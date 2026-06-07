@@ -49,13 +49,36 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   }
 
   Future<void> scan() async {
-    if (state.state != SessionState.idle) return;
-    state = state.copyWith(
-        state: SessionState.scanning, error: SessionError.none);
+    if (state.state != SessionState.idle && state.state != SessionState.error) return;
+    // Reset error state before retrying
+    if (state.state == SessionState.error) {
+      state = state.copyWith(state: SessionState.idle, error: SessionError.none);
+    }
+    state = state.copyWith(state: SessionState.scanning, error: SessionError.none);
     final completer = Completer<String?>();
-    _scanSub = _scanner
-        .scan(timeout: const Duration(seconds: scanTimeoutSec))
-        .listen((d) => completer.complete(d.remoteId));
+    try {
+      _scanSub = _scanner
+          .scan(timeout: const Duration(seconds: scanTimeoutSec))
+          .listen(
+            (d) { if (!completer.isCompleted) completer.complete(d.remoteId); },
+            onError: (Object e) {
+              if (!completer.isCompleted) completer.complete(null);
+              state = state.copyWith(
+                state: SessionState.error,
+                error: SessionError.scanFailed,
+                lastErrorMessage: e.toString(),
+              );
+            },
+          );
+    } catch (e) {
+      state = state.copyWith(
+        state: SessionState.error,
+        error: SessionError.scanFailed,
+        lastErrorMessage: e.toString(),
+      );
+      return;
+    }
+
     final id = await completer.future.timeout(
       const Duration(seconds: scanTimeoutSec + 1),
       onTimeout: () {

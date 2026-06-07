@@ -32,9 +32,24 @@ class HomeScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _StatePill(state: snap.state),
+          if (snap.state == SessionState.error && snap.lastErrorMessage != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Text(
+                snap.lastErrorMessage!,
+                style: TextStyle(color: Colors.red.shade800, fontSize: 12),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: snap.state == SessionState.idle
+            onPressed: (snap.state == SessionState.idle || snap.state == SessionState.error)
                 ? () => ref.read(syncOrchestratorProvider.notifier).scan()
                 : null,
             icon: const Icon(Icons.bluetooth_searching),

@@ -7,9 +7,20 @@ final bleScannerProvider = Provider<BleScanner>(
 );
 
 /// Real BLE scanner backed by flutter_blue_plus.
+/// Turns Bluetooth on if it is off before scanning.
 class FbpScanner implements BleScanner {
   @override
   Stream<DiscoveredDevice> scan({Duration? timeout}) async* {
+    // Turn on Bluetooth if it's off (Android only — iOS cannot do this)
+    if (await FlutterBluePlus.adapterState.first != BluetoothAdapterState.on) {
+      await FlutterBluePlus.turnOn();
+      // Wait up to 5 seconds for it to turn on
+      await FlutterBluePlus.adapterState
+          .where((s) => s == BluetoothAdapterState.on)
+          .first
+          .timeout(const Duration(seconds: 5));
+    }
+
     await FlutterBluePlus.startScan(timeout: timeout);
     await for (final results in FlutterBluePlus.scanResults) {
       for (final r in results) {
