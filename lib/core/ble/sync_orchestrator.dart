@@ -20,6 +20,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   SessionStore? _store;
   GattConnection? _gatt;
   EncryptedEndpoint? _huamiComms;
+  bool _connecting = false;
   final List<String> _logs = [];
   final List<TypeCodeResult> _results = [];
 
@@ -108,6 +109,8 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   Future<void> connect() async {
     if (state.state != SessionState.idle &&
         state.state != SessionState.error) return;
+    if (_connecting) return;
+    _connecting = true;
     if (state.state == SessionState.error) {
       state = state.copyWith(
         state: SessionState.idle,
@@ -123,11 +126,13 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
         error: SessionError.scanFailed,
         lastErrorMessage: 'No strap MAC saved. Go back and scan.',
       );
+      _connecting = false;
       return;
     }
 
     _log('Connecting to MAC $mac ...');
     await _connectAndAuth(mac);
+    _connecting = false;
   }
 
   Future<void> saveAuthKeyAndMac(String key, String mac) async {
@@ -146,13 +151,13 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   Future<bool> hasSavedMac() => _authStorage.hasMac();
 
   Future<void> _connectAndAuth(String remoteId) async {
+    final done = Completer<bool>();
+
     state = state.copyWith(state: SessionState.connecting);
     try {
-      _log('GATT connecting to $remoteId ...');
       _gatt = await _connector.connect(remoteId);
-      _log('GATT connected successfully');
     } catch (e) {
-      _log('GATT FAILED: $e');
+      _log('connect failed: $e');
       state = state.copyWith(
         state: SessionState.error,
         error: SessionError.gattFailed,
@@ -161,70 +166,21 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       return;
     }
 
+    final gatt = _gatt as StrapGattConnection;
     state = state.copyWith(state: SessionState.authenticating);
-    try {
-      _log('Starting ECDH auth handshake ...');
-      final authResult = await _runEcdhAuth();
-      _log('Auth SUCCESS — strap is authenticated');
 
-      final gatt = _gatt;
-      if (gatt is StrapGattConnection) {
-        // Set up EncryptedEndpoint on 0x0017 to handle services list ACK
-        _log('Setting up EncryptedEndpoint (encrypted chunked transport) ...');
-        _huamiComms = EncryptedEndpoint(
-          sessionKey: authResult.sessionKey,
-          sequence: authResult.sequence,
-          writeChunk: gatt.writeChunked,
-          writeAck: (bytes) async {
-            await gatt.writeChunked(bytes);
-          },
-          onPayload: _handlePayload,
-          log: (msg) => _log('[COMMS] $msg'),
-        );
-
-        // Switch the 0x0017 notification handler to EncryptedEndpoint
-        gatt.switchToComms(_huamiComms!);
-
-        // Re-subscribe to 0x0004/0x0005 AFTER auth — handshake resets notifications
-        await gatt.resubscribeNotifications();
-
-        // Wait for strap to send services list and for EncryptedEndpoint to ACK it
-        _log('Waiting for services list ...');
-        await Future<void>.delayed(const Duration(seconds: 2));
-      }
-      state = state.copyWith(state: SessionState.connected);
-    } catch (e) {
-      _log('Auth FAILED: $e');
-      state = state.copyWith(
-        state: SessionState.error,
-        error: SessionError.authRejected,
-        lastErrorMessage: 'Auth failed: $e',
-      );
+    final authKey = await _authStorage.readBytes();
+    if (authKey == null) {
+      _log('No auth key stored');
       return;
     }
 
-    _log('Auto-fetching all data types ...');
-    await startFetch(
-      typeCodes: allTypeCodes,
-      fetchWindowHours: defaultFetchWindowHours,
-      listenDurationSec: defaultListenDurationSec,
-    );
-  }
-
-  Future<({Uint8List sessionKey, int sequence})> _runEcdhAuth() async {
-    final authKey = await _authStorage.readBytes();
-    if (authKey == null) throw StateError('No auth key stored');
-
-    final gatt = _gatt;
-    if (gatt is! StrapGattConnection) {
-      throw StateError('GattConnection is not a StrapGattConnection');
-    }
-
-    final done = Completer<bool>();
     final auth = DeviceHandshake(
       authKey: authKey,
-      writeChunk: gatt.writeChunked,
-      log: (msg) => _log('[AUTH] $msg'),
+      log: (msg) => _log(msg),
+      writeChunk: (chunk) async {
+        await gatt.writeChunked(chunk);
+      },
       onSuccess: () {
         if (!done.isCompleted) done.complete(true);
       },
@@ -233,18 +189,54 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       },
     );
 
-    final sub = gatt.incoming.listen(auth.onNotify);
-    await auth.start();
-    final ok = await done.future.timeout(
-      const Duration(seconds: 15),
-      onTimeout: () => false,
-    );
-    await sub.cancel();
-    if (!ok) throw StateError('Auth handshake failed or timed out');
+    gatt.setNotifyHandler(auth.onNotify);
 
-    return (
-      sessionKey: auth.sessionKey!,
+    await auth.start();
+    final authed = await done.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () {
+        _log('auth timed out');
+        return false;
+      },
+    );
+    if (!authed) {
+      _log('auth failed');
+      state = state.copyWith(
+        state: SessionState.error,
+        error: SessionError.authRejected,
+        lastErrorMessage: 'Auth failed',
+      );
+      return;
+    }
+
+    _log('Auth SUCCESS — strap is authenticated');
+
+    // ---- post-auth: comms + activity fetch (matches Huami protocol _postAuth) ----
+    _huamiComms = EncryptedEndpoint(
+      sessionKey: auth.sessionKey,
       sequence: auth.sequence ?? 0,
+      log: (msg) => _log(msg),
+      writeChunk: (c) => gatt.writeChunked(c),
+      writeAck: (c) => gatt.writeNotify(c),
+      onPayload: _handlePayload,
+    );
+
+    gatt.setNotifyHandler(_huamiComms!.onNotify);
+
+    // Re-subscribe 0x0004/0x0005 after auth
+    await gatt.resubscribeNotifications();
+
+    // Wait for services list from strap
+    _log('Waiting for services list ...');
+    await Future.delayed(const Duration(seconds: 2));
+
+    state = state.copyWith(state: SessionState.connected);
+
+    _log('Auto-fetching all data types ...');
+    await startFetch(
+      typeCodes: allTypeCodes,
+      fetchWindowHours: defaultFetchWindowHours,
+      listenDurationSec: defaultListenDurationSec,
     );
   }
 
