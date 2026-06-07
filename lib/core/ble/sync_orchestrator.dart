@@ -177,27 +177,36 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       _flush();
 
       try {
-        final raw = await client.fetchCode(typeInt, since);
+        final result = await client.fetchCode(typeInt, since);
+        final raw = result.raw;
+        final expected = result.expected;
+        final skipped = result.skipped;
 
         String status;
         String? rawHex;
-        if (raw.isEmpty) {
-          status = 'empty';
-          _log('  — $codeStr: empty');
+        if (skipped) {
+          status = 'skipped';
+          _log('  ⚡ $codeStr: skipped ($expected pkts too large)');
+        } else if (raw.isEmpty) {
+          status = expected < 0 ? 'rejected' : 'empty';
+          _log('  — $codeStr: ${expected < 0 ? "rejected" : "empty"}');
         } else {
           status = 'ok';
-          rawHex = raw.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+          // Store only first 128 hex chars (64 bytes) in rawHex for display
+          final fullHex = raw.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+          rawHex = fullHex.length > 128 ? fullHex.substring(0, 128) : fullHex;
           _log('  ✓ $codeStr: ${raw.length} bytes');
-          if (rawHex.length > 200) {
-            _log('  hex: ${rawHex.substring(0, 200)}...');
-          } else {
-            _log('  hex: $rawHex');
-          }
+          _log('  hex[0]: ${rawHex.substring(0, rawHex.length.clamp(0, 64))}');
+          if (rawHex.length > 64) _log('  hex[1]: ${rawHex.substring(64)}');
         }
 
         final entry = DumpEntry(
           code: codeStr,
-          status: status == 'ok' ? DumpStatus.ok : DumpStatus.empty,
+          status: status == 'ok'
+              ? DumpStatus.ok
+              : status == 'empty'
+                  ? DumpStatus.empty
+                  : DumpStatus.rejected,
           samples: raw.length ~/ 4,
           bytes: raw.length,
           file: '${codeStr}_raw.bin',

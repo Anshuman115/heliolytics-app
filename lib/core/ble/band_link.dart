@@ -153,15 +153,39 @@ class BandLink {
     onUpdate?.call();
   }
 
-  /// Fetch one type code, returns raw bytes. Used by SyncOrchestrator
-  /// to drive the discovery scan across all 54 codes.
-  Future<Uint8List> fetchCode(int code, DateTime since) async {
+  /// Fetch one type code, returns raw bytes.
+  /// Probes first — if expected packets > [maxExpected], skips the download
+  /// and returns the packet count as a 4-byte LE integer (for logging).
+  /// This prevents 0x07 GPS / other huge types from hanging the scan.
+  Future<({Uint8List raw, int expected, bool skipped})> fetchCode(
+    int code,
+    DateTime since, {
+    int maxExpected = 50000,
+  }) async {
     final f = fetcher;
-    if (f == null) return Uint8List(0);
+    if (f == null) return (raw: Uint8List(0), expected: -1, skipped: false);
+
+    // Probe: get expected count quickly
+    await f.fetchType(code, since,
+        probeOnly: true, timeout: const Duration(seconds: 5));
+    final expected = f.lastExpected;
+
+    if (expected < 0) {
+      return (raw: Uint8List(0), expected: expected, skipped: false);
+    }
+    if (expected == 0) {
+      return (raw: Uint8List(0), expected: 0, skipped: false);
+    }
+    if (expected > maxExpected) {
+      log('  skipping 0x${code.toRadixString(16)}: $expected pkts too large');
+      return (raw: Uint8List(0), expected: expected, skipped: true);
+    }
+
+    // Full fetch
     await f.fetchType(code, since,
         probeOnly: false, maxRounds: 400,
-        timeout: const Duration(seconds: 30));
-    return f.lastRaw;
+        timeout: const Duration(seconds: 60));
+    return (raw: f.lastRaw, expected: expected, skipped: false);
   }
 
   void _handlePayload(int endpoint, Uint8List payload) {

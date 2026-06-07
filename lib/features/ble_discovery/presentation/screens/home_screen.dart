@@ -110,8 +110,16 @@ class HomeScreen extends ConsumerWidget {
     for (final r in snap.typeResults) {
       final icon = r.status == 'ok' ? '✓' : r.status == 'empty' ? '—' : '✗';
       buf.writeln('$icon ${r.code} (${r.label}): ${r.status} — ${r.bytes} bytes');
-      if (r.rawHex != null) {
-        buf.writeln('  hex: ${r.rawHex}');
+      if (r.rawHex != null && r.rawHex!.isNotEmpty) {
+        // First 2 lines = 32 bytes each = 64 hex chars per line
+        final hex = r.rawHex!;
+        final line1 = hex.length > 64 ? hex.substring(0, 64) : hex;
+        final line2 = hex.length > 64
+            ? (hex.length > 128 ? hex.substring(64, 128) : hex.substring(64))
+            : null;
+        buf.writeln('  hex[0]: $line1');
+        if (line2 != null) buf.writeln('  hex[1]: $line2');
+        if (hex.length > 128) buf.writeln('  ... (${r.bytes} bytes total)');
       }
     }
     buf.writeln();
@@ -121,7 +129,7 @@ class HomeScreen extends ConsumerWidget {
     }
     Clipboard.setData(ClipboardData(text: buf.toString()));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Results copied to clipboard')),
+      const SnackBar(content: Text('Copied to clipboard')),
     );
   }
 }
