@@ -177,7 +177,17 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       _flush();
 
       try {
-        final result = await client.fetchCode(typeInt, since);
+        // Per-code caps
+        // 0x06: sports details — 166k packets, fetch all (per-second badminton data)
+        // 0x58: raw PPG dump — fetch first page only to identify format
+        final int cap = switch (codeStr) {
+          '0x06' => 200000,
+          '0x58' => 1000000,
+          _ => 50000,
+        };
+        final int rounds = codeStr == '0x58' ? 1 : 400;
+        final result = await client.fetchCode(typeInt, since,
+            maxExpected: cap, maxRounds: rounds);
         final raw = result.raw;
         final expected = result.expected;
         final skipped = result.skipped;
@@ -192,9 +202,12 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
           _log('  — $codeStr: ${expected < 0 ? "rejected" : "empty"}');
         } else {
           status = 'ok';
-          // Store only first 128 hex chars (64 bytes) in rawHex for display
           final fullHex = raw.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-          rawHex = fullHex.length > 128 ? fullHex.substring(0, 128) : fullHex;
+          // Large types: keep first 512 hex chars (256 bytes) for format identification
+          final previewLen = (raw.length > 1000) ? 512 : 128;
+          rawHex = fullHex.length > previewLen
+              ? fullHex.substring(0, previewLen)
+              : fullHex;
           _log('  ✓ $codeStr: ${raw.length} bytes');
           _log('  hex[0]: ${rawHex.substring(0, rawHex.length.clamp(0, 64))}');
           if (rawHex.length > 64) _log('  hex[1]: ${rawHex.substring(64)}');

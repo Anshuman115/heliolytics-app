@@ -161,11 +161,12 @@ class BandLink {
     int code,
     DateTime since, {
     int maxExpected = 50000,
+    int maxRounds = 400,
   }) async {
     final f = fetcher;
     if (f == null) return (raw: Uint8List(0), expected: -1, skipped: false);
 
-    // Probe: get expected count quickly (1.5s matches Huami protocol's probe timeout)
+    // Probe: get expected count quickly
     await f.fetchType(code, since,
         probeOnly: true, timeout: const Duration(milliseconds: 1500));
     final expected = f.lastExpected;
@@ -181,10 +182,12 @@ class BandLink {
       return (raw: Uint8List(0), expected: expected, skipped: true);
     }
 
-    // Full fetch
+    // Full fetch with per-code round cap and 3-min timeout for large types
+    final timeout = expected > 50000
+        ? const Duration(minutes: 3)
+        : const Duration(seconds: 60);
     await f.fetchType(code, since,
-        probeOnly: false, maxRounds: 400,
-        timeout: const Duration(seconds: 60));
+        probeOnly: false, maxRounds: maxRounds, timeout: timeout);
     return (raw: f.lastRaw, expected: expected, skipped: false);
   }
 
