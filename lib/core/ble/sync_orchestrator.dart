@@ -128,6 +128,11 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       _log('Starting ECDH auth handshake ...');
       await _runEcdhAuth();
       _log('Auth SUCCESS — strap is authenticated');
+      // Re-subscribe to 0x0004/0x0005 AFTER auth — handshake resets notifications
+      final gatt = _gatt;
+      if (gatt is StrapGattConnection) {
+        await gatt.resubscribeNotifications();
+      }
       state = state.copyWith(state: SessionState.connected);
     } catch (e) {
       _log('Auth FAILED: $e');

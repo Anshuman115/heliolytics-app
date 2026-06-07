@@ -108,6 +108,35 @@ class StrapGattConnection implements GattConnection {
     return out;
   }
 
+  /// Re-subscribe to control (0x0004) and data (0x0005) notifications.
+  /// Must be called AFTER auth — the handshake resets BLE notification state.
+  Future<void> resubscribeNotifications() async {
+    // Cancel old subscriptions
+    await _controlSub?.cancel();
+    await _dataSub?.cancel();
+
+    if (_controlChar != null) {
+      await _controlChar!.setNotifyValue(true);
+      _controlSub = _controlChar!.onValueReceived.listen((v) {
+        // ignore: avoid_print
+        print('[STRAP] control notify on 0x0004: ${v.length} bytes');
+        if (v.isNotEmpty) _incomingControl.add(Uint8List.fromList(v));
+      });
+      // ignore: avoid_print
+      print('[STRAP] re-subscribed to 0x0004 notifications');
+    }
+    if (_dataChar != null) {
+      await _dataChar!.setNotifyValue(true);
+      _dataSub = _dataChar!.onValueReceived.listen((v) {
+        // ignore: avoid_print
+        print('[STRAP] data notify on 0x0005: ${v.length} bytes');
+        if (v.isNotEmpty) _incomingData.add(Uint8List.fromList(v));
+      });
+      // ignore: avoid_print
+      print('[STRAP] re-subscribed to 0x0005 notifications');
+    }
+  }
+
   /// Write to the chunked write char (0x0016) — used for auth.
   @override
   Future<void> writeChunked(Uint8List bytes) async {
