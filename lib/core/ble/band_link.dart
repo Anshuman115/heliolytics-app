@@ -166,28 +166,46 @@ class BandLink {
     final f = fetcher;
     if (f == null) return (raw: Uint8List(0), expected: -1, skipped: false);
 
-    // Probe: get expected count quickly
+    // For codes with known large data (skipProbe), go straight to fetch —
+    // probe+ACK causes the strap to start streaming immediately, corrupting
+    // the subsequent full-fetch start command.
+    final bool skipProbe = maxExpected > 50000;
+
+    if (!skipProbe) {
+      // Probe: get expected count quickly
+      await f.fetchType(code, since,
+          probeOnly: true, timeout: const Duration(milliseconds: 1500));
+      final expected = f.lastExpected;
+
+      if (expected < 0) {
+        return (raw: Uint8List(0), expected: expected, skipped: false);
+      }
+      if (expected == 0) {
+        return (raw: Uint8List(0), expected: 0, skipped: false);
+      }
+      if (expected > maxExpected) {
+        log('  skipping 0x${code.toRadixString(16)}: $expected pkts too large');
+        return (raw: Uint8List(0), expected: expected, skipped: true);
+      }
+    }
+
+    // Full fetch — generous timeout for large types
+    final timeout = skipProbe
+        ? const Duration(minutes: 5)
+        : const Duration(seconds: 60);
     await f.fetchType(code, since,
-        probeOnly: true, timeout: const Duration(milliseconds: 1500));
+        probeOnly: false, maxRounds: maxRounds, timeout: timeout);
     final expected = f.lastExpected;
 
-    if (expected < 0) {
-      return (raw: Uint8List(0), expected: expected, skipped: false);
+    if (!skipProbe) {
+      return (raw: f.lastRaw, expected: expected, skipped: false);
     }
-    if (expected == 0) {
-      return (raw: Uint8List(0), expected: 0, skipped: false);
-    }
+
+    // For large codes: check if it was actually too large after seeing real count
     if (expected > maxExpected) {
       log('  skipping 0x${code.toRadixString(16)}: $expected pkts too large');
       return (raw: Uint8List(0), expected: expected, skipped: true);
     }
-
-    // Full fetch with per-code round cap and 3-min timeout for large types
-    final timeout = expected > 50000
-        ? const Duration(minutes: 3)
-        : const Duration(seconds: 60);
-    await f.fetchType(code, since,
-        probeOnly: false, maxRounds: maxRounds, timeout: timeout);
     return (raw: f.lastRaw, expected: expected, skipped: false);
   }
 

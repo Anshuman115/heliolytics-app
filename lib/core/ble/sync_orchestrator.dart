@@ -177,16 +177,20 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       _flush();
 
       try {
-        // Per-code caps
-        // 0x06: sports details — 166k packets, fetch all (per-second badminton data)
-        // 0x58: raw PPG dump — fetch first page only to identify format
+        // Per-code caps and windows
+        // 0x06: sports details — 166k pkts, no probe (probe corrupts stream)
+        // 0x58: raw PPG — try 6h window (48h window gets status 0x05 rejection)
         final int cap = switch (codeStr) {
           '0x06' => 200000,
           '0x58' => 1000000,
           _ => 50000,
         };
         final int rounds = codeStr == '0x58' ? 1 : 400;
-        final result = await client.fetchCode(typeInt, since,
+        // 0x58 uses a shorter window — PPG likely only stores last few hours
+        final DateTime codeSince = codeStr == '0x58'
+            ? DateTime.now().subtract(const Duration(hours: 6))
+            : since;
+        final result = await client.fetchCode(typeInt, codeSince,
             maxExpected: cap, maxRounds: rounds);
         final raw = result.raw;
         final expected = result.expected;
