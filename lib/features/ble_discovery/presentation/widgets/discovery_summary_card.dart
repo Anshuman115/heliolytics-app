@@ -61,9 +61,11 @@ class _EntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final detail = switch (entry.status) {
       DumpStatus.ok => '${entry.samples} samples · ${entry.bytes} bytes',
-      DumpStatus.empty => '(empty)',
-      DumpStatus.rejected => '(rejected: ${entry.errorByte})',
-      DumpStatus.unknown => '(unknown — bytes saved)',
+      DumpStatus.empty => '— empty (no data on strap)',
+      DumpStatus.rejected => entry.errorByte != null
+          ? '— rejected (${entry.errorByte})'
+          : '— no data for this type right now',
+      DumpStatus.unknown => '— unknown (raw bytes saved)',
     };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),

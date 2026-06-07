@@ -31,6 +31,7 @@ class DataRequester {
     final data = BytesBuilder();
     int lastCounter = -1;
     String status = 'rejected';
+    String? errorByte;
 
     final controlCompleter = Completer<void>();
 
@@ -41,6 +42,7 @@ class DataRequester {
       if (cmd == _cmdStart) {
         if (st != 0x01) {
           status = 'rejected';
+          errorByte = '0x${st.toRadixString(16).padLeft(2, '0')}';
           if (!controlCompleter.isCompleted) controlCompleter.complete();
           return;
         }
@@ -103,9 +105,10 @@ class DataRequester {
       entry: DumpEntry(
         code: hexCode,
         status: _parseDumpStatus(status),
-        samples: raw.length ~/ 4, // rough estimate for Phase 1
+        samples: raw.length ~/ 4,
         bytes: raw.length,
         file: '${hexCode}_raw.bin',
+        errorByte: errorByte,
       ),
       rawBytes: raw,
     );

@@ -7,6 +7,7 @@ import 'package:heliolytics/core/ble/ble_devices.dart';
 import 'package:heliolytics/core/ble/connector.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
 import 'package:heliolytics/core/ble/device_handshake.dart';
+import 'package:heliolytics/core/constants.dart';
 import 'package:heliolytics/features/ble_discovery/data/data_requester.dart';
 import 'package:heliolytics/features/ble_discovery/data/session_store.dart';
 import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
@@ -115,7 +116,15 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
         error: SessionError.authRejected,
         lastErrorMessage: 'Auth failed: $e',
       );
+      return;
     }
+
+    // Auth succeeded — auto-fetch data immediately.
+    startFetch(
+      typeCodes: [...knownTypeCodes, '0x26'],
+      fetchWindowHours: defaultFetchWindowHours,
+      listenDurationSec: defaultListenDurationSec,
+    );
   }
 
   /// ZeppOS ECDH auth handshake over char 0x0016/0x0017.
