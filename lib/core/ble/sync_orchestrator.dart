@@ -28,9 +28,8 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   Future<void> _initAsync() async {
     _store = await ref.read(sessionStoreProvider.future);
     final hasKey = await _authStorage.hasKey();
-    final hasMac = await _authStorage.hasMac();
     state = state.copyWith(
-      state: (hasKey && hasMac) ? SessionState.idle : SessionState.noAuthKey,
+      state: hasKey ? SessionState.idle : SessionState.noAuthKey,
     );
   }
 
@@ -67,12 +66,20 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     await _connectAndAuth(mac);
   }
 
-  /// Save both auth key and MAC address together.
+  /// Save both auth key and MAC address together (called from setup screen).
   Future<void> saveAuthKeyAndMac(String key, String mac) async {
     await _authStorage.save(key);
     await _authStorage.saveMac(mac);
     state = state.copyWith(state: SessionState.idle);
   }
+
+  /// Store MAC picked from scan screen, then connect immediately.
+  Future<void> saveMacAndConnect(String mac) async {
+    await _authStorage.saveMac(mac);
+    await connect();
+  }
+
+  Future<bool> hasSavedMac() => _authStorage.hasMac();
 
   Future<void> _connectAndAuth(String remoteId) async {
     state = state.copyWith(state: SessionState.connecting);

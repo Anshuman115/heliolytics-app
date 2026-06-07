@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/core/ble/sync_orchestrator.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
 import 'package:heliolytics/core/constants.dart';
-import 'package:heliolytics/features/ble_discovery/presentation/widgets/discovery_summary_card.dart';
+import 'package:heliolytics/features/ble_discovery/presentation/screens/device_scan_screen.dart';
 import 'package:heliolytics/features/ble_discovery/presentation/screens/sessions_screen.dart';
+import 'package:heliolytics/features/ble_discovery/presentation/widgets/discovery_summary_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -49,12 +50,41 @@ class HomeScreen extends ConsumerWidget {
           ],
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: (snap.state == SessionState.idle || snap.state == SessionState.error)
-                ? () => ref.read(syncOrchestratorProvider.notifier).connect()
+            onPressed: (snap.state == SessionState.idle ||
+                    snap.state == SessionState.error)
+                ? () async {
+                    final hasMac = await ref
+                        .read(syncOrchestratorProvider.notifier)
+                        .hasSavedMac();
+                    if (!context.mounted) return;
+                    if (hasMac) {
+                      // Known device — connect directly
+                      ref
+                          .read(syncOrchestratorProvider.notifier)
+                          .connect();
+                    } else {
+                      // First time — scan so user can pick their strap
+                      await Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const DeviceScanScreen(),
+                        ),
+                      );
+                    }
+                  }
                 : null,
             icon: const Icon(Icons.bluetooth_searching),
             label: const Text('Connect to ring'),
           ),
+          if (snap.state == SessionState.idle)
+            TextButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const DeviceScanScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.radar, size: 16),
+              label: const Text('Scan for different device'),
+            ),
           if (snap.state == SessionState.connected) ...[
             const SizedBox(height: 8),
             FilledButton.icon(

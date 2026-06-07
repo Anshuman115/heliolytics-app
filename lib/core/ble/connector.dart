@@ -41,6 +41,17 @@ class StrapGattConnection implements GattConnection {
     final services = await _device.discoverServices();
     final out = <BleCharacteristic>[];
 
+    // ignore: avoid_print
+    print('[STRAP] discovered ${services.length} services:');
+    for (final svc in services) {
+      // ignore: avoid_print
+      print('[STRAP]   svc: ${svc.uuid.str}');
+      for (final c in svc.characteristics) {
+        // ignore: avoid_print
+        print('[STRAP]     char: ${c.uuid.str} notify=${c.properties.notify} write=${c.properties.write}');
+      }
+    }
+
     for (final svc in services) {
       for (final c in svc.characteristics) {
         final uuid = c.uuid.str.toLowerCase();
@@ -76,11 +87,19 @@ class StrapGattConnection implements GattConnection {
       }
     }
 
+    // ignore: avoid_print
+    print('[STRAP] write=$_writeChar notify=$_notifyChar control=$_controlChar data=$_dataChar');
     if (_writeChar == null || _notifyChar == null) {
-      throw StateError('Chunked chars not found (0016/0017 missing)');
+      throw StateError(
+        'Chunked chars 0016/0017 not found. '
+        'Found: ${out.map((c) => c.uuid).join(', ')}',
+      );
     }
     if (_controlChar == null || _dataChar == null) {
-      throw StateError('Activity chars not found (0004/0005 missing)');
+      throw StateError(
+        'Activity chars 0004/0005 not found. '
+        'Found: ${out.map((c) => c.uuid).join(', ')}',
+      );
     }
     return out;
   }
