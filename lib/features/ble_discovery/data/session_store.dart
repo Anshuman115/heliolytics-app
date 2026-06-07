@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:heliolytics/core/constants.dart';
+import 'package:heliolytics/core/constants.dart' show appDocsSubdir, typeCodeLabels;
 import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -22,20 +22,13 @@ class SessionStore {
       Directory(p.join(rootDir.path, 'sessions', id));
 
   String _binFileName(String code) {
-    const names = {
-      '0x01': '0x01_activity',
-      '0x05': '0x05_workout',
-      '0x13': '0x13_stress',
-      '0x25': '0x25_spo2',
-      '0x2E': '0x2E_temperature',
-      '0x38': '0x38_sleep_resp_rate',
-      '0x3A': '0x3A_resting_hr',
-      '0x3D': '0x3D_max_hr',
-      '0x48': '0x48_sleep_session',
-      '0x49': '0x49_hrv',
-      '0x2a37': '0x2a37_live_hr',
-    };
-    return '${names[code] ?? 'unknown_$code'}.bin';
+    // Use the label from constants for a human-readable filename
+    final label = typeCodeLabels[code]
+        ?.toLowerCase()
+        .replaceAll(' ', '_')
+        .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+    final suffix = label != null ? '_$label' : '';
+    return '${code.replaceAll('0x', '0x')}$suffix.bin';
   }
 
   Future<String> createSession({

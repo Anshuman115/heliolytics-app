@@ -153,15 +153,17 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     state = state.copyWith(state: SessionState.fetching);
     _results.clear();
 
+    const dumpWindowHours = 24 * 30; // 30 days
     final sessionId = await store.createSession(
       deviceMac: mac,
-      fetchWindowHours: defaultFetchWindowHours,
-      listenDurationSec: defaultListenDurationSec,
+      fetchWindowHours: dumpWindowHours,
+      listenDurationSec: 0,
       mode: SessionMode.fetchAndListen,
     );
 
-    final since = DateTime.now().subtract(Duration(hours: defaultFetchWindowHours));
-    _log('Fetch window: last ${defaultFetchWindowHours}h since ${since.toIso8601String()}');
+    final since = DateTime.now().subtract(const Duration(days: 30));
+    _log('DUMP: last 30 days since ${since.toIso8601String()}');
+    _log('Fetching ${allTypeCodes.length} codes (all 0x01-0x7F)...');
     _flush();
 
     final entries = <DumpEntry>[];

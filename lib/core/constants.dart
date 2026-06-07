@@ -72,6 +72,32 @@ const List<String> allTypeCodes = [
   ...probeTypeCodes,
 ];
 
+/// Only confirmed data-returning codes for the 30-day full dump.
+/// Skips all probe codes to avoid 2+ minutes of 1.5s timeouts.
+const List<String> dumpTypeCodes = [
+  '0x01', // HR + steps + activity per-minute
+  '0x02', // Manual HR
+  '0x05', // Workout summaries
+  '0x06', // Workout details (per-second HR/cadence) — large, no probe
+  '0x0D', // PAI scores
+  '0x12', // Stress manual
+  '0x13', // Stress auto
+  '0x25', // SpO2
+  '0x26', // SpO2 sleep
+  '0x27', // Accelerometer stream
+  '0x2C', // Device metadata / statistics
+  '0x2E', // Temperature
+  '0x38', // Sleep respiratory rate
+  '0x3A', // Resting HR
+  '0x3B', // Activity sessions (protobuf)
+  '0x3D', // Max HR
+  '0x46', // Continuous HR (PPG session)
+  '0x48', // Sleep session blobs
+  '0x49', // HRV
+  '0x4A', // HRV trend
+  '0x4E', // Sleep segments / nap log
+];
+
 /// Friendly labels for each type code.
 const Map<String, String> typeCodeLabels = {
   '0x01': 'HR samples',

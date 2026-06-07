@@ -172,9 +172,9 @@ class BandLink {
     final bool skipProbe = maxExpected > 50000;
 
     if (!skipProbe) {
-      // Probe: get expected count quickly
-      await f.fetchType(code, since,
-          probeOnly: true, timeout: const Duration(milliseconds: 1500));
+    // Probe: get expected count quickly
+    await f.fetchType(code, since,
+        probeOnly: true, timeout: const Duration(milliseconds: 1500));
       final expected = f.lastExpected;
 
       if (expected < 0) {
@@ -189,12 +189,11 @@ class BandLink {
       }
     }
 
-    // Full fetch — generous timeout for large types
-    final timeout = skipProbe
-        ? const Duration(minutes: 5)
-        : const Duration(seconds: 60);
+    // Full fetch — no timeout. If strap says it has data, wait for all of it.
+    // The fetchType completes naturally when all packets are received and ACKed.
     await f.fetchType(code, since,
-        probeOnly: false, maxRounds: maxRounds, timeout: timeout);
+        probeOnly: false, maxRounds: maxRounds,
+        timeout: const Duration(hours: 24)); // effectively no timeout
     final expected = f.lastExpected;
 
     if (!skipProbe) {
