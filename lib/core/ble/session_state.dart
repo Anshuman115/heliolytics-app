@@ -30,6 +30,8 @@ class SessionSnapshot {
   final String? currentTypeCode;
   final Session? lastSession;
   final String? lastErrorMessage;
+  final List<String> logs;
+  final List<TypeCodeResult> typeResults;
 
   const SessionSnapshot({
     required this.state,
@@ -37,6 +39,8 @@ class SessionSnapshot {
     this.currentTypeCode,
     this.lastSession,
     this.lastErrorMessage,
+    this.logs = const [],
+    this.typeResults = const [],
   });
 
   static const initial = SessionSnapshot(
@@ -50,6 +54,8 @@ class SessionSnapshot {
     String? currentTypeCode,
     Session? lastSession,
     String? lastErrorMessage,
+    List<String>? logs,
+    List<TypeCodeResult>? typeResults,
   }) =>
       SessionSnapshot(
         state: state ?? this.state,
@@ -57,5 +63,28 @@ class SessionSnapshot {
         currentTypeCode: currentTypeCode ?? this.currentTypeCode,
         lastSession: lastSession ?? this.lastSession,
         lastErrorMessage: lastErrorMessage ?? this.lastErrorMessage,
+        logs: logs ?? this.logs,
+        typeResults: typeResults ?? this.typeResults,
       );
+}
+
+/// Result of fetching a single type code from the strap.
+class TypeCodeResult {
+  final String code;
+  final String label;
+  final String status; // 'ok', 'empty', 'rejected', 'error'
+  final int bytes;
+  final int samples;
+  final String? rawHex;
+  final String? errorMsg;
+
+  const TypeCodeResult({
+    required this.code,
+    required this.label,
+    required this.status,
+    this.bytes = 0,
+    this.samples = 0,
+    this.rawHex,
+    this.errorMsg,
+  });
 }
