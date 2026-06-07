@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/core/ble/ble_devices.dart';
+import 'package:heliolytics/core/ble/encrypted_endpoint.dart';
 import 'package:heliolytics/core/constants.dart';
 
 final bleConnectorProvider = Provider<BleConnector>(
@@ -135,6 +136,18 @@ class StrapGattConnection implements GattConnection {
       // ignore: avoid_print
       print('[STRAP] re-subscribed to 0x0005 notifications');
     }
+  }
+
+  /// Switch the 0x0017 notification handler to EncryptedEndpoint (post-auth).
+  /// After auth, the strap sends a services list through the chunked transport.
+  /// EncryptedEndpoint decodes it and sends back the required ACK.
+  void switchToComms(EncryptedEndpoint comms) {
+    _notifySub?.cancel();
+    _notifySub = _notifyChar!.onValueReceived.listen((v) {
+      comms.onNotify(Uint8List.fromList(v));
+    });
+    // ignore: avoid_print
+    print('[STRAP] switched 0x0017 handler to EncryptedEndpoint');
   }
 
   /// Write to the chunked write char (0x0016) — used for auth.

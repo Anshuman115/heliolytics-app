@@ -7,6 +7,7 @@ import 'package:heliolytics/core/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/core/ble/ble_devices.dart';
 import 'package:heliolytics/core/ble/connector.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
+import 'package:heliolytics/core/ble/encrypted_endpoint.dart';
 import 'package:heliolytics/core/ble/device_handshake.dart';
 import 'package:heliolytics/core/constants.dart';
 import 'package:heliolytics/features/ble_discovery/data/data_requester.dart';
@@ -18,6 +19,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   late BleConnector _connector;
   SessionStore? _store;
   GattConnection? _gatt;
+  EncryptedEndpoint? _huamiComms;
   final List<String> _logs = [];
   final List<TypeCodeResult> _results = [];
 
@@ -39,6 +41,42 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     // ignore: avoid_print
     print(msg);
     state = state.copyWith(logs: List.unmodifiable(_logs));
+  }
+
+  void _handlePayload(int endpoint, Uint8List payload) {
+    final hex = payload
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+    _log('[COMMS] endpoint 0x${endpoint.toRadixString(16).padLeft(4, '0')} '
+        '(${payload.length}B): $hex');
+
+    // Services list reply: [0x04, count(u16 LE), (endpoint u16 LE, encrypted u8)×N]
+    if (endpoint == 0x0000 && payload.length >= 3 && payload[0] == 0x04) {
+      final bd = ByteData.sublistView(Uint8List.fromList(payload));
+      final n = bd.getUint16(1, Endian.little);
+      final services = <String>[];
+      var has4b = false;
+      var off = 3;
+      for (var i = 0; i < n && off + 3 <= payload.length; i++) {
+        final ep = bd.getUint16(off, Endian.little);
+        final enc = payload[off + 2] != 0;
+        if (ep == 0x004b) has4b = true;
+        services.add('0x${ep.toRadixString(16).padLeft(4, '0')}${enc ? '*' : ''}');
+        off += 3;
+      }
+      _log('[COMMS] SERVICES ($n) [*=encrypted]: ${services.join(' ')}');
+      _log('[COMMS] activity-fetch service 0x004b: $has4b');
+    }
+
+    // Record-counts reply
+    if (endpoint == 0x0016 && payload.length >= 15 &&
+        payload[0] == 0x04 && payload[1] == 0x01) {
+      final bd = ByteData.sublistView(Uint8List.fromList(payload));
+      final a = bd.getUint32(3, Endian.little);
+      final b = bd.getUint32(7, Endian.little);
+      final c = bd.getUint32(11, Endian.little);
+      _log('[COMMS] RECORD COUNTS: $a / $b / $c records pending');
+    }
   }
 
   Future<void> _initAsync() async {
@@ -126,12 +164,33 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     state = state.copyWith(state: SessionState.authenticating);
     try {
       _log('Starting ECDH auth handshake ...');
-      await _runEcdhAuth();
+      final authResult = await _runEcdhAuth();
       _log('Auth SUCCESS — strap is authenticated');
-      // Re-subscribe to 0x0004/0x0005 AFTER auth — handshake resets notifications
+
       final gatt = _gatt;
       if (gatt is StrapGattConnection) {
+        // Set up EncryptedEndpoint on 0x0017 to handle services list ACK
+        _log('Setting up EncryptedEndpoint (encrypted chunked transport) ...');
+        _huamiComms = EncryptedEndpoint(
+          sessionKey: authResult.sessionKey,
+          sequence: authResult.sequence,
+          writeChunk: gatt.writeChunked,
+          writeAck: (bytes) async {
+            await gatt.writeChunked(bytes);
+          },
+          onPayload: _handlePayload,
+          log: (msg) => _log('[COMMS] $msg'),
+        );
+
+        // Switch the 0x0017 notification handler to EncryptedEndpoint
+        gatt.switchToComms(_huamiComms!);
+
+        // Re-subscribe to 0x0004/0x0005 AFTER auth — handshake resets notifications
         await gatt.resubscribeNotifications();
+
+        // Wait for strap to send services list and for EncryptedEndpoint to ACK it
+        _log('Waiting for services list ...');
+        await Future<void>.delayed(const Duration(seconds: 2));
       }
       state = state.copyWith(state: SessionState.connected);
     } catch (e) {
@@ -152,7 +211,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     );
   }
 
-  Future<void> _runEcdhAuth() async {
+  Future<({Uint8List sessionKey, int sequence})> _runEcdhAuth() async {
     final authKey = await _authStorage.readBytes();
     if (authKey == null) throw StateError('No auth key stored');
 
@@ -182,6 +241,11 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     );
     await sub.cancel();
     if (!ok) throw StateError('Auth handshake failed or timed out');
+
+    return (
+      sessionKey: auth.sessionKey!,
+      sequence: auth.sequence ?? 0,
+    );
   }
 
   Future<void> startFetch({
