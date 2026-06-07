@@ -30,4 +30,12 @@ class AuthKeyStorage {
   Future<bool> hasKey() async => (await read()) != null;
 
   Future<void> clear() => _store.delete(authKeyStorageKey);
+
+  /// MAC address of the strap — stored so we can connect directly without scanning.
+  Future<void> saveMac(String mac) =>
+      _store.write(strapMacStorageKey, mac.toUpperCase().trim());
+
+  Future<String?> readMac() => _store.read(strapMacStorageKey);
+
+  Future<bool> hasMac() async => (await readMac()) != null;
 }

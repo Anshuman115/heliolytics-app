@@ -18,6 +18,7 @@ const String liveHeartRateTypeCode = '0x2a37';
 const String appDocsSubdir = 'heliolytics';
 const String sessionsSubdir = 'sessions';
 const String authKeyStorageKey = 'heliolytics.auth_key';
+const String strapMacStorageKey = 'heliolytics.strap_mac';
 const int defaultFetchWindowHours = 48;
 const int defaultListenDurationSec = 300;
 const int scanTimeoutSec = 10;

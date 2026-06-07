@@ -50,7 +50,7 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: (snap.state == SessionState.idle || snap.state == SessionState.error)
-                ? () => ref.read(syncOrchestratorProvider.notifier).scan()
+                ? () => ref.read(syncOrchestratorProvider.notifier).connect()
                 : null,
             icon: const Icon(Icons.bluetooth_searching),
             label: const Text('Connect to ring'),

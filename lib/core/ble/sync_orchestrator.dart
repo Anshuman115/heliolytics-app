@@ -5,26 +5,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/core/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/core/ble/ble_devices.dart';
 import 'package:heliolytics/core/ble/connector.dart';
-import 'package:heliolytics/core/ble/scanner.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
 import 'package:heliolytics/core/ble/device_handshake.dart';
-import 'package:heliolytics/core/constants.dart';
 import 'package:heliolytics/features/ble_discovery/data/data_requester.dart';
 import 'package:heliolytics/features/ble_discovery/data/session_store.dart';
 import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
 
 class SyncOrchestrator extends Notifier<SessionSnapshot> {
   late AuthKeyStorage _authStorage;
-  late BleScanner _scanner;
   late BleConnector _connector;
   SessionStore? _store;
-  StreamSubscription<DiscoveredDevice>? _scanSub;
   GattConnection? _gatt;
 
   @override
   SessionSnapshot build() {
     _authStorage = AuthKeyStorage(store: ref.read(authKeyStoreProvider));
-    _scanner = ref.read(bleScannerProvider);
     _connector = ref.read(bleConnectorProvider);
     _initAsync();
     return SessionSnapshot.initial;
@@ -33,8 +28,9 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   Future<void> _initAsync() async {
     _store = await ref.read(sessionStoreProvider.future);
     final hasKey = await _authStorage.hasKey();
+    final hasMac = await _authStorage.hasMac();
     state = state.copyWith(
-      state: hasKey ? SessionState.idle : SessionState.noAuthKey,
+      state: (hasKey && hasMac) ? SessionState.idle : SessionState.noAuthKey,
     );
   }
 
@@ -48,72 +44,69 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     state = state.copyWith(state: SessionState.noAuthKey);
   }
 
-  Future<void> scan() async {
+  /// Connect directly by MAC address — no scanning needed.
+  /// The strap MAC is saved during setup alongside the auth key.
+  Future<void> connect() async {
     if (state.state != SessionState.idle && state.state != SessionState.error) return;
-    // Reset error state before retrying
     if (state.state == SessionState.error) {
       state = state.copyWith(state: SessionState.idle, error: SessionError.none);
     }
-    state = state.copyWith(state: SessionState.scanning, error: SessionError.none);
-    final completer = Completer<String?>();
-    try {
-      _scanSub = _scanner
-          .scan(timeout: const Duration(seconds: scanTimeoutSec))
-          .listen(
-            (d) { if (!completer.isCompleted) completer.complete(d.remoteId); },
-            onError: (Object e) {
-              if (!completer.isCompleted) completer.complete(null);
-              state = state.copyWith(
-                state: SessionState.error,
-                error: SessionError.scanFailed,
-                lastErrorMessage: e.toString(),
-              );
-            },
-          );
-    } catch (e) {
+
+    final mac = await _authStorage.readMac();
+    if (mac == null || mac.isEmpty) {
       state = state.copyWith(
         state: SessionState.error,
         error: SessionError.scanFailed,
-        lastErrorMessage: e.toString(),
+        lastErrorMessage: 'No strap MAC address saved. Go back and enter it.',
       );
       return;
     }
 
-    final id = await completer.future.timeout(
-      const Duration(seconds: scanTimeoutSec + 1),
-      onTimeout: () {
-        _scanSub?.cancel();
-        state = state.copyWith(
-          state: SessionState.error,
-          error: SessionError.scanTimeout,
-        );
-        return null;
-      },
-    );
-    await _scanSub?.cancel();
-    if (id == null) return;
-    await _connectAndAuth(id);
+    // ignore: avoid_print
+    print('[SESSION] connecting directly to MAC $mac');
+    await _connectAndAuth(mac);
+  }
+
+  /// Save both auth key and MAC address together.
+  Future<void> saveAuthKeyAndMac(String key, String mac) async {
+    await _authStorage.save(key);
+    await _authStorage.saveMac(mac);
+    state = state.copyWith(state: SessionState.idle);
   }
 
   Future<void> _connectAndAuth(String remoteId) async {
     state = state.copyWith(state: SessionState.connecting);
     try {
+      // ignore: avoid_print
+      print('[SESSION] GATT connecting to $remoteId');
       _gatt = await _connector.connect(remoteId);
-    } catch (_) {
+      // ignore: avoid_print
+      print('[SESSION] GATT connected');
+    } catch (e) {
+      // ignore: avoid_print
+      print('[SESSION] GATT failed: $e');
       state = state.copyWith(
         state: SessionState.error,
         error: SessionError.gattFailed,
+        lastErrorMessage: 'Connect failed: $e',
       );
       return;
     }
     state = state.copyWith(state: SessionState.authenticating);
     try {
+      // ignore: avoid_print
+      print('[SESSION] starting ECDH auth');
       await _runEcdhAuth();
+      // ignore: avoid_print
+      print('[SESSION] auth SUCCESS');
       state = state.copyWith(state: SessionState.connected);
-    } catch (_) {
+    } catch (e) {
+      // ignore: avoid_print
+      print('[SESSION] auth FAILED: $e');
       state = state.copyWith(
         state: SessionState.error,
         error: SessionError.authRejected,
+        lastErrorMessage: 'Auth failed: $e',
       );
     }
   }

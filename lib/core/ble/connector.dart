@@ -125,12 +125,18 @@ class StrapConnector implements BleConnector {
   @override
   Future<GattConnection> connect(String remoteId) async {
     final device = BluetoothDevice.fromId(remoteId);
+    // ignore: avoid_print
+    print('[STRAP] connecting to $remoteId');
     await device.connect(
-      timeout: const Duration(seconds: 20),
+      timeout: const Duration(seconds: 30),
       autoConnect: false,
     );
+    // ignore: avoid_print
+    print('[STRAP] connected, discovering services...');
     final conn = StrapGattConnection(device);
     await conn.discoverCharacteristics();
+    // ignore: avoid_print
+    print('[STRAP] services discovered, ready');
     return conn;
   }
 }
