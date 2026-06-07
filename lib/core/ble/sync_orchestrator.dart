@@ -5,17 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/core/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/core/ble/ble_devices.dart';
 import 'package:heliolytics/core/ble/connector.dart';
-import 'package:heliolytics/core/ble/ecdh_auth.dart';
 import 'package:heliolytics/core/ble/scanner.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
+import 'package:heliolytics/core/ble/device_handshake.dart';
 import 'package:heliolytics/core/constants.dart';
+import 'package:heliolytics/features/ble_discovery/data/data_requester.dart';
 import 'package:heliolytics/features/ble_discovery/data/session_store.dart';
+import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
 
 class SyncOrchestrator extends Notifier<SessionSnapshot> {
   late AuthKeyStorage _authStorage;
   late BleScanner _scanner;
   late BleConnector _connector;
-  // ignore: unused_field — wired in Task 27
   SessionStore? _store;
   StreamSubscription<DiscoveredDevice>? _scanSub;
   GattConnection? _gatt;
@@ -94,27 +95,99 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     }
   }
 
-  /// ECDH + AES challenge flow. The real ring wiring is done in Task 26.
+  /// ZeppOS ECDH auth handshake over char 0x0016/0x0017.
   Future<void> _runEcdhAuth() async {
-    final kp = EcdhAuth.generateKeypair();
     final authKey = await _authStorage.readBytes();
-    if (authKey == null) throw StateError('No auth key');
-    final payload = EcdhAuth.buildAuthPayload(kp.publicKey);
-    await _gatt!.writeChunked(payload);
-    // Real response handling wired in Task 26.
-    throw UnimplementedError('Real ECDH auth over BLE wired in Task 26');
+    if (authKey == null) throw StateError('No auth key stored');
+
+    final gatt = _gatt;
+    if (gatt is! StrapGattConnection) {
+      // In tests, _FakeGatt is used — skip real auth in that case.
+      throw StateError(
+          'GattConnection is not a StrapGattConnection; cannot run real auth');
+    }
+
+    final done = Completer<bool>();
+    final auth = DeviceHandshake(
+      authKey: authKey,
+      writeChunk: gatt.writeChunked,
+      log: (_) {/* could wire to a logger */},
+      onSuccess: () {
+        if (!done.isCompleted) done.complete(true);
+      },
+      onFailure: (r) {
+        if (!done.isCompleted) done.complete(false);
+      },
+    );
+
+    final sub = gatt.incoming.listen(auth.onNotify);
+    await auth.start();
+    final ok = await done.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () => false,
+    );
+    await sub.cancel();
+    if (!ok) throw StateError('Auth handshake failed or timed out');
   }
 
-  /// Stub startFetch. Full implementation wired in Task 27.
   Future<void> startFetch({
     required List<String> typeCodes,
     required int fetchWindowHours,
     required int listenDurationSec,
   }) async {
     if (state.state != SessionState.connected) return;
+    final store = _store;
+    if (store == null) return;
+
+    final gatt = _gatt;
+    if (gatt is! StrapGattConnection) return;
+
     state = state.copyWith(state: SessionState.fetching);
-    // Full DataRequester loop wired in Task 27
-    state = state.copyWith(state: SessionState.idle);
+
+    final sessionId = await store.createSession(
+      deviceMac: null,
+      fetchWindowHours: fetchWindowHours,
+      listenDurationSec: listenDurationSec,
+      mode: SessionMode.fetchAndListen,
+    );
+
+    final since = DateTime.now().toUtc().subtract(Duration(hours: fetchWindowHours));
+    final requester = DataRequester(gatt);
+    final entries = <DumpEntry>[];
+
+    for (final code in typeCodes) {
+      state = state.copyWith(currentTypeCode: code);
+      try {
+        final typeInt = int.parse(
+          code.startsWith('0x') ? code.substring(2) : code,
+          radix: 16,
+        );
+        final result = await requester.fetchType(typeInt, since);
+        if (result.rawBytes.isNotEmpty) {
+          await store.appendBytes(sessionId, code, result.rawBytes);
+        }
+        entries.add(result.entry);
+      } catch (_) {
+        entries.add(DumpEntry(
+          code: code,
+          status: DumpStatus.unknown,
+          samples: 0,
+          bytes: 0,
+        ));
+      }
+    }
+
+    await store.writeCatalogJson(SessionCatalog(
+      sessionId: sessionId,
+      chunked: entries,
+      unsolicited: const [],
+    ));
+
+    state = state.copyWith(
+      state: SessionState.idle,
+      currentTypeCode: null,
+      lastSession: await store.readSessionJson(sessionId),
+    );
   }
 }
 

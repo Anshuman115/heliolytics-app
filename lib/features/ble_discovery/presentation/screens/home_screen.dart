@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:heliolytics/core/ble/sync_orchestrator.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
+import 'package:heliolytics/core/constants.dart';
 import 'package:heliolytics/features/ble_discovery/presentation/widgets/discovery_summary_card.dart';
 import 'package:heliolytics/features/ble_discovery/presentation/screens/sessions_screen.dart';
 
@@ -39,6 +40,19 @@ class HomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.bluetooth_searching),
             label: const Text('Connect to ring'),
           ),
+          if (snap.state == SessionState.connected) ...[
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: () =>
+                  ref.read(syncOrchestratorProvider.notifier).startFetch(
+                        typeCodes: [...knownTypeCodes, '0x26'],
+                        fetchWindowHours: defaultFetchWindowHours,
+                        listenDurationSec: defaultListenDurationSec,
+                      ),
+              icon: const Icon(Icons.download),
+              label: const Text('Fetch (last 2 days)'),
+            ),
+          ],
           const SizedBox(height: 16),
           if (last != null) DiscoverySummaryCard(session: last),
         ],

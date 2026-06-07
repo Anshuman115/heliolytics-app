@@ -1,12 +1,16 @@
 const String huamiServiceUUID = '0000fee0-0000-1000-8000-00805f9b34fb';
 const String chunkedWriteUUID = '00000016-0000-3512-2118-0009af100700';
-const String chunkedReadUUID  = '00000017-0000-3512-2118-0009af100700';
+/// Chunked notify characteristic (0x0017) — used for auth responses.
+const String chunkedNotifyUUID = '00000017-0000-3512-2118-0009af100700';
+
+/// Deprecated alias for [chunkedNotifyUUID]. Kept for backward compatibility.
+const String chunkedReadUUID = chunkedNotifyUUID;
 const String activityControlUUID = '00000004-0000-3512-2118-0009af100700';
 const String activityDataUUID    = '00000005-0000-3512-2118-0009af100700';
 const String liveHeartRateUUID   = '00002a37-0000-1000-8000-00805f9b34fb';
 
 const List<String> knownTypeCodes = [
-  '0x01', '0x05', '0x13', '0x25', '0x2E',
+  '0x01', '0x05', '0x13', '0x25', '0x26', '0x2E',
   '0x38', '0x3A', '0x3D', '0x48', '0x49',
 ];
 
