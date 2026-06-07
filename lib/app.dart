@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:heliolytics/ble/sync_orchestrator.dart';
-import 'package:heliolytics/ble/session_state.dart';
-import 'package:heliolytics/ui/auth_key_screen.dart';
-import 'package:heliolytics/ui/home_screen.dart';
+import 'package:heliolytics/core/ble/sync_orchestrator.dart';
+import 'package:heliolytics/core/ble/session_state.dart';
+import 'package:heliolytics/features/ble_discovery/presentation/screens/auth_key_screen.dart';
+import 'package:heliolytics/features/ble_discovery/presentation/screens/home_screen.dart';
 
 class HeliolyticsApp extends ConsumerWidget {
   const HeliolyticsApp({super.key});

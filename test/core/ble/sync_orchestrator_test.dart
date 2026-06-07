@@ -5,14 +5,14 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:heliolytics/auth/auth_key_storage.dart';
-import 'package:heliolytics/auth/auth_key_store.dart';
-import 'package:heliolytics/ble/ble_devices.dart';
-import 'package:heliolytics/ble/connector.dart';
-import 'package:heliolytics/ble/scanner.dart';
-import 'package:heliolytics/ble/sync_orchestrator.dart';
-import 'package:heliolytics/ble/session_state.dart';
-import 'package:heliolytics/data/session_store.dart';
+import 'package:heliolytics/core/ble/auth/auth_key_storage.dart';
+import 'package:heliolytics/core/ble/auth/auth_key_store.dart';
+import 'package:heliolytics/core/ble/ble_devices.dart';
+import 'package:heliolytics/core/ble/connector.dart';
+import 'package:heliolytics/core/ble/scanner.dart';
+import 'package:heliolytics/core/ble/sync_orchestrator.dart';
+import 'package:heliolytics/core/ble/session_state.dart';
+import 'package:heliolytics/features/ble_discovery/data/session_store.dart';
 
 class _MemStore implements AuthKeyStore {
   String? k;

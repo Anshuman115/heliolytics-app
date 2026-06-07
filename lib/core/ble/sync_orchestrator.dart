@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:heliolytics/auth/auth_key_storage.dart';
-import 'package:heliolytics/ble/ble_devices.dart';
-import 'package:heliolytics/ble/connector.dart';
-import 'package:heliolytics/ble/ecdh_auth.dart';
-import 'package:heliolytics/ble/scanner.dart';
-import 'package:heliolytics/ble/session_state.dart';
-import 'package:heliolytics/config/constants.dart';
-import 'package:heliolytics/data/session_store.dart';
+import 'package:heliolytics/core/ble/auth/auth_key_storage.dart';
+import 'package:heliolytics/core/ble/ble_devices.dart';
+import 'package:heliolytics/core/ble/connector.dart';
+import 'package:heliolytics/core/ble/ecdh_auth.dart';
+import 'package:heliolytics/core/ble/scanner.dart';
+import 'package:heliolytics/core/ble/session_state.dart';
+import 'package:heliolytics/core/constants.dart';
+import 'package:heliolytics/features/ble_discovery/data/session_store.dart';
 
 class SyncOrchestrator extends Notifier<SessionSnapshot> {
   late AuthKeyStorage _authStorage;

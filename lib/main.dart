@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:heliolytics/app.dart';
-import 'package:heliolytics/auth/auth_key_storage.dart';
-import 'package:heliolytics/auth/auth_key_store.dart';
+import 'package:heliolytics/core/ble/auth/auth_key_storage.dart';
+import 'package:heliolytics/core/ble/auth/auth_key_store.dart';
 
 class _SecureStore implements AuthKeyStore {
   final _s = const FlutterSecureStorage(
