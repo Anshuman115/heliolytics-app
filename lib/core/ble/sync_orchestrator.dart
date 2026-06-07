@@ -10,6 +10,7 @@ import 'package:heliolytics/core/ble/session_state.dart';
 import 'package:heliolytics/core/ble/encrypted_endpoint.dart';
 import 'package:heliolytics/core/ble/device_handshake.dart';
 import 'package:heliolytics/core/constants.dart';
+import 'package:heliolytics/core/utils/huami_time.dart';
 import 'package:heliolytics/features/ble_discovery/data/data_requester.dart';
 import 'package:heliolytics/features/ble_discovery/data/session_store.dart';
 import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
@@ -18,11 +19,14 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   late AuthKeyStorage _authStorage;
   late BleConnector _connector;
   SessionStore? _store;
-  GattConnection? _gatt;
-  EncryptedEndpoint? _huamiComms;
   bool _connecting = false;
   final List<String> _logs = [];
   final List<TypeCodeResult> _results = [];
+
+  StrapGattConnection? _gatt;
+  EncryptedEndpoint? _comms;
+  StreamSubscription<List<int>>? _controlSub;
+  StreamSubscription<List<int>>? _dataSub;
 
   @override
   SessionSnapshot build() {
@@ -51,7 +55,6 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     _log('[COMMS] endpoint 0x${endpoint.toRadixString(16).padLeft(4, '0')} '
         '(${payload.length}B): $hex');
 
-    // Services list reply: [0x04, count(u16 LE), (endpoint u16 LE, encrypted u8)×N]
     if (endpoint == 0x0000 && payload.length >= 3 && payload[0] == 0x04) {
       final bd = ByteData.sublistView(Uint8List.fromList(payload));
       final n = bd.getUint16(1, Endian.little);
@@ -69,7 +72,6 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       _log('[COMMS] activity-fetch service 0x004b: $has4b');
     }
 
-    // Record-counts reply
     if (endpoint == 0x0016 && payload.length >= 15 &&
         payload[0] == 0x04 && payload[1] == 0x01) {
       final bd = ByteData.sublistView(Uint8List.fromList(payload));
@@ -151,11 +153,11 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   Future<bool> hasSavedMac() => _authStorage.hasMac();
 
   Future<void> _connectAndAuth(String remoteId) async {
-    final done = Completer<bool>();
-
     state = state.copyWith(state: SessionState.connecting);
+
+    // --- connect ---
     try {
-      _gatt = await _connector.connect(remoteId);
+      _gatt = (await _connector.connect(remoteId)) as StrapGattConnection;
     } catch (e) {
       _log('connect failed: $e');
       state = state.copyWith(
@@ -166,18 +168,20 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       return;
     }
 
-    final gatt = _gatt as StrapGattConnection;
+    final gatt = _gatt!;
     state = state.copyWith(state: SessionState.authenticating);
 
+    // --- auth ---
     final authKey = await _authStorage.readBytes();
     if (authKey == null) {
       _log('No auth key stored');
       return;
     }
 
+    final done = Completer<bool>();
     final auth = DeviceHandshake(
       authKey: authKey,
-      log: (msg) => _log(msg),
+      log: (msg) => _log('[AUTH] $msg'),
       writeChunk: (chunk) async {
         await gatt.writeChunked(chunk);
       },
@@ -189,6 +193,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       },
     );
 
+    // Route 0x0017 notifications to auth handler
     gatt.setNotifyHandler(auth.onNotify);
 
     await auth.start();
@@ -200,7 +205,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       },
     );
     if (!authed) {
-      _log('auth failed');
+      _log('Auth FAILED');
       state = state.copyWith(
         state: SessionState.error,
         error: SessionError.authRejected,
@@ -209,67 +214,70 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       return;
     }
 
-    _log('Auth SUCCESS — strap is authenticated');
+    _log('Auth SUCCESS');
 
-    // ---- post-auth: comms + activity fetch (matches Huami protocol _postAuth) ----
-    _huamiComms = EncryptedEndpoint(
-      sessionKey: auth.sessionKey,
-      sequence: auth.sequence ?? 0,
-      log: (msg) => _log(msg),
-      writeChunk: (c) => gatt.writeChunked(c),
-      writeAck: (c) => gatt.writeNotify(c),
-      onPayload: _handlePayload,
-    );
+    // --- post-auth: comms ---
+    try {
+      _comms = EncryptedEndpoint(
+        sessionKey: auth.sessionKey,
+        sequence: auth.sequence ?? 0,
+        log: (msg) => _log('[COMMS] $msg'),
+        writeChunk: (c) => gatt.writeChunked(c),
+        writeAck: (c) => gatt.writeNotify(c),
+        onPayload: _handlePayload,
+      );
+      _log('EncryptedEndpoint created');
+    } catch (e) {
+      _log('EncryptedEndpoint FAILED: $e');
+      return;
+    }
 
-    gatt.setNotifyHandler(_huamiComms!.onNotify);
+    // Switch 0x0017 from auth to comms
+    gatt.setNotifyHandler(_comms!.onNotify);
+    _log('0x0017 handler switched to comms');
 
-    // Re-subscribe 0x0004/0x0005 after auth
-    await gatt.resubscribeNotifications();
+    // --- post-auth: activity fetch chars ---
+    try {
+      await gatt.resubscribeNotifications();
+      _log('0x0004/0x0005 re-subscribed');
+    } catch (e) {
+      _log('resubscribe FAILED: $e');
+      return;
+    }
 
-    // Wait for services list from strap
-    _log('Waiting for services list ...');
+    // Wait for strap services list
+    _log('Waiting for services list (2s)...');
     await Future.delayed(const Duration(seconds: 2));
 
     state = state.copyWith(state: SessionState.connected);
+    _log('Connected — starting fetch');
 
-    _log('Auto-fetching all data types ...');
-    await startFetch(
-      typeCodes: allTypeCodes,
-      fetchWindowHours: defaultFetchWindowHours,
-      listenDurationSec: defaultListenDurationSec,
-    );
+    // --- fetch all types ---
+    await _fetchAllTypes();
   }
 
-  Future<void> startFetch({
-    required List<String> typeCodes,
-    required int fetchWindowHours,
-    required int listenDurationSec,
-  }) async {
-    if (state.state != SessionState.connected) return;
-    final store = _store;
-    if (store == null) return;
-
+  Future<void> _fetchAllTypes() async {
     final gatt = _gatt;
-    if (gatt is! StrapGattConnection) return;
+    final store = _store;
+    if (gatt == null || store == null) return;
 
     state = state.copyWith(state: SessionState.fetching);
     _results.clear();
 
     final sessionId = await store.createSession(
       deviceMac: await _authStorage.readMac(),
-      fetchWindowHours: fetchWindowHours,
-      listenDurationSec: listenDurationSec,
+      fetchWindowHours: defaultFetchWindowHours,
+      listenDurationSec: defaultListenDurationSec,
       mode: SessionMode.fetchAndListen,
     );
 
     final since =
-        DateTime.now().toUtc().subtract(Duration(hours: fetchWindowHours));
-    _log('Fetch window: last ${fetchWindowHours}h since ${since.toIso8601String()}');
+        DateTime.now().toUtc().subtract(Duration(hours: defaultFetchWindowHours));
+    _log('Fetch window: last ${defaultFetchWindowHours}h since ${since.toIso8601String()}');
 
-    final requester = DataRequester(gatt);
     final entries = <DumpEntry>[];
 
-    for (final code in typeCodes) {
+    for (final code in allTypeCodes) {
       final label = typeCodeLabels[code] ?? code;
       state = state.copyWith(currentTypeCode: code);
       _log('Fetching $code ($label) ...');
@@ -279,7 +287,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
           code.startsWith('0x') ? code.substring(2) : code,
           radix: 16,
         );
-        final result = await requester.fetchType(typeInt, since);
+        final result = await _fetchOneType(gatt, typeInt, since);
         final entry = result.entry;
 
         String status;
@@ -362,6 +370,104 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       currentTypeCode: null,
       lastSession: await store.readSessionJson(sessionId),
     );
+  }
+
+  Future<FetchResult> _fetchOneType(
+    StrapGattConnection gatt,
+    int typeCode,
+    DateTime since,
+  ) async {
+    const response = 0x10;
+    const cmdStartDate = 0x01;
+    const cmdFetchData = 0x02;
+    const cmdAck = 0x03;
+    const ackKeep = 0x09;
+
+    final data = BytesBuilder();
+    int lastCounter = -1;
+    int rounds = 0;
+    String status = 'rejected';
+
+    final controlDone = Completer<void>();
+    final controlBuf = <Uint8List>[];
+
+    final controlSub = gatt.controlStream.listen((p) {
+      controlBuf.add(Uint8List.fromList(p));
+    });
+
+    final dataSub = gatt.dataStream.listen((p) {
+      if (p.isEmpty) return;
+      final counter = p[0];
+      lastCounter = counter;
+      final payload = p.sublist(1);
+      if (payload.isNotEmpty) data.add(payload);
+      rounds++;
+    });
+
+    // Send start command
+    final startCmd = [
+      cmdStartDate,
+      typeCode,
+      ...HuamiTime.fromDateTime(since),
+    ];
+    await gatt.writeControl(startCmd);
+
+    // Wait for control reply (5s)
+    await Future.delayed(const Duration(seconds: 5));
+
+    // Process control replies
+    await controlSub.cancel();
+    for (final p in controlBuf) {
+      if (p.length < 3 || p[0] != response) continue;
+      final cmd = p[1];
+      final st = p[2];
+      if (cmd == cmdStartDate) {
+        if (st != 0x01) {
+          status = 'rejected';
+          break;
+        }
+        // Parse expected count
+        if (p.length >= 7) {
+          final expected = ByteData.sublistView(Uint8List.fromList(p), 3, 7)
+              .getUint32(0, Endian.little);
+          if (expected == 0) {
+            status = 'empty';
+            await gatt.writeControl([cmdAck, ackKeep]);
+            break;
+          }
+        }
+        status = 'ok';
+        await gatt.writeControl([cmdFetchData]);
+        // Wait for data (15s)
+        await Future.delayed(const Duration(seconds: 15));
+        await gatt.writeControl([cmdAck, ackKeep]);
+      }
+    }
+    await dataSub.cancel();
+
+    final raw = data.toBytes();
+    final hexCode = '0x${typeCode.toRadixString(16).padLeft(2, '0').toUpperCase()}';
+    return FetchResult(
+      entry: DumpEntry(
+        code: hexCode,
+        status: _parseDumpStatus(status),
+        samples: raw.length ~/ 4,
+        bytes: raw.length,
+        file: '${hexCode}_raw.bin',
+      ),
+      rawBytes: raw.toList(),
+    );
+  }
+
+  DumpStatus _parseDumpStatus(String s) {
+    switch (s) {
+      case 'ok':
+        return DumpStatus.ok;
+      case 'empty':
+        return DumpStatus.empty;
+      default:
+        return DumpStatus.rejected;
+    }
   }
 
   String? _bytesToHex(List<int> bytes) {
