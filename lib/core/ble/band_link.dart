@@ -165,9 +165,9 @@ class BandLink {
     final f = fetcher;
     if (f == null) return (raw: Uint8List(0), expected: -1, skipped: false);
 
-    // Probe: get expected count quickly
+    // Probe: get expected count quickly (1.5s matches Huami protocol's probe timeout)
     await f.fetchType(code, since,
-        probeOnly: true, timeout: const Duration(seconds: 5));
+        probeOnly: true, timeout: const Duration(milliseconds: 1500));
     final expected = f.lastExpected;
 
     if (expected < 0) {
