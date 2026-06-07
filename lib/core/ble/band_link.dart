@@ -166,7 +166,8 @@ class BandLink {
 
     // Only skip permanently-huge known dumps (debug logs / raw PPG) that
     // would take hours and provide no structured health data.
-    const skipCodes = {0x07, 0x58}; // debug logs, raw PPG dump
+    // 0x07=debug logs, 0x55=9M pkts raw dump, 0x57=1.8M pkts raw dump, 0x58=raw PPG
+    const skipCodes = {0x07, 0x55, 0x57, 0x58};
     if (skipCodes.contains(code)) {
       // Probe to get count for logging, then skip
       await f.fetchType(code, since,
