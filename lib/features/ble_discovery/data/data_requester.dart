@@ -16,11 +16,11 @@ class FetchResult {
 /// Fetches one data type from the strap via the legacy plaintext path:
 /// commands on char 0x0004 (control), data on char 0x0005 (data notify).
 class DataRequester {
-  static const int _cmdStart = 0x01;
-  static const int _cmdFetch = 0x02;
+  static const int _response = 0x10;
+  static const int _cmdStartDate = 0x01;
+  static const int _cmdFetchData = 0x02;
   static const int _cmdAck = 0x03;
   static const int _ackKeep = 0x09; // keep data on device after reading
-  static const int _response = 0x10;
 
   final StrapGattConnection _gatt;
   DataRequester(this._gatt);
@@ -29,26 +29,46 @@ class DataRequester {
   /// and raw bytes for storage.
   Future<FetchResult> fetchType(int typeCode, DateTime since) async {
     final data = BytesBuilder();
+    final allRaw = BytesBuilder();
     int lastCounter = -1;
+    int rounds = 0;
+    int expectedPackets = -1;
     String status = 'rejected';
-    String? errorByte;
 
     final controlCompleter = Completer<void>();
 
     final controlSub = _gatt.controlStream.listen((p) {
-      if (p.length < 3 || p[0] != _response) return;
+      // ignore: avoid_print
+      print('[FETCH] control notify: ${p.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+
+      if (p.length < 3 || p[0] != _response) {
+        // ignore: avoid_print
+        print('[FETCH]   not a response (first byte: ${p.isNotEmpty ? p[0].toRadixString(16) : "empty"})');
+        return;
+      }
       final cmd = p[1];
       final st = p[2];
-      if (cmd == _cmdStart) {
+      // ignore: avoid_print
+      print('[FETCH]   cmd=0x${cmd.toRadixString(16)} status=0x${st.toRadixString(16)}');
+
+      if (cmd == _cmdStartDate) {
         if (st != 0x01) {
           status = 'rejected';
-          errorByte = '0x${st.toRadixString(16).padLeft(2, '0')}';
+          // ignore: avoid_print
+          print('[FETCH]   start rejected (status=0x${st.toRadixString(16)})');
           if (!controlCompleter.isCompleted) controlCompleter.complete();
           return;
         }
-        final expectedPackets = p.length >= 6
-            ? (p[4] | (p[5] << 8))
-            : 0;
+        // Parse expected packet count from bytes 3-6 (u32 LE)
+        if (p.length >= 7) {
+          expectedPackets = ByteData.sublistView(Uint8List.fromList(p), 3, 7)
+              .getUint32(0, Endian.little);
+        } else if (p.length >= 6) {
+          expectedPackets = p[3] | (p[4] << 8) | (p[5] << 16) | (p.length > 6 ? (p[6] << 24) : 0);
+        }
+        // ignore: avoid_print
+        print('[FETCH]   expected packets: $expectedPackets');
+
         if (expectedPackets == 0) {
           status = 'empty';
           _gatt.writeControl([_cmdAck, _ackKeep]);
@@ -56,49 +76,69 @@ class DataRequester {
           return;
         }
         status = 'ok';
-        _gatt.writeControl([_cmdFetch]);
-      } else if (cmd == _cmdFetch) {
+        _gatt.writeControl([_cmdFetchData]);
+        // ignore: avoid_print
+        print('[FETCH]   sent fetch command');
+      } else if (cmd == _cmdFetchData) {
         if (st != 0x01) {
+          status = 'rejected';
+          // ignore: avoid_print
+          print('[FETCH]   fetch failed (status=0x${st.toRadixString(16)})');
           if (!controlCompleter.isCompleted) controlCompleter.complete();
           return;
         }
         _gatt.writeControl([_cmdAck, _ackKeep]);
         if (!controlCompleter.isCompleted) controlCompleter.complete();
+      } else if (cmd == _cmdAck) {
+        // Device reply to our ack — ignore
       }
     });
 
     final dataSub = _gatt.dataStream.listen((p) {
       if (p.isEmpty) return;
       final counter = p[0];
-      // Counter gap is logged but we continue collecting.
       if (lastCounter >= 0 && counter != ((lastCounter + 1) & 0xFF)) {
-        // Gap detected — data may be incomplete.
+        // ignore: avoid_print
+        print('[FETCH]   counter gap: got=$counter expected=${(lastCounter + 1) & 0xFF}');
       }
       lastCounter = counter;
-      if (p.length > 1) data.add(p.sublist(1));
+      final payload = p.sublist(1);
+      if (payload.isNotEmpty) data.add(payload);
+      rounds++;
+      // ignore: avoid_print
+      print('[FETCH]   data pkt #$rounds: counter=$counter ${payload.length}B');
     });
 
-    // Send the start command: [0x01, typeCode, timestamp(4 bytes big-endian)]
+    // Send the start command: [0x01, typeCode, ...HuamiTime(8 bytes)]
     final startCmd = [
-      _cmdStart,
+      _cmdStartDate,
       typeCode,
-      ...HuamiTime.fromDateTime(since.toUtc()),
+      ...HuamiTime.fromDateTime(since),
     ];
+    // ignore: avoid_print
+    print('[FETCH] sending start: ${startCmd.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
     await _gatt.writeControl(startCmd);
 
     // Wait for control acknowledgment (5 sec timeout)
     await controlCompleter.future
-        .timeout(const Duration(seconds: 5), onTimeout: () {});
+        .timeout(const Duration(seconds: 5), onTimeout: () {
+      // ignore: avoid_print
+      print('[FETCH]   control timeout — no response from strap');
+    });
 
+    // If data is coming, wait for it to finish (up to 15 sec)
     if (status == 'ok') {
-      // Allow data notifications to arrive (10 sec)
-      await Future<void>.delayed(const Duration(seconds: 10));
+      // ignore: avoid_print
+      print('[FETCH] waiting for data packets (up to 15s)...');
+      await Future<void>.delayed(const Duration(seconds: 15));
     }
 
     await controlSub.cancel();
     await dataSub.cancel();
 
     final raw = data.toBytes();
+    if (raw.isNotEmpty) allRaw.add(raw);
+
     final hexCode =
         '0x${typeCode.toRadixString(16).padLeft(2, '0').toUpperCase()}';
     return FetchResult(
@@ -108,9 +148,8 @@ class DataRequester {
         samples: raw.length ~/ 4,
         bytes: raw.length,
         file: '${hexCode}_raw.bin',
-        errorByte: errorByte,
       ),
-      rawBytes: raw,
+      rawBytes: allRaw.toBytes(),
     );
   }
 

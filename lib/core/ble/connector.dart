@@ -74,6 +74,8 @@ class StrapGattConnection implements GattConnection {
           _controlChar = c;
           await c.setNotifyValue(true);
           _controlSub = c.onValueReceived.listen((v) {
+            // ignore: avoid_print
+            print('[STRAP] control notify on 0x0004: ${v.length} bytes');
             if (v.isNotEmpty) _incomingControl.add(Uint8List.fromList(v));
           });
         }
@@ -81,6 +83,8 @@ class StrapGattConnection implements GattConnection {
           _dataChar = c;
           await c.setNotifyValue(true);
           _dataSub = c.onValueReceived.listen((v) {
+            // ignore: avoid_print
+            print('[STRAP] data notify on 0x0005: ${v.length} bytes');
             if (v.isNotEmpty) _incomingData.add(Uint8List.fromList(v));
           });
         }

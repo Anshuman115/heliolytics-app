@@ -4,13 +4,13 @@ import 'package:heliolytics/core/ble/parsers/hrv.dart';
 
 void main() {
   test('parses a single 6-byte sample', () {
-    // timestamp (4 bytes BE) for 2026-06-07 + rmssd=0x42 + unknown=0xFF
+    // timestamp (4 bytes LE) for 2026-06-07 + rmssd=0x42 + unknown=0xFF
     final seconds = DateTime.utc(2026, 6, 7).millisecondsSinceEpoch ~/ 1000;
     final tsBytes = [
-      (seconds >> 24) & 0xFF,
-      (seconds >> 16) & 0xFF,
-      (seconds >> 8) & 0xFF,
       seconds & 0xFF,
+      (seconds >> 8) & 0xFF,
+      (seconds >> 16) & 0xFF,
+      (seconds >> 24) & 0xFF,
     ];
     final bytes = Uint8List.fromList([...tsBytes, 0x42, 0xFF]);
     final s = HrvParser.parse(bytes);

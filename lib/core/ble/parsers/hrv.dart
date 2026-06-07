@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:heliolytics/core/utils/huami_time.dart';
+import 'dart:math';
 
 class HrvSample {
   final Uint8List timestampBytes;
@@ -24,9 +24,10 @@ class HrvParser {
     final out = <HrvSample>[];
     for (var i = 0; i < bytes.length; i += 6) {
       final ts = Uint8List.fromList(bytes.sublist(i, i + 4));
+      final sec = ByteData.sublistView(ts).getUint32(0, Endian.little);
       out.add(HrvSample(
         timestampBytes: ts,
-        timestamp: HuamiTime.toDateTime(ts),
+        timestamp: DateTime.fromMillisecondsSinceEpoch(sec * 1000, isUtc: true),
         rmssd: bytes[i + 4],
         unknown: bytes[i + 5],
       ));
