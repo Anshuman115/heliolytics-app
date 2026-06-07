@@ -159,52 +159,33 @@ class BandLink {
   /// This prevents 0x07 GPS / other huge types from hanging the scan.
   Future<({Uint8List raw, int expected, bool skipped})> fetchCode(
     int code,
-    DateTime since, {
-    int maxExpected = 50000,
-    int maxRounds = 400,
-  }) async {
+    DateTime since,
+  ) async {
     final f = fetcher;
     if (f == null) return (raw: Uint8List(0), expected: -1, skipped: false);
 
-    // For codes with known large data (skipProbe), go straight to fetch —
-    // probe+ACK causes the strap to start streaming immediately, corrupting
-    // the subsequent full-fetch start command.
-    final bool skipProbe = maxExpected > 50000;
-
-    if (!skipProbe) {
-    // Probe: get expected count quickly
-    await f.fetchType(code, since,
-        probeOnly: true, timeout: const Duration(milliseconds: 1500));
+    // Only skip permanently-huge known dumps (debug logs / raw PPG) that
+    // would take hours and provide no structured health data.
+    const skipCodes = {0x07, 0x58}; // debug logs, raw PPG dump
+    if (skipCodes.contains(code)) {
+      // Probe to get count for logging, then skip
+      await f.fetchType(code, since,
+          probeOnly: true, timeout: const Duration(milliseconds: 1500));
       final expected = f.lastExpected;
-
-      if (expected < 0) {
-        return (raw: Uint8List(0), expected: expected, skipped: false);
-      }
-      if (expected == 0) {
-        return (raw: Uint8List(0), expected: 0, skipped: false);
-      }
-      if (expected > maxExpected) {
-        log('  skipping 0x${code.toRadixString(16)}: $expected pkts too large');
-        return (raw: Uint8List(0), expected: expected, skipped: true);
-      }
-    }
-
-    // Full fetch — no timeout. If strap says it has data, wait for all of it.
-    // The fetchType completes naturally when all packets are received and ACKed.
-    await f.fetchType(code, since,
-        probeOnly: false, maxRounds: maxRounds,
-        timeout: const Duration(hours: 24)); // effectively no timeout
-    final expected = f.lastExpected;
-
-    if (!skipProbe) {
-      return (raw: f.lastRaw, expected: expected, skipped: false);
-    }
-
-    // For large codes: check if it was actually too large after seeing real count
-    if (expected > maxExpected) {
-      log('  skipping 0x${code.toRadixString(16)}: $expected pkts too large');
+      log('  skipping 0x${code.toRadixString(16)}: $expected pkts (debug/raw dump)');
       return (raw: Uint8List(0), expected: expected, skipped: true);
     }
+
+    // All other codes: go straight to full fetch, no probe, no cap, no timeout.
+    // Probe-then-fetch causes double round-trip which confuses the strap stream.
+    await f.fetchType(code, since,
+        probeOnly: false,
+        maxRounds: 9999,
+        timeout: const Duration(hours: 24));
+    final expected = f.lastExpected;
+
+    if (expected < 0) return (raw: Uint8List(0), expected: expected, skipped: false);
+    if (expected == 0) return (raw: Uint8List(0), expected: 0, skipped: false);
     return (raw: f.lastRaw, expected: expected, skipped: false);
   }
 
