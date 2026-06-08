@@ -1,23 +1,17 @@
 import 'dart:typed_data';
 import 'package:heliolytics/core/utils/crypto.dart';
 
-// ─── Huami-2021 / ZeppOS Chunked Transport ────────────────────────────────
-// Multiplexes logical "endpoints" (auth=0x0082, fetch-control=0x004b, …)
-// over one GATT char pair: 0x0016 (write) and 0x0017 (notify).
-//
-// Each logical message is split into BLE-sized chunks with a small header:
-//   byte 0    = 0x03 (framing marker)
-//   byte 1    = flags: bit0=first, bit1=last, bit2=needsAck, bit3=encrypted
-//   byte 2    = 0x00 (reserved)
-//   byte 3    = write handle (increments per message, wraps at 255)
-//   byte 4    = chunk counter within this message
-//   bytes 5-10 (first chunk only) = 4-byte LE original length + 2-byte LE endpoint
-//
-// Encryption (post-auth):
-//   message key = sessionKey[i] ^ writeHandle  (per-message AES-128-ECB key)
-//   plaintext   = data ‖ seq(4 LE) ‖ crc32(4 LE), zero-padded to 16-byte multiple
-//   The length field in the frame header stays the ORIGINAL (decrypted) length.
-//
+/// Huami-2021 / ZeppOS chunked transport over GATT chars
+/// 0x0016 (write) and 0x0017 (notify). Multiplexes logical "endpoints"
+/// (auth = 0x0082, activity-fetch control = 0x004b, …) onto one char pair.
+///
+/// Ported from Gadgetbridge `Huami2021ChunkedEncoder/Decoder` (primary,
+/// research/protocol/zeppos_ble_handshake.md.
+///
+/// Encryption (post-auth, GB scheme): per-message AES-128-ECB key =
+/// sessionKey[i] ^ writeHandle; plaintext = data ‖ seq(4 LE) ‖ crc32(4 LE),
+/// zero-padded to a 16-byte multiple. The frame's length field stays the
+/// ORIGINAL length; the decoder recomputes the padded ciphertext length.
 
 class GattChunkEncoder {
   int mtu;
@@ -44,8 +38,6 @@ class GattChunkEncoder {
       for (var i = 0; i < 16; i++) {
         messageKey[i] = key[i] ^ _writeHandle;
       }
-      // Plaintext = data(originalLength) + seq(4 bytes) + crc32(4 bytes) = +8.
-      // Then zero-pad to the next 16-byte multiple for AES-128 block alignment.
       var encLen = originalLength + 8;
       final overflow = encLen % 16;
       if (overflow > 0) encLen += 16 - overflow;
@@ -53,7 +45,7 @@ class GattChunkEncoder {
       plain.setRange(0, originalLength, data);
       final seq = _sequence & 0xFFFFFFFF;
       _sequence++;
-      plain[originalLength]     = seq & 0xff;
+      plain[originalLength] = seq & 0xff;
       plain[originalLength + 1] = (seq >> 8) & 0xff;
       plain[originalLength + 2] = (seq >> 16) & 0xff;
       plain[originalLength + 3] = (seq >> 24) & 0xff;
@@ -62,7 +54,7 @@ class GattChunkEncoder {
       plain[originalLength + 5] = (crc >> 8) & 0xff;
       plain[originalLength + 6] = (crc >> 16) & 0xff;
       plain[originalLength + 7] = (crc >> 24) & 0xff;
-      // Note: aes128EcbEncrypt(input, key) — input first, key second.
+      // Note: CryptoUtils.aes128EcbEncrypt(input, key) — input first, key second.
       toSend = CryptoUtils.aes128EcbEncrypt(plain, messageKey);
     }
 
@@ -72,18 +64,15 @@ class GattChunkEncoder {
     var count = 0;
     do {
       final first = count == 0;
-      // First chunk header = 5 common bytes + 6 bytes (length+endpoint) = 11 bytes.
-      // Subsequent chunk headers = 5 common bytes only.
       final header = first ? 11 : 5;
-      // mtu - 3: BLE ATT overhead is 3 bytes (opcode + handle), leaving mtu-3 for the chunk.
       var maxPayload = (mtu - 3) - header;
       if (maxPayload < 1) maxPayload = 1;
       final take = remaining < maxPayload ? remaining : maxPayload;
-      var flags = first ? 0x01 : 0x00; // bit0 = isFirst
-      if (encrypt) flags |= 0x08;       // bit3 = encrypted
+      var flags = first ? 0x01 : 0x00;
+      if (encrypt) flags |= 0x08;
       if (remaining <= maxPayload) {
-        flags |= 0x02; // bit1 = isLast
-        flags |= 0x04; // bit2 = needsAck (always set on last chunk)
+        flags |= 0x02;
+        flags |= 0x04;
       }
       final b = BytesBuilder();
       b.add([0x03, flags, 0x00, _writeHandle & 0xFF, count & 0xFF]);
@@ -119,8 +108,8 @@ class GattChunkDecoder {
   bool _encrypted = false;
   final BytesBuilder _buf = BytesBuilder();
 
-  /// Feed one notification value from char 0x0017.
-  /// Returns the fully reassembled frame on the last chunk, null otherwise.
+  /// Feed one notification value from char 0x0017. Returns the reassembled
+  /// frame on the last chunk, decrypting if needed (requires [sessionKey]).
   HuamiFrame? feed(Uint8List data, {Uint8List? sessionKey}) {
     if (data.length < 5 || data[0] != 0x03) return null;
     var i = 1;
@@ -129,7 +118,7 @@ class GattChunkDecoder {
     final first = (flags & 0x01) != 0;
     final last = (flags & 0x02) != 0;
     final needsAck = (flags & 0x04) != 0;
-    i++; // reserved byte
+    i++; // skip data[2]
     final handle = data[i++];
     final count = data[i++];
     if (_handle != null && _handle != handle) return null;
@@ -157,7 +146,7 @@ class GattChunkDecoder {
         for (var j = 0; j < 16; j++) {
           messageKey[j] = sessionKey[j] ^ handle;
         }
-        // ciphertext length = padded(originalLength + 8)
+        // ciphertext length = padded(length + 8)
         var encLen = _length + 8;
         final overflow = encLen % 16;
         if (overflow > 0) encLen += 16 - overflow;
@@ -165,7 +154,7 @@ class GattChunkDecoder {
           _reset();
           return null;
         }
-        // Note: aes128EcbDecrypt(input, key) — input first, key second.
+        // Note: CryptoUtils.aes128EcbDecrypt(input, key) — input first, key second.
         all = CryptoUtils.aes128EcbDecrypt(
             Uint8List.sublistView(all, 0, encLen), messageKey);
       }

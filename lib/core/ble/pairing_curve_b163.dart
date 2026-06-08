@@ -1,25 +1,24 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-// ─── Sect163k1 ECDH (Binary Curve) ───────────────────────────────────────
-// Pure-Dart port of the Amazfit/Zepp BLE auth curve math.
-//
-// Curve: y² + x·y = x³ + x² + b  over GF(2¹⁶³)
-// Reduction polynomial: x¹⁶³ + x⁷ + x⁶ + x³ + 1
-//
-// cross-checked with Gadgetbridge's ECDH_B163.java.
-//
-// Key sizes:
-//   private key = 24 bytes (LE bit-vector, 163 bits used)
-//   public key  = 48 bytes (x[24] || y[24])
-//
-// NOT constant-time — only use for talking to the strap, not for anything
-// that needs side-channel resistance.
+/// Pure-Dart port of the Huami sect163k1 (B-163) ECDH used by the
+/// Amazfit/Zepp BLE auth handshake.
+///
+/// is itself validated against real devices, and cross-checked against
+/// Gadgetbridge's `ECDH_B163.java`. Interop-focused, NOT constant-time — do
+/// not reuse for anything security-sensitive beyond talking to the strap.
+///
+/// Representation: a field element / scalar is a little-endian `Uint32List` of
+/// 6 words (192 bits, of which 163 are used). Private key = 24 bytes,
+/// public key = 48 bytes (x[24] || y[24]).
+///
+/// Curve: y^2 + x*y = x^3 + x^2 + b  over GF(2^163),
+/// reduction polynomial x^163 + x^7 + x^6 + x^3 + 1.
 class PairingCurveB163 {
   static const int _words = 6;
   static const int _curveDegree = 163;
-  static const int _polyLow = 0xC9; // x⁷+x⁶+x³+1  (word 0)
-  static const int _polyW5 = 0x08;  // x¹⁶³         (word 5, bit 3)
+  static const int _polyLow = 0xC9; // x^7+x^6+x^3+1  (word 0)
+  static const int _polyW5 = 0x08; // x^163          (word 5, bit 3)
 
   static final Uint32List _baseX = Uint32List.fromList(
       [0xE8343E36, 0xD4994637, 0xA0991168, 0x86A2D57E, 0xF0EBA162, 0x00000003]);
@@ -28,7 +27,10 @@ class PairingCurveB163 {
   static final Uint32List _coeffB = Uint32List.fromList(
       [0x4A3205FD, 0x512F7874, 0x1481EB10, 0xB8C953CA, 0x0A601907, 0x00000002]);
 
+  // ---- low-level bit-vector helpers ----
+
   static Uint32List _zero() => Uint32List(_words);
+
   static Uint32List _copy(Uint32List v) => Uint32List.fromList(v);
 
   static bool _isZero(Uint32List v) {
@@ -53,7 +55,8 @@ class PairingCurveB163 {
     return true;
   }
 
-  // Highest set bit index + 1 (0 if all-zero).
+  /// Highest set bit index + 1 (0 if all-zero). Matches Swift
+  /// `i*32 + (32 - leadingZeroBitCount)` via Dart's `int.bitLength`.
   static int _degree(Uint32List v) {
     for (var i = _words - 1; i >= 0; i--) {
       if (v[i] != 0) return i * 32 + v[i].bitLength;
@@ -205,6 +208,8 @@ class PairingCurveB163 {
     return _eq(a, xy);
   }
 
+  // ---- byte <-> bit-vector ----
+
   static Uint32List _bytesToBV(Uint8List data, int n) {
     final v = _zero();
     final m = n < data.length ? n : data.length;
@@ -228,10 +233,10 @@ class PairingCurveB163 {
     return x;
   }
 
-  // ─── Public API ──────────────────────────────────────────────────────────
+  // ---- public API (mirrors HuamiECDH) ----
 
-  /// Generate a keypair. Pass [privateKeyBytes] to make it deterministic (tests).
-  /// Returns (private 24 bytes, public 48 bytes = x||y).
+  /// Returns (privateKey 24 bytes, publicKey 48 bytes = x||y).
+  /// Pass [privateKeyBytes] to make it deterministic (tests); otherwise random.
   static (Uint8List priv, Uint8List pub) generateKeypair(
       {Uint8List? privateKeyBytes}) {
     final rng = Random.secure();
@@ -259,7 +264,7 @@ class PairingCurveB163 {
     throw StateError('keypair generation failed');
   }
 
-  /// ECDH shared secret. Returns 48-byte shared point (x||y).
+  /// ECDH: returns the 48-byte shared point (x||y).
   static Uint8List generateShared(Uint8List privateKey, Uint8List remotePub) {
     if (privateKey.length != 24 || remotePub.length != 48) {
       throw ArgumentError('bad key sizes');

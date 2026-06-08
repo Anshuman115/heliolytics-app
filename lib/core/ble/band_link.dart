@@ -2,24 +2,17 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:heliolytics/core/ble/fetch/type_sync_engine.dart';
-import 'package:heliolytics/core/ble/protocol/encrypted_endpoint.dart';
-import 'package:heliolytics/core/ble/auth/device_handshake.dart';
+import 'package:heliolytics/core/ble/type_sync_engine.dart';
+import 'package:heliolytics/core/ble/encrypted_endpoint.dart';
+import 'package:heliolytics/core/ble/device_handshake.dart';
 
-// ─── Strap Client ─────────────────────────────────────────────────────────
-// Top-level BLE client for the Helio strap. Owns the BluetoothDevice,
-// drives the auth handshake, wires up all GATT subscriptions, and exposes
-// fetchCode() for the session controller to call per type code.
-//
-// Pure Dart — no Riverpod, no UI state. The caller provides a [log] callback
-// and reacts to data via [onUpdate].
+/// Pure Dart — no Riverpod, no abstractions.
+/// The caller provides a [log] callback and sets [onUpdate] to react to data.
 class BandLink {
-  // GATT characteristic UUIDs
-  static const String writeUuid   = '00000016-0000-3512-2118-0009af100700';
-  static const String notifyUuid  = '00000017-0000-3512-2118-0009af100700';
+  static const String writeUuid  = '00000016-0000-3512-2118-0009af100700';
+  static const String notifyUuid = '00000017-0000-3512-2118-0009af100700';
   static const String controlUuid = '00000004-0000-3512-2118-0009af100700';
-  static const String dataUuid    = '00000005-0000-3512-2118-0009af100700';
-  static const String batteryUuid = '00000006-0000-3512-2118-0009af100700';
+  static const String dataUuid   = '00000005-0000-3512-2118-0009af100700';
 
   final void Function(String) log;
   void Function()? onUpdate;
@@ -30,7 +23,6 @@ class BandLink {
   BluetoothCharacteristic? _notify;
   BluetoothCharacteristic? _control;
   BluetoothCharacteristic? _data;
-  BluetoothCharacteristic? _battery;
 
   DeviceHandshake? auth;
   EncryptedEndpoint? comms;
@@ -41,9 +33,6 @@ class BandLink {
   StreamSubscription<List<int>>? _controlSub;
   StreamSubscription<List<int>>? _dataSub;
   StreamSubscription<BluetoothConnectionState>? _connSub;
-  StreamSubscription<List<int>>? _batterySub;
-
-  // ─── Connect + Auth ──────────────────────────────────────────────────────
 
   Future<bool> connectAndAuth({
     required String mac,
@@ -72,7 +61,6 @@ class BandLink {
     log('✓ connected');
 
     try {
-      // 247 = max BLE 4.2 ATT payload. Larger MTU = fewer chunks per message = faster transfer.
       final mtu = await _device!.requestMtu(247);
       log('• MTU = $mtu');
     } catch (e) {
@@ -88,10 +76,6 @@ class BandLink {
         if (u == notifyUuid)  _notify  = c;
         if (u == controlUuid) _control = c;
         if (u == dataUuid)    _data    = c;
-        if (u == batteryUuid) {
-          _battery = c;
-          log('🔋 Battery char: read=${c.properties.read} notify=${c.properties.notify}');
-        }
       }
     }
     if (_write == null || _notify == null) {
@@ -114,11 +98,6 @@ class BandLink {
       },
     );
 
-    // Route char 0x0017 notifications through _notifyHandler.
-    // During auth it points to DeviceHandshake.onNotify (handles the handshake).
-    // After auth (_postAuth) it is swapped to EncryptedEndpoint.onNotify (handles
-    // all post-auth encrypted frames). The indirection means we never need to
-    // re-subscribe to the characteristic — just swap the handler.
     _notifyHandler = auth!.onNotify;
     await _notify!.setNotifyValue(true);
     _notifySub = _notify!.onValueReceived.listen((v) {
@@ -171,50 +150,13 @@ class BandLink {
     });
 
     log('✓ post-auth setup complete — ready to fetch');
-    await _readBattery();
     onUpdate?.call();
   }
 
-  Future<void> _readBattery() async {
-    if (_battery == null) {
-      log('🔋 Battery char (0006) not found');
-      return;
-    }
-    if (_battery!.properties.notify) {
-      try {
-        await _batterySub?.cancel();
-        await _battery!.setNotifyValue(true);
-        _batterySub = _battery!.onValueReceived.listen((v) {
-          final val = Uint8List.fromList(v);
-          if (val.length >= 3) {
-            final level = val[1];
-            final status = val[2] == 1 ? 'charging' : 'normal';
-            log('🔋 Battery: $level% ($status)');
-          }
-        });
-        log('🔋 Subscribed to battery notifications');
-      } catch (e) {
-        log('🔋 Failed to subscribe to battery: $e');
-      }
-    }
-    if (_battery!.properties.read) {
-      try {
-        final val = await _battery!.read();
-        if (val.length >= 3) {
-          final level = val[1];
-          final status = val[2] == 1 ? 'charging' : 'normal';
-          log('🔋 Battery (read): $level% ($status)');
-        }
-      } catch (e) {
-        log('🔋 Failed to read battery: $e');
-      }
-    }
-  }
-
-  // ─── Fetch ───────────────────────────────────────────────────────────────
-
-  /// Fetch one type code over [since] and return all raw bytes.
-  /// Every code gets maxRounds=400. No timeout — device always replies.
+  /// Fetch one type code, returns raw bytes.
+  /// Probes first — if expected packets > [maxExpected], skips the download
+  /// and returns the packet count as a 4-byte LE integer (for logging).
+  /// This prevents 0x07 GPS / other huge types from hanging the scan.
   Future<({Uint8List raw, int expected, bool skipped})> fetchCode(
     int code,
     DateTime since,
@@ -222,27 +164,37 @@ class BandLink {
     final f = fetcher;
     if (f == null) return (raw: Uint8List(0), expected: -1, skipped: false);
 
+    // Only skip permanently-huge known dumps (debug logs / raw PPG) that
+    // would take hours and provide no structured health data.
+    // 0x07=debug logs, 0x55=9M pkts raw dump, 0x57=1.8M pkts raw dump, 0x58=raw PPG
+    const skipCodes = {0x07, 0x55, 0x57, 0x58};
+    if (skipCodes.contains(code)) {
+      // Probe to get count for logging, then skip
+      await f.fetchType(code, since,
+          probeOnly: true, timeout: const Duration(milliseconds: 1500));
+      final expected = f.lastExpected;
+      log('  skipping 0x${code.toRadixString(16)}: $expected pkts (debug/raw dump)');
+      return (raw: Uint8List(0), expected: expected, skipped: true);
+    }
+
+    // All other codes: go straight to full fetch, no probe, no cap, no timeout.
+    // Probe-then-fetch causes double round-trip which confuses the strap stream.
     await f.fetchType(code, since,
         probeOnly: false,
-        maxRounds: 400);
+        maxRounds: 9999,
+        timeout: const Duration(hours: 24));
     final expected = f.lastExpected;
 
-    // expected < 0  → device rejected the request (unsupported code or bad status)
-    // expected == 0 → device accepted but has no records in the window
-    // expected > 0  → data transferred; f.lastRaw holds the raw bytes
     if (expected < 0) return (raw: Uint8List(0), expected: expected, skipped: false);
     if (expected == 0) return (raw: Uint8List(0), expected: 0, skipped: false);
     return (raw: f.lastRaw, expected: expected, skipped: false);
   }
-
-  // ─── Unsolicited payload handler ─────────────────────────────────────────
 
   void _handlePayload(int endpoint, Uint8List payload) {
     final hex = payload.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     log('← endpoint 0x${endpoint.toRadixString(16).padLeft(4, '0')} '
         '(${payload.length}B): $hex');
 
-    // Record count reply (endpoint 0x0016, cmd 0x04 0x01)
     if (endpoint == 0x0016 && payload.length >= 15 &&
         payload[0] == 0x04 && payload[1] == 0x01) {
       final bd = ByteData.sublistView(payload);
@@ -251,9 +203,6 @@ class BandLink {
       final c = bd.getUint32(11, Endian.little);
       log('✓ RECORD COUNTS — $a / $b / $c records pending');
     }
-    // Service list reply (endpoint 0x0000, cmd 0x04).
-    // Each entry is 3 bytes: 2-byte LE endpoint ID + 1-byte encryption flag.
-    // 0x004b = "Fetch History" endpoint — must be present for activity fetch to work.
     if (endpoint == 0x0000 && payload.length >= 3 && payload[0] == 0x04) {
       final bd = ByteData.sublistView(payload);
       final n = bd.getUint16(1, Endian.little);
@@ -272,14 +221,11 @@ class BandLink {
     }
   }
 
-  // ─── Disconnect ──────────────────────────────────────────────────────────
-
   Future<void> disconnect() async {
     await _notifySub?.cancel();
     await _controlSub?.cancel();
     await _dataSub?.cancel();
     await _connSub?.cancel();
-    await _batterySub?.cancel();
     try { await _device?.disconnect(); } catch (_) {}
   }
 }
