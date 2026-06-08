@@ -36,7 +36,7 @@ void main() {
     );
     await s.appendBytes(id, '0x01', [0x01, 0x02, 0x03]);
     await s.appendBytes(id, '0x01', [0x04, 0x05]);
-    final f = File(p.join(tmpRoot.path, 'sessions', id, '0x01_activity.bin'));
+    final f = File(p.join(tmpRoot.path, 'sessions', id, '0x01_raw.bin'));
     expect(f.existsSync(), isTrue);
     expect(f.readAsBytesSync(), [0x01, 0x02, 0x03, 0x04, 0x05]);
   });
@@ -81,7 +81,7 @@ void main() {
           status: DumpStatus.ok,
           samples: 142,
           bytes: 568,
-          file: '0x01_activity.bin',
+          file: '0x01_raw.bin',
         ),
       ],
       unsolicited: const [],
