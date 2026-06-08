@@ -1,18 +1,27 @@
 import 'dart:typed_data';
 
-import 'package:heliolytics/core/ble/pairing_curve_b163.dart';
-import 'package:heliolytics/core/ble/gatt_framing.dart';
+import 'package:heliolytics/core/ble/crypto/pairing_curve_b163.dart';
+import 'package:heliolytics/core/ble/protocol/gatt_framing.dart';
 import 'package:heliolytics/core/utils/crypto.dart';
+
+// ─── ZeppOS / Huami-2021 Auth Handshake ──────────────────────────────────
+// Runs the ECDH-based authentication over logical endpoint 0x0082.
+// Transport-agnostic: caller provides writeChunk (sends one BLE chunk to
+// char 0x0016) and feeds char 0x0017 notifications into onNotify().
+//
+// Handshake flow:
+//   1. We generate an ECDH keypair and send our public key  (cmd 0x04)
+//   2. Device replies with its public key + a random challenge
+//   3. We derive the shared session key and send AES-encrypted proof  (cmd 0x05)
+//   4. Device replies 0x01 (success) or 0x25 (wrong key)
+//
+// On success: sessionKey (16 bytes) and sequence (uint32) are set.
+// These drive AES encryption of all post-auth frames (see gatt_framing.dart).
+//
+// Reference: research/protocol/zeppos_ble_handshake.md
 
 enum AuthState { idle, sentPubKey, sentSessionKey, success, failed }
 
-/// ZeppOS / Huami-2021 auth handshake over logical endpoint 0x0082.
-/// Transport-agnostic: the caller provides [writeChunk] (writes one BLE chunk
-/// to char 0x0016) and feeds notifications from char 0x0017 into [onNotify].
-///
-/// On success, [sessionKey] (16 bytes) and [sequence] (uint32) are set — these
-/// drive AES encryption/decryption of post-auth frames.
-/// See research/protocol/zeppos_ble_handshake.md.
 class DeviceHandshake {
   static const int endpoint = 0x0082;
 
@@ -47,6 +56,7 @@ class DeviceHandshake {
     final kp = PairingCurveB163.generateKeypair();
     _priv = kp.$1;
     _pub = kp.$2;
+    // Packet: [0x04, 0x02, 0x00, 0x02] + publicKey (48 bytes) = 52 bytes total
     final payload = Uint8List(52)
       ..setRange(0, 4, const [0x04, 0x02, 0x00, 0x02])
       ..setRange(4, 52, _pub!);
@@ -88,16 +98,20 @@ class DeviceHandshake {
       _fail('pub-key reply too short (${p.length})');
       return;
     }
+    // p[3..18]  = 16-byte random challenge from device
+    // p[19..66] = 48-byte device public key
     final random = Uint8List.fromList(p.sublist(3, 19));
     final remotePub = Uint8List.fromList(p.sublist(19, 67));
     final shared = PairingCurveB163.generateShared(_priv!, remotePub);
+    // sequence = first 4 bytes of shared secret (LE uint32)
     sequence = ByteData.sublistView(shared, 0, 4).getUint32(0, Endian.little);
+    // session key = shared[8..23] XOR authKey
     final session = Uint8List(16);
     for (var i = 0; i < 16; i++) {
       session[i] = shared[i + 8] ^ authKey[i];
     }
     sessionKey = session;
-    // Note: CryptoUtils.aes128EcbEncrypt(input, key) — input first, key second.
+    // Proof: AES-128-ECB(challenge, authKey) + AES-128-ECB(challenge, sessionKey)
     final enc1 = CryptoUtils.aes128EcbEncrypt(random, authKey);
     final enc2 = CryptoUtils.aes128EcbEncrypt(random, session);
     final cmd = Uint8List(33)

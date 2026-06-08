@@ -1,17 +1,19 @@
 import 'dart:typed_data';
 
-import 'package:heliolytics/core/ble/gatt_framing.dart';
+import 'package:heliolytics/core/ble/protocol/gatt_framing.dart';
 
-/// Post-auth chunked comms over chars 0x0016 (write) / 0x0017 (notify).
-/// Handles fragmentation, optional AES encryption (session key), and the
-/// chunked ACK the device requires (flag 0x04).
+// ─── Post-Auth Chunked Comms ──────────────────────────────────────────────
+// Sits on top of the chunked transport layer (gatt_framing.dart).
+// Used after auth succeeds to send/receive structured endpoint messages.
+// Handles fragmentation, optional AES encryption, and the chunked ACK the
+// device requires when it sets the needsAck flag.
 class EncryptedEndpoint {
   final GattChunkEncoder _encoder;
   final GattChunkDecoder _decoder = GattChunkDecoder();
 
   final Uint8List? sessionKey;
-  final Future<void> Function(Uint8List) writeChunk; // -> 0x0016
-  final Future<void> Function(Uint8List) writeAck; // -> 0x0017
+  final Future<void> Function(Uint8List) writeChunk; // → char 0x0016
+  final Future<void> Function(Uint8List) writeAck;   // → char 0x0017
   final void Function(int endpoint, Uint8List payload) onPayload;
   final void Function(String)? log;
 
