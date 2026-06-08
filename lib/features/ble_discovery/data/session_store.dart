@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/core/constants.dart' show appDocsSubdir;
@@ -100,6 +101,12 @@ class SessionStore {
       throw StateError('No types.json for session $sessionId');
     }
     return c;
+  }
+
+  Future<Uint8List?> readTypeBytes(String sessionId, String typeCode) async {
+    final f = File(p.join(_sessionDir(sessionId).path, _binFileName(typeCode)));
+    if (!f.existsSync()) return null;
+    return f.readAsBytes();
   }
 
   Future<List<String>> listSessions() async {

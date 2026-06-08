@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/core/ble/sync_orchestrator.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
 import 'package:heliolytics/features/ble_discovery/presentation/screens/auth_key_screen.dart';
-import 'package:heliolytics/features/ble_discovery/presentation/screens/home_screen.dart';
+import 'package:heliolytics/features/health_data/presentation/screens/health_home_screen.dart';
 
 class HeliolyticsApp extends ConsumerWidget {
   const HeliolyticsApp({super.key});
@@ -31,6 +31,6 @@ class _RootRouter extends ConsumerWidget {
     if (snap.state == SessionState.noAuthKey) {
       return const AuthKeyScreen();
     }
-    return const HomeScreen();
+    return const HealthHomeScreen();
   }
 }

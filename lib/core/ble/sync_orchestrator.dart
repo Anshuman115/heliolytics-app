@@ -163,12 +163,12 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
 
     final since = DateTime.now().subtract(const Duration(days: 30));
     _log('DUMP v2: last 30 days since ${since.toIso8601String()}');
-    _log('Fetching ${allTypeCodes.length} codes (all 0x00-0xFF), no timeouts...');
+    _log('Fetching ${dumpTypeCodes.length} health type codes (30-day window)...');
     _flush();
 
     final entries = <DumpEntry>[];
 
-    for (final codeStr in allTypeCodes) {
+    for (final codeStr in dumpTypeCodes) {
       final typeInt = int.parse(
         codeStr.startsWith('0x') ? codeStr.substring(2) : codeStr,
         radix: 16,
