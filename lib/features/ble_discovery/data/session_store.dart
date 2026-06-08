@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:heliolytics/core/constants.dart' show appDocsSubdir, typeCodeLabels;
+import 'package:heliolytics/core/constants.dart' show appDocsSubdir;
 import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -21,15 +21,8 @@ class SessionStore {
   Directory _sessionDir(String id) =>
       Directory(p.join(rootDir.path, 'sessions', id));
 
-  String _binFileName(String code) {
-    // Use the label from constants for a human-readable filename
-    final label = typeCodeLabels[code]
-        ?.toLowerCase()
-        .replaceAll(' ', '_')
-        .replaceAll(RegExp(r'[^a-z0-9_]'), '');
-    final suffix = label != null ? '_$label' : '';
-    return '${code.replaceAll('0x', '0x')}$suffix.bin';
-  }
+  /// Matches catalog `DumpEntry.file` (e.g. `0x01_raw.bin`).
+  String _binFileName(String code) => '${code}_raw.bin';
 
   Future<String> createSession({
     required String? deviceMac,

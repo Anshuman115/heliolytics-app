@@ -3,10 +3,11 @@ import 'dart:typed_data';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:heliolytics/core/ble/type_sync_engine.dart';
+import 'package:heliolytics/core/ble/sync_page_anchor.dart';
 import 'package:heliolytics/core/ble/encrypted_endpoint.dart';
 import 'package:heliolytics/core/ble/device_handshake.dart';
 
-/// Pure Dart — no Riverpod, no abstractions.
+/// BLE connect, ZeppOS auth, and activity-fetch for the Helio Strap.
 /// The caller provides a [log] callback and sets [onUpdate] to react to data.
 class BandLink {
   static const String writeUuid  = '00000016-0000-3512-2118-0009af100700';
@@ -157,23 +158,60 @@ class BandLink {
   /// Probes first — if expected packets > [maxExpected], skips the download
   /// and returns the packet count as a 4-byte LE integer (for logging).
   /// This prevents 0x07 GPS / other huge types from hanging the scan.
-  Future<({Uint8List raw, int expected, bool skipped})> fetchCode(
+  Future<({
+    Uint8List raw,
+    int expected,
+    bool skipped,
+    DateTime? roundStart,
+    List<SyncPageAnchor> roundSegments,
+  })> fetchCode(
     int code,
     DateTime since,
   ) async {
     final f = fetcher;
-    if (f == null) return (raw: Uint8List(0), expected: -1, skipped: false);
+    if (f == null) {
+      return (
+        raw: Uint8List(0),
+        expected: -1,
+        skipped: false,
+        roundStart: null,
+        roundSegments: <SyncPageAnchor>[],
+      );
+    }
 
-    // No skips, no caps, no timeouts — fetch everything the strap has.
     await f.fetchType(code, since,
         probeOnly: false,
         maxRounds: 99999,
-        timeout: const Duration(days: 7)); // effectively infinite
+        timeout: const Duration(days: 7));
     final expected = f.lastExpected;
+    final roundStart = f.firstRoundStart;
+    final roundSegments = List<SyncPageAnchor>.from(f.roundSegments);
 
-    if (expected < 0) return (raw: Uint8List(0), expected: expected, skipped: false);
-    if (expected == 0) return (raw: Uint8List(0), expected: 0, skipped: false);
-    return (raw: f.lastRaw, expected: expected, skipped: false);
+    if (expected < 0) {
+      return (
+        raw: Uint8List(0),
+        expected: expected,
+        skipped: false,
+        roundStart: null,
+        roundSegments: roundSegments,
+      );
+    }
+    if (expected == 0) {
+      return (
+        raw: Uint8List(0),
+        expected: 0,
+        skipped: false,
+        roundStart: roundStart,
+        roundSegments: roundSegments,
+      );
+    }
+    return (
+      raw: f.lastRaw,
+      expected: expected,
+      skipped: false,
+      roundStart: roundStart,
+      roundSegments: roundSegments,
+    );
   }
 
   void _handlePayload(int endpoint, Uint8List payload) {

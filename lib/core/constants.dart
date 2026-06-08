@@ -90,29 +90,33 @@ const List<String> allTypeCodes = [
 ];
 
 /// Only confirmed data-returning codes for the 30-day full dump.
-/// Skips all probe codes to avoid 2+ minutes of 1.5s timeouts.
+/// Skips probe codes. Skips 0x07 (debug logs — 20 MB of firmware noise).
+/// Note: 0x02/0x12/0x2C are included but return empty — device has no data for them.
 const List<String> dumpTypeCodes = [
-  '0x01', // HR + steps + activity per-minute
-  '0x02', // Manual HR
-  '0x05', // Workout summaries
-  '0x06', // Workout details (per-second HR/cadence) — large, no probe
+  '0x01', // HR + steps + activity per-minute (8B/rec)
+  '0x02', // Manual HR — empty (no manual readings)
+  '0x05', // Workout summaries (protobuf)
+  '0x06', // Workout details (per-second HR/cadence)
   '0x0D', // PAI scores
-  '0x12', // Stress manual
-  '0x13', // Stress auto
-  '0x25', // SpO2
+  '0x12', // Stress manual — empty (no manual readings)
+  '0x13', // Stress auto (1B/min)
+  '0x25', // SpO2 spot (65B/rec)
   '0x26', // SpO2 sleep
   '0x27', // Accelerometer stream
-  '0x2C', // Device metadata / statistics
-  '0x2E', // Temperature
-  '0x38', // Sleep respiratory rate
-  '0x3A', // Resting HR
-  '0x3B', // Activity sessions (protobuf)
-  '0x3D', // Max HR
+  '0x2C', // Device statistics — device rejects this
+  '0x2E', // Temperature (8B/rec, signed i16/100 = °C)
+  '0x38', // Sleep respiratory rate (8B/rec)
+  '0x39', // Daily readiness score
+  '0x3A', // Resting HR (6B/rec)
+  '0x3B', // Activity sessions
+  '0x3D', // Max HR (6B/rec)
   '0x46', // Continuous HR (PPG session)
-  '0x48', // Sleep session blobs
-  '0x49', // HRV
+  '0x48', // Sleep session blobs (594B/session — confirmed 96.3% match)
+  '0x49', // HRV RMSSD (6B/rec)
   '0x4A', // HRV trend
   '0x4E', // Sleep segments / nap log
+  '0x55', // RR interval stream (~9 MB)
+  '0x57', // RR blocks (~1.8 MB)
 ];
 
 /// Friendly labels for each type code.
@@ -151,7 +155,8 @@ const Map<String, String> typeCodeLabels = {
   '0x2A': 'probe-2A', '0x2B': 'probe-2B', '0x2D': 'probe-2D',
   '0x2F': 'probe-2F', '0x30': 'probe-30', '0x31': 'probe-31', '0x32': 'probe-32',
   '0x33': 'probe-33', '0x34': 'probe-34', '0x35': 'probe-35', '0x36': 'probe-36',
-  '0x37': 'probe-37', '0x39': 'probe-39',
+  '0x37': 'probe-37',
+  '0x39': 'Daily readiness',  // confirmed data: 3.4 KB
   '0x3B': 'Activity sessions', // auto-detected activity bouts, protobuf
   '0x3C': 'probe-3C',
   '0x3E': 'probe-3E', '0x3F': 'probe-3F', '0x40': 'probe-40', '0x41': 'probe-41',
@@ -164,7 +169,9 @@ const Map<String, String> typeCodeLabels = {
   '0x4E': 'Sleep segments', // nap/sleep windows — ts + tz + duration
   '0x4F': 'probe-4F',
   '0x50': 'probe-50', '0x51': 'probe-51', '0x52': 'probe-52', '0x53': 'probe-53',
-  '0x54': 'probe-54', '0x55': 'probe-55', '0x56': 'probe-56', '0x57': 'probe-57',
+  '0x54': 'probe-54',  '0x55': 'RR intervals',     // confirmed data: ~9 MB raw RR stream
+  '0x56': 'probe-56',
+  '0x57': 'RR blocks',        // confirmed data: ~1.8 MB RR block format
   '0x58': 'Raw PPG dump',   // 859k pkts — full-res PPG/accel, like 0x07
   '0x59': 'probe-59', '0x5A': 'probe-5A', '0x5B': 'probe-5B',
   '0x5C': 'probe-5C', '0x5D': 'probe-5D', '0x5E': 'probe-5E', '0x5F': 'probe-5F',

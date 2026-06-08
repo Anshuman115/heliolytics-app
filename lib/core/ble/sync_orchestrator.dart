@@ -183,6 +183,8 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
         final raw = result.raw;
         final expected = result.expected;
         final skipped = result.skipped;
+        final roundStart = result.roundStart;
+        final roundSegments = result.roundSegments;
 
         String status;
         String? rawHex;
@@ -215,6 +217,8 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
           samples: raw.length ~/ 4,
           bytes: raw.length,
           file: '${codeStr}_raw.bin',
+          roundStart: roundStart,
+          roundSegments: roundSegments,
         );
         _results.add(TypeCodeResult(
           code: codeStr,

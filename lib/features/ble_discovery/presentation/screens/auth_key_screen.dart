@@ -60,6 +60,7 @@ class _AuthKeyScreenState extends ConsumerState<AuthKeyScreen> {
             ),
             const SizedBox(height: 4),
             const Text(
+              '32 hex chars — from Zepp account or a compatible companion app',
               style: TextStyle(color: Colors.grey, fontSize: 13),
             ),
             const SizedBox(height: 8),
@@ -87,7 +88,7 @@ class _AuthKeyScreenState extends ConsumerState<AuthKeyScreen> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'After saving, tap "Connect to ring" on the next screen to scan for your Helio Strap.',
+              'After saving, tap Connect on the next screen to scan for your Helio Strap.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey, fontSize: 13),
             ),

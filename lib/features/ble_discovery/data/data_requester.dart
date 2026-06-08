@@ -15,6 +15,7 @@ class FetchResult {
 
 /// Fetches one data type from the strap via the legacy plaintext path:
 /// commands on char 0x0004 (control), data on char 0x0005 (data notify).
+/// Legacy activity-fetch helper (superseded by [TypeSyncEngine] in core/ble).
 class DataRequester {
   static const int _response = 0x10;
   static const int _cmdStartDate = 0x01;

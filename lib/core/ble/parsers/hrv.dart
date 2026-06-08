@@ -28,8 +28,8 @@ class HrvParser {
       out.add(HrvSample(
         timestampBytes: ts,
         timestamp: DateTime.fromMillisecondsSinceEpoch(sec * 1000, isUtc: true),
-        rmssd: bytes[i + 4],
-        unknown: bytes[i + 5],
+        rmssd: bytes[i + 5],
+        unknown: bytes[i + 4],
       ));
     }
     return out;

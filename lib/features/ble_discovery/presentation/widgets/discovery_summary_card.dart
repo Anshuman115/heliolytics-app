@@ -59,8 +59,13 @@ class _EntryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final segCount = entry.roundSegments.length;
+    final rs = entry.roundStart != null
+        ? ' · rs ${entry.roundStart!.toLocal().toIso8601String().substring(0, 16)}'
+            '${segCount > 1 ? ' · $segCount pages' : ''}'
+        : '';
     final detail = switch (entry.status) {
-      DumpStatus.ok => '${entry.samples} samples · ${entry.bytes} bytes',
+      DumpStatus.ok => '${entry.samples} samples · ${entry.bytes} bytes$rs',
       DumpStatus.empty => '— empty (no data on strap)',
       DumpStatus.rejected => entry.errorByte != null
           ? '— rejected (${entry.errorByte})'

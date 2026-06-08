@@ -1,16 +1,19 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:heliolytics/core/ble/sync_page_anchor.dart';
+import 'package:heliolytics/core/ble/record_stride.dart';
 import 'package:heliolytics/core/utils/huami_time.dart';
 
+/// Huami activity-fetch over plaintext GATT (control 0x0004, data 0x0005).
 /// Protocol: [0x01,type]+HuamiTime → meta reply [0x10,0x01,status,expected,date]
 /// → [0x02] fetch → data on 0x0005 [counter,payload..] → [0x03,0x09] ack (keep).
 class TypeSyncEngine {
-  static const int _response    = 0x10;
+  static const int _response = 0x10;
   static const int _cmdStartDate = 0x01;
   static const int _cmdFetchData = 0x02;
-  static const int _cmdAck      = 0x03;
-  static const int _ackKeep     = 0x09;
+  static const int _cmdAck = 0x03;
+  static const int _ackKeep = 0x09;
 
   final Future<void> Function(List<int>) writeControl;
   final void Function(String)? log;
@@ -18,6 +21,8 @@ class TypeSyncEngine {
   _FetchJob? _job;
   int lastExpected = 0;
   Uint8List lastRaw = Uint8List(0);
+  DateTime? firstRoundStart;
+  final List<SyncPageAnchor> roundSegments = [];
 
   TypeSyncEngine(this.writeControl, {this.log});
 
@@ -29,6 +34,8 @@ class TypeSyncEngine {
     Duration timeout = const Duration(seconds: 30),
   }) {
     lastExpected = -1;
+    firstRoundStart = null;
+    roundSegments.clear();
     final job = _FetchJob(code, since)
       ..probeOnly = probeOnly
       ..maxRounds = maxRounds;
@@ -67,8 +74,12 @@ class TypeSyncEngine {
         return;
       }
       final parsed = HuamiTime.parseStartDate(p);
-      if (parsed == null) { _finish('bad start reply'); return; }
+      if (parsed == null) {
+        _finish('bad start reply');
+        return;
+      }
       job.roundStart = parsed.start;
+      firstRoundStart ??= parsed.start;
       lastExpected = parsed.expected;
       if (!job.probeOnly) {
         log?.call('  round ${job.rounds}: expect ${parsed.expected} pkts '
@@ -80,10 +91,11 @@ class TypeSyncEngine {
       }
       writeControl([_cmdFetchData]);
     } else if (cmd == _cmdFetchData) {
-      if (status != 0x01) { _finish('fetch failed 0x${status.toRadixString(16)}'); return; }
+      if (status != 0x01) {
+        _finish('fetch failed 0x${status.toRadixString(16)}');
+        return;
+      }
       _ackAndPage();
-    } else if (cmd == _cmdAck) {
-      // device ack reply — ignore
     }
   }
 
@@ -103,29 +115,35 @@ class TypeSyncEngine {
     if (job == null) return;
     writeControl([_cmdAck, _ackKeep]);
     final raw = job.data.toBytes();
+    if (raw.isNotEmpty) {
+      roundSegments.add(SyncPageAnchor(
+        byteOffset: job.allRaw.length,
+        roundStart: job.roundStart,
+      ));
+    }
     job.allRaw.add(raw);
     log?.call('  round ${job.rounds}: ${raw.length}B raw');
 
-    // Page forward if there might be more
     if (raw.isNotEmpty && job.rounds < job.maxRounds) {
-      // Use the last 4 bytes of raw as a LE timestamp to advance since
-      if (raw.length >= 4) {
-        final ts = ByteData.sublistView(raw, raw.length - 4)
-            .getUint32(0, Endian.little);
-        if (ts > 0) {
-          final next = DateTime.fromMillisecondsSinceEpoch(ts * 1000, isUtc: true)
-              .add(const Duration(minutes: 1));
-          final now = DateTime.now();
-          if (next.isBefore(now.subtract(const Duration(seconds: 30))) &&
-              next.isAfter(job.since)) {
-            job.since = next;
-            _startRound();
-            return;
-          }
-        }
+      final nextSince = _nextSince(job.code, raw, job.roundStart);
+      final now = DateTime.now();
+      if (nextSince != null &&
+          nextSince.isBefore(now.subtract(const Duration(seconds: 30))) &&
+          nextSince.isAfter(job.since)) {
+        job.since = nextSince;
+        _startRound();
+        return;
       }
     }
     _finishOk();
+  }
+
+  DateTime? _nextSince(int code, Uint8List raw, DateTime roundStart) {
+    if (!isRoundRelative(code)) return null;
+    final stride = recordStride(code, raw.length);
+    final count = raw.length ~/ stride;
+    if (count == 0) return null;
+    return roundStart.add(Duration(minutes: count));
   }
 
   void _ackThenFinish() {

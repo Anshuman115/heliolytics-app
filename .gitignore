@@ -43,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Personal / local-only — never commit
+CLAUDE.md
+test/
+scripts/
+helio_dump/
+helio_dump_v*/
+zepp-export/
+reference_parsed_v*/
+reports/
+docs/

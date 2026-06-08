@@ -162,7 +162,7 @@ class _StatusBar extends StatelessWidget {
     };
 
     return Container(
-      color: color.withOpacity(0.12),
+      color: color.withValues(alpha: 0.12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
@@ -215,9 +215,9 @@ class _TypeCodeGrid extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 4),
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
+                color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: color.withOpacity(0.3)),
+                border: Border.all(color: color.withValues(alpha: 0.3)),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -235,7 +235,7 @@ class _TypeCodeGrid extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     r.label,
-                    style: TextStyle(fontSize: 9, color: color.withOpacity(0.8)),
+                    style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.8)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -243,7 +243,7 @@ class _TypeCodeGrid extends StatelessWidget {
                   if (r.bytes > 0)
                     Text(
                       '${r.bytes}B',
-                      style: TextStyle(fontSize: 9, color: color.withOpacity(0.6)),
+                      style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.6)),
                     ),
                 ],
               ),
