@@ -164,25 +164,11 @@ class BandLink {
     final f = fetcher;
     if (f == null) return (raw: Uint8List(0), expected: -1, skipped: false);
 
-    // Only skip permanently-huge known dumps (debug logs / raw PPG) that
-    // would take hours and provide no structured health data.
-    // 0x07=debug logs, 0x55=9M pkts raw dump, 0x57=1.8M pkts raw dump, 0x58=raw PPG
-    const skipCodes = {0x07, 0x55, 0x57, 0x58};
-    if (skipCodes.contains(code)) {
-      // Probe to get count for logging, then skip
-      await f.fetchType(code, since,
-          probeOnly: true, timeout: const Duration(milliseconds: 1500));
-      final expected = f.lastExpected;
-      log('  skipping 0x${code.toRadixString(16)}: $expected pkts (debug/raw dump)');
-      return (raw: Uint8List(0), expected: expected, skipped: true);
-    }
-
-    // All other codes: go straight to full fetch, no probe, no cap, no timeout.
-    // Probe-then-fetch causes double round-trip which confuses the strap stream.
+    // No skips, no caps, no timeouts — fetch everything the strap has.
     await f.fetchType(code, since,
         probeOnly: false,
-        maxRounds: 9999,
-        timeout: const Duration(hours: 24));
+        maxRounds: 99999,
+        timeout: const Duration(days: 7)); // effectively infinite
     final expected = f.lastExpected;
 
     if (expected < 0) return (raw: Uint8List(0), expected: expected, skipped: false);

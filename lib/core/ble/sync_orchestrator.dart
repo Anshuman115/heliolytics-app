@@ -162,8 +162,8 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     );
 
     final since = DateTime.now().subtract(const Duration(days: 30));
-    _log('DUMP: last 30 days since ${since.toIso8601String()}');
-    _log('Fetching ${allTypeCodes.length} codes (all 0x01-0x7F)...');
+    _log('DUMP v2: last 30 days since ${since.toIso8601String()}');
+    _log('Fetching ${allTypeCodes.length} codes (all 0x00-0xFF), no timeouts...');
     _flush();
 
     final entries = <DumpEntry>[];
