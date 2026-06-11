@@ -5,7 +5,7 @@ import 'package:heliolytics/core/utils/crypto.dart';
 /// 0x0016 (write) and 0x0017 (notify). Multiplexes logical "endpoints"
 /// (auth = 0x0082, activity-fetch control = 0x004b, …) onto one char pair.
 ///
-/// Huami 2021 chunked encoder/decoder (Gadgetbridge-compatible framing).
+/// Huami 2021 chunked encoder/decoder for ZeppOS BLE transport.
 /// Framing + encryption in
 /// research/protocol/zeppos_ble_handshake.md.
 ///

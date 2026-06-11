@@ -11,6 +11,7 @@ class Session {
   final SessionMode mode;
   final List<DumpEntry> entries;
   final List<UnsolicitedEntry> unsolicited;
+  final int? batteryPercent;
 
   const Session({
     required this.sessionId,
@@ -22,6 +23,7 @@ class Session {
     required this.mode,
     required this.entries,
     required this.unsolicited,
+    this.batteryPercent,
   });
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +35,7 @@ class Session {
         'fetchWindowHours': fetchWindowHours,
         'listenDurationSec': listenDurationSec,
         'mode': mode.label,
+        if (batteryPercent != null) 'batteryPercent': batteryPercent,
       };
 
   factory Session.fromJson(Map<String, dynamic> j) => Session(
@@ -51,5 +54,6 @@ class Session {
         unsolicited: (j['unsolicited'] as List<dynamic>? ?? [])
             .map((e) => UnsolicitedEntry.fromJson(e as Map<String, dynamic>))
             .toList(),
+        batteryPercent: (j['batteryPercent'] as num?)?.toInt(),
       );
 }

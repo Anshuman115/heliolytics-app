@@ -4,20 +4,28 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:heliolytics/core/ble/auth/auth_key_storage.dart';
-import 'package:heliolytics/core/ble/ble_devices.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
 import 'package:heliolytics/core/ble/band_link.dart';
+import 'package:heliolytics/core/ble/cloud_upload.dart';
+import 'package:heliolytics/core/ble/parsers/activity_parser.dart';
+import 'package:heliolytics/core/ble/sync_refetch_runner.dart';
+import 'package:heliolytics/core/ble/sync_coverage_resolver.dart';
+import 'package:heliolytics/core/ble/sync_cursor.dart';
+import 'package:heliolytics/core/ble/sync_watermark.dart';
 import 'package:heliolytics/core/constants.dart';
 import 'package:heliolytics/features/ble_discovery/data/session_store.dart';
 import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
-
+import 'package:heliolytics/core/utils/logger.dart';
+import 'package:heliolytics/features/cloud_sync/domain/models/sync_payload.dart';
+import 'package:heliolytics/features/health_data/presentation/providers/live_health_provider.dart';
 class SyncOrchestrator extends Notifier<SessionSnapshot> {
   late AuthKeyStorage _authStorage;
   SessionStore? _store;
-  BandLink? _client;
   bool _connecting = false;
+  bool _autoConnectScheduled = false;
   final List<String> _logs = [];
   final List<TypeCodeResult> _results = [];
+  SyncPayload? _lastPayload;
 
   @override
   SessionSnapshot build() {
@@ -36,8 +44,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
         '${ts.minute.toString().padLeft(2, '0')}:'
         '${ts.second.toString().padLeft(2, '0')}';
     _logs.add('[$tsStr] $msg');
-    // ignore: avoid_print
-    print(msg);
+    appLog(msg);
   }
 
   void _flush() {
@@ -72,7 +79,9 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
 
   Future<void> connect() async {
     if (state.state != SessionState.idle &&
-        state.state != SessionState.error) return;
+        state.state != SessionState.error) {
+      return;
+    }
     if (_connecting) return;
     _connecting = true;
     if (state.state == SessionState.error) {
@@ -109,6 +118,117 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
 
   Future<bool> hasSavedMac() => _authStorage.hasMac();
 
+  /// Called once when the main shell opens — connects and syncs incrementally.
+  Future<void> scheduleAutoConnect() async {
+    if (_autoConnectScheduled) return;
+    _autoConnectScheduled = true;
+    if (!await _authStorage.hasKey()) return;
+    if (!await hasSavedMac()) return;
+    if (state.state != SessionState.idle) return;
+    if (_connecting) return;
+    _log('Auto-sync: connecting to saved strap');
+    _flush();
+    await connect();
+  }
+
+  SyncPayload? get lastPayload => _lastPayload;
+
+  Future<void> retryLastUpload() async {
+    final p = _lastPayload;
+    if (p == null) throw StateError('No session in memory — sync first');
+    try {
+      await tryCloudUpload(ref, p, _log);
+    } catch (e) {
+      state = state.copyWith(
+        state: SessionState.error,
+        lastErrorMessage: 'Cloud upload failed: $e',
+      );
+      _flush();
+      rethrow;
+    }
+    _flush();
+  }
+
+  Future<void> refetchType(String codeStr) async {
+    if (_connecting ||
+        state.state == SessionState.fetching ||
+        state.state == SessionState.connecting) {
+      return;
+    }
+    final store = _store;
+    if (store == null) return;
+
+    _connecting = true;
+    state = state.copyWith(
+      state: SessionState.connecting,
+      currentTypeCode: codeStr,
+      error: SessionError.none,
+    );
+    _log('→ refetch $codeStr only (since last sync cursor)');
+    _flush();
+
+    state = state.copyWith(state: SessionState.fetching);
+    _flush();
+
+    try {
+      final plan = await resolveSyncFetchSince(ref, ref.read(authKeyStoreProvider));
+      final since = plan.since;
+      final result = await SyncRefetchRunner(_log).run(
+        _authStorage,
+        codeStr,
+        since: since,
+      );
+      if (result != null) {
+        final entry = result.entry;
+        _log('✓ refetch $codeStr: ${entry.bytes} bytes (${entry.status.name})');
+        final base = _lastPayload ??
+            await _payloadFromLastMeta(store, await store.latestSessionId());
+        if (base != null && result.raw.isNotEmpty) {
+          final payload = SyncPayload(
+            session: base.session,
+            catalog: SessionCatalog(
+              sessionId: base.session.sessionId,
+              chunked: [entry],
+              unsolicited: const [],
+            ),
+            rawByCode: {codeStr: result.raw},
+          );
+          _lastPayload = payload;
+          try {
+            await tryCloudUpload(ref, payload, _log);
+          } catch (e) {
+            state = state.copyWith(
+              state: SessionState.error,
+              lastErrorMessage: 'Cloud upload failed: $e',
+            );
+          }
+        }
+        final sid = await store.latestSessionId();
+        if (sid != null) {
+          state = state.copyWith(lastSession: await store.readSessionJson(sid));
+        }
+      } else {
+        _log('✗ refetch $codeStr failed');
+        state = state.copyWith(
+          state: SessionState.error,
+          error: SessionError.scanFailed,
+          lastErrorMessage: 'Refetch $codeStr failed',
+        );
+      }
+    } catch (e) {
+      _log('✗ refetch $codeStr: $e');
+      state = state.copyWith(
+        state: SessionState.error,
+        error: SessionError.scanFailed,
+        lastErrorMessage: e.toString(),
+      );
+    } finally {
+      state = state.copyWith(state: SessionState.idle, currentTypeCode: null);
+      _flush();
+      _connecting = false;
+    }
+  }
+
   // ── main run loop ─────────────────────────────────────────────────────────
   Future<void> _run(String mac) async {
     final authKey = await _authStorage.readBytes();
@@ -120,7 +240,6 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
 
     // ── BandLink: pure Dart, no Riverpod state inside ──────────────────
     final client = BandLink(_log);
-    _client = client;
 
     state = state.copyWith(state: SessionState.connecting);
     _log('→ connecting to $mac');
@@ -153,7 +272,14 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     state = state.copyWith(state: SessionState.fetching);
     _results.clear();
 
-    const dumpWindowHours = 24 * 30; // 30 days
+    final wm = SyncWatermark(ref.read(authKeyStoreProvider));
+    final cursor = SyncCursor(ref.read(authKeyStoreProvider));
+    final plan = await resolveSyncFetchSince(ref, ref.read(authKeyStoreProvider));
+    final since = plan.since;
+    final dumpWindowHours = DateTime.now().difference(since).inHours.clamp(
+      1,
+      24 * initialSyncBackfillDays,
+    );
     final sessionId = await store.createSession(
       deviceMac: mac,
       fetchWindowHours: dumpWindowHours,
@@ -161,14 +287,18 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       mode: SessionMode.fetchAndListen,
     );
 
-    final since = DateTime.now().subtract(const Duration(days: 30));
-    _log('DUMP v2: last 30 days since ${since.toIso8601String()}');
-    _log('Fetching ${dumpTypeCodes.length} health type codes (30-day window)...');
+    _log(plan.logLine);
+    if (plan.backendDataThrough != null) {
+      final gap = DateTime.now().difference(plan.backendDataThrough!);
+      _log('Gap to fill: ${gap.inHours}h ${gap.inMinutes.remainder(60)}m');
+    }
+    _log('Fetching ${fetchTypeCodes.length} types → upload to API');
     _flush();
 
     final entries = <DumpEntry>[];
+    final rawByCode = <String, Uint8List>{};
 
-    for (final codeStr in dumpTypeCodes) {
+    for (final codeStr in fetchTypeCodes) {
       final typeInt = int.parse(
         codeStr.startsWith('0x') ? codeStr.substring(2) : codeStr,
         radix: 16,
@@ -179,7 +309,12 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       _flush();
 
       try {
-        final result = await client.fetchCode(typeInt, since);
+        final metric = _watermarkMetric(codeStr);
+        final fetchSince = resolveTypeFetchSince(codeStr, since);
+        if (fetchSince != since) {
+          _log('  $codeStr: workout backfill from ${fetchSince.toIso8601String()}');
+        }
+        final result = await client.fetchCode(typeInt, fetchSince);
         final raw = result.raw;
         final expected = result.expected;
         final skipped = result.skipped;
@@ -232,7 +367,12 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
         _flush();
 
         if (raw.isNotEmpty) {
-          await store.appendBytes(sessionId, codeStr, raw);
+          rawByCode[codeStr] = raw;
+          if (metric != null) {
+            final anchor = roundStart ?? since;
+            final last = ActivityParser.lastSampleTime(typeInt, raw, anchor);
+            if (last != null) await wm.write(metric, last);
+          }
         }
         entries.add(entry);
       } catch (e) {
@@ -246,24 +386,95 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       }
     }
 
-    await store.writeCatalogJson(SessionCatalog(
+    final catalog = SessionCatalog(
       sessionId: sessionId,
       chunked: entries,
       unsolicited: const [],
-    ));
+    );
+    await store.writeCatalogJson(catalog);
 
     final ok  = _results.where((r) => r.status == 'ok').length;
     final emp = _results.where((r) => r.status == 'empty').length;
     final rej = _results.where((r) => r.status == 'rejected').length;
     _log('═══ DONE ═══  $ok ok  $emp empty  $rej rejected');
 
+    final ended = DateTime.now().toUtc();
+    final base = await store.readSessionJson(sessionId);
+    await store.writeSessionJson(Session(
+      sessionId: base.sessionId,
+      startedAt: base.startedAt,
+      endedAt: ended,
+      deviceMac: base.deviceMac,
+      fetchWindowHours: base.fetchWindowHours,
+      listenDurationSec: base.listenDurationSec,
+      mode: base.mode,
+      entries: base.entries,
+      unsolicited: base.unsolicited,
+      batteryPercent: client.batteryPercent,
+    ));
+
+    final session = await store.readSessionJson(sessionId);
+    _lastPayload = SyncPayload(
+      session: session,
+      catalog: catalog,
+      rawByCode: rawByCode,
+    );
+
     state = state.copyWith(
       state: SessionState.idle,
       currentTypeCode: null,
-      lastSession: await store.readSessionJson(sessionId),
+      lastSession: session,
     );
     _flush();
+    try {
+      await tryCloudUpload(ref, _lastPayload!, _log);
+      await cursor.markSuccess(ended);
+      ref.invalidate(liveHealthProvider);
+      _log('✓ sync cursor → ${ended.toIso8601String()}');
+    } catch (e) {
+      state = state.copyWith(
+        state: SessionState.error,
+        lastErrorMessage: 'Cloud upload failed: $e',
+      );
+    }
+    _flush();
   }
+
+  Future<SyncPayload?> _payloadFromLastMeta(
+    SessionStore store,
+    String? sessionId,
+  ) async {
+    if (sessionId == null) return null;
+    final session = await store.readSessionJson(sessionId);
+    return SyncPayload(
+      session: session,
+      catalog: SessionCatalog(
+        sessionId: sessionId,
+        chunked: const [],
+        unsolicited: const [],
+      ),
+      rawByCode: const {},
+    );
+  }
+
+  String? _watermarkMetric(String code) => switch (code) {
+        '0x01' => 'steps',
+        '0x05' => 'workout',
+        '0x0D' => 'pai',
+        '0x13' => 'stress',
+        '0x25' => 'spo2',
+        '0x26' => 'spo2_sleep',
+        '0x2E' => 'temperature',
+        '0x38' => 'respiratory_rate',
+        '0x39' => 'readiness',
+        '0x3A' => 'resting_hr',
+        '0x3B' => 'activity_session',
+        '0x3D' => 'max_hr',
+        '0x48' => 'sleep',
+        '0x49' => 'hrv',
+        '0x4E' => 'nap',
+        _ => null,
+      };
 }
 
 final syncOrchestratorProvider =

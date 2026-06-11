@@ -1,56 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:heliolytics/core/ble/parsers/sleep_session.dart';
-import 'package:heliolytics/features/health_data/domain/entities/day_health_row.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:heliolytics/core/utils/formatters.dart';
+import 'package:heliolytics/features/health_data/domain/entities/day_metric.dart';
+import 'package:heliolytics/features/health_data/presentation/providers/live_health_provider.dart';
+import 'package:heliolytics/features/health_data/presentation/screens/day_detail_body.dart';
+import 'package:heliolytics/shared/widgets/error_view.dart';
 
-class DayDetailScreen extends StatelessWidget {
-  final DayHealthRow day;
-  final List<SleepSession> sleep;
-
-  const DayDetailScreen({super.key, required this.day, required this.sleep});
+class DayDetailScreen extends ConsumerWidget {
+  final String dayKey;
+  const DayDetailScreen({super.key, required this.dayKey});
 
   @override
-  Widget build(BuildContext context) {
-    final daySleep = sleep.where((s) {
-      final key = '${s.sessionStart.toLocal().year}-'
-          '${s.sessionStart.toLocal().month.toString().padLeft(2, '0')}-'
-          '${s.sessionStart.toLocal().day.toString().padLeft(2, '0')}';
-      return key == day.dayKey;
-    }).toList();
-
-    return Scaffold(
-      appBar: AppBar(title: Text(day.dayKey)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _metric('Steps', '${day.steps}'),
-          if (day.avgHeartRate != null)
-            _metric('Avg HR', '${day.avgHeartRate} bpm'),
-          if (day.stressAvg != null) _metric('Avg stress', '${day.stressAvg}'),
-          if (day.tempCelsiusAvg != null)
-            _metric('Avg skin temp', '${day.tempCelsiusAvg!.toStringAsFixed(1)} °C'),
-          const SizedBox(height: 16),
-          const Text('Sleep', style: TextStyle(fontWeight: FontWeight.bold)),
-          if (daySleep.isEmpty)
-            const Text('No sleep session this day')
-          else
-            ...daySleep.map(_sleepTile),
-        ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final health = ref.watch(liveHealthProvider);
+    return health.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, _) => Scaffold(
+        appBar: AppBar(title: Text(formatDayLabel(dayKey))),
+        body: ErrorView(error: e, onRetry: () => ref.invalidate(liveHealthProvider)),
       ),
+      data: (snap) {
+        if (snap == null) {
+          return Scaffold(
+            appBar: AppBar(title: Text(formatDayLabel(dayKey))),
+            body: const Center(child: Text('No data')),
+          );
+        }
+        DayMetric? day;
+        for (final d in snap.days) {
+          if (d.dayKey == dayKey) {
+            day = d;
+            break;
+          }
+        }
+        if (day == null) {
+          return Scaffold(
+            appBar: AppBar(title: Text(formatDayLabel(dayKey))),
+            body: const Center(child: Text('Day not found')),
+          );
+        }
+        return DayDetailBody(
+          day: day,
+          workouts: snap.workoutsFor(dayKey),
+          totalCalories: snap.caloriesFor(dayKey),
+          temps: snap.tempFor(dayKey),
+          series: snap.seriesByMetric(dayKey),
+        );
+      },
     );
   }
-
-  Widget _metric(String label, String value) => ListTile(
-        title: Text(label),
-        trailing: Text(value, style: const TextStyle(fontSize: 16)),
-      );
-
-  Widget _sleepTile(SleepSession s) => Card(
-        child: ListTile(
-          title: Text(s.sessionStart.toLocal().toString().substring(0, 16)),
-          subtitle: Text(
-            'deep ${s.deepMin} · light ${s.lightMin} · REM ${s.remMin} · '
-            'wake ${s.wakeMin} min · score ${s.score}',
-          ),
-        ),
-      );
 }

@@ -9,137 +9,45 @@ const String activityControlUUID = '00000004-0000-3512-2118-0009af100700';
 const String activityDataUUID    = '00000005-0000-3512-2118-0009af100700';
 const String liveHeartRateUUID   = '00002a37-0000-1000-8000-00805f9b34fb';
 
-/// Confirmed type codes from Gadgetbridge HuamiFetchDataType enum + our own testing.
-const List<String> knownTypeCodes = [
-  '0x01', // ACTIVITY — per-minute HR/steps/intensity (Gadgetbridge confirmed)
-  '0x49', // HRV (Gadgetbridge confirmed, 2025 addition)
-  '0x25', // SPO2_NORMAL — spot SpO2 (Gadgetbridge confirmed)
-  '0x26', // SPO2_SLEEP — sleep SpO2 (Gadgetbridge confirmed)
-  '0x2E', // TEMPERATURE — skin temp (Gadgetbridge confirmed)
-  '0x13', // STRESS_AUTOMATIC (Gadgetbridge confirmed)
-  '0x12', // STRESS_MANUAL (Gadgetbridge confirmed)
-  '0x38', // SLEEP_RESPIRATORY_RATE (Gadgetbridge confirmed)
-  '0x3A', // RESTING_HEART_RATE (Gadgetbridge confirmed)
-  '0x3D', // MAX_HEART_RATE (Gadgetbridge confirmed)
-  '0x48', // SLEEP_SESSION (Gadgetbridge confirmed, 2025 addition)
-  '0x05', // SPORTS_SUMMARIES — workout summaries (Gadgetbridge confirmed)
-  '0x06', // SPORTS_DETAILS — workout GPS/per-second data (Gadgetbridge confirmed)
-  '0x02', // MANUAL_HEART_RATE — user-triggered HR (Gadgetbridge confirmed)
-  '0x0D', // PAI — Personal Activity Intelligence daily scores (Gadgetbridge confirmed)
-  '0x2C', // STATISTICS — aggregate statistics (Gadgetbridge confirmed)
-  '0x07', // DEBUG_LOGS — device debug data (Gadgetbridge confirmed, can be huge)
-];
-
-/// Undocumented codes to probe — brute-force scan of the full range.
-/// Codes not in knownTypeCodes, covering 0x03–0x7F.
-/// Source: gaps in Gadgetbridge enum + extended range for 2025 Helio firmware.
-const List<String> probeTypeCodes = [
-  // Gap in 0x03–0x04 (not in Gadgetbridge enum)
-  '0x03', '0x04',
-  // 0x08–0x0C (gap)
-  '0x08', '0x09', '0x0A', '0x0B', '0x0C',
-  // 0x0E–0x11 (gap)
-  '0x0E', '0x0F', '0x10', '0x11',
-  // 0x14–0x24 (gap)
-  '0x14', '0x15', '0x16', '0x17', '0x18', '0x19',
-  '0x1A', '0x1B', '0x1C', '0x1D', '0x1E', '0x1F',
-  '0x20', '0x21', '0x22', '0x23', '0x24',
-  // 0x27–0x2B (gap)
-  '0x27', '0x28', '0x29', '0x2A', '0x2B',
-  // 0x2D (gap)
-  '0x2D',
-  // 0x2F–0x37 (gap)
-  '0x2F', '0x30', '0x31', '0x32', '0x33', '0x34', '0x35', '0x36', '0x37',
-  // 0x39 (gap)
-  '0x39',
-  // 0x3B–0x3C (gap)
-  '0x3B', '0x3C',
-  // 0x3E–0x47 (gap)
-  '0x3E', '0x3F', '0x40', '0x41', '0x42', '0x43', '0x44', '0x45', '0x46', '0x47',
-  // 0x4A–0x7F (beyond Gadgetbridge enum — Helio 2025 firmware territory)
-  '0x4A', '0x4B', '0x4C', '0x4D', '0x4E', '0x4F',
-  '0x50', '0x51', '0x52', '0x53', '0x54', '0x55', '0x56', '0x57', '0x58', '0x59',
-  '0x5A', '0x5B', '0x5C', '0x5D', '0x5E', '0x5F',
-  '0x60', '0x61', '0x62', '0x63', '0x64', '0x65', '0x66', '0x67', '0x68', '0x69',
-  '0x6A', '0x6B', '0x6C', '0x6D', '0x6E', '0x6F',
-  '0x70', '0x71', '0x72', '0x73', '0x74', '0x75', '0x76', '0x77', '0x78', '0x79',
-  '0x7A', '0x7B', '0x7C', '0x7D', '0x7E', '0x7F',
-  // 0x80–0xFF (extended range — uncharted Helio 2025 / Zepp OS 4.x territory)
-  '0x80', '0x81', '0x82', '0x83', '0x84', '0x85', '0x86', '0x87', '0x88', '0x89',
-  '0x8A', '0x8B', '0x8C', '0x8D', '0x8E', '0x8F',
-  '0x90', '0x91', '0x92', '0x93', '0x94', '0x95', '0x96', '0x97', '0x98', '0x99',
-  '0x9A', '0x9B', '0x9C', '0x9D', '0x9E', '0x9F',
-  '0xA0', '0xA1', '0xA2', '0xA3', '0xA4', '0xA5', '0xA6', '0xA7', '0xA8', '0xA9',
-  '0xAA', '0xAB', '0xAC', '0xAD', '0xAE', '0xAF',
-  '0xB0', '0xB1', '0xB2', '0xB3', '0xB4', '0xB5', '0xB6', '0xB7', '0xB8', '0xB9',
-  '0xBA', '0xBB', '0xBC', '0xBD', '0xBE', '0xBF',
-  '0xC0', '0xC1', '0xC2', '0xC3', '0xC4', '0xC5', '0xC6', '0xC7', '0xC8', '0xC9',
-  '0xCA', '0xCB', '0xCC', '0xCD', '0xCE', '0xCF',
-  '0xD0', '0xD1', '0xD2', '0xD3', '0xD4', '0xD5', '0xD6', '0xD7', '0xD8', '0xD9',
-  '0xDA', '0xDB', '0xDC', '0xDD', '0xDE', '0xDF',
-  '0xE0', '0xE1', '0xE2', '0xE3', '0xE4', '0xE5', '0xE6', '0xE7', '0xE8', '0xE9',
-  '0xEA', '0xEB', '0xEC', '0xED', '0xEE', '0xEF',
-  '0xF0', '0xF1', '0xF2', '0xF3', '0xF4', '0xF5', '0xF6', '0xF7', '0xF8', '0xF9',
-  '0xFA', '0xFB', '0xFC', '0xFD', '0xFE', '0xFF',
-];
-
-/// Combined list: all known + all probe codes, deduplicated.
-const List<String> allTypeCodes = [
-  ...knownTypeCodes,
-  ...probeTypeCodes,
-];
-
-/// Only confirmed data-returning codes for the 30-day full dump.
-/// Skips probe codes. Skips 0x07 (debug logs — 20 MB of firmware noise).
-/// Note: 0x02/0x12/0x2C are included but return empty — device has no data for them.
-const List<String> dumpTypeCodes = [
+/// BLE types fetched during sync — must have a Go ingest parser wired.
+const List<String> fetchTypeCodes = [
   '0x01', // HR + steps + activity per-minute (8B/rec)
-  '0x02', // Manual HR — empty (no manual readings)
   '0x05', // Workout summaries (protobuf)
   '0x06', // Workout details (per-second HR/cadence)
   '0x0D', // PAI scores
-  '0x12', // Stress manual — empty (no manual readings)
   '0x13', // Stress auto (1B/min)
   '0x25', // SpO2 spot (65B/rec)
   '0x26', // SpO2 sleep
-  '0x27', // Accelerometer stream
-  '0x2C', // Device statistics — device rejects this
-  '0x2E', // Temperature (8B/rec, signed i16/100 = °C)
+  '0x2E', // Temperature (8B/rec)
   '0x38', // Sleep respiratory rate (8B/rec)
   '0x39', // Daily readiness score
   '0x3A', // Resting HR (6B/rec)
-  '0x3B', // Activity sessions
+  '0x3B', // Auto-detected activity sessions (protobuf)
   '0x3D', // Max HR (6B/rec)
-  '0x46', // Continuous HR (PPG session)
-  '0x48', // Sleep session blobs (594B/session — confirmed 96.3% match)
+  '0x48', // Sleep session blobs (594B/session)
   '0x49', // HRV RMSSD (6B/rec)
-  '0x4A', // HRV trend
   '0x4E', // Sleep segments / nap log
-  '0x55', // RR interval stream (~9 MB)
-  '0x57', // RR blocks (~1.8 MB)
 ];
 
-/// Friendly labels for each type code.
+/// Reference map of known Huami type codes (not all are fetched).
 const Map<String, String> typeCodeLabels = {
   '0x01': 'HR samples',
-  // Gadgetbridge-confirmed codes
-  '0x02': 'Manual HR',
+  '0x02': 'Manual HR — not fetched (empty on device)',
   '0x05': 'Workouts',
   '0x06': 'Workout details',
-  '0x07': 'Debug logs',
+  '0x07': 'Debug logs — not fetched (~20 MB firmware log)',
   '0x0D': 'PAI scores',
-  '0x12': 'Stress manual',
+  '0x12': 'Stress manual — not fetched',
   '0x13': 'Stress auto',
   '0x25': 'SpO2',
   '0x26': 'SpO2 sleep',
-  '0x2C': 'Device metadata',
+  '0x2C': 'Device metadata — not fetched (rejected)',
   '0x2E': 'Temperature',
   '0x38': 'Sleep resp rate',
   '0x3A': 'Resting HR',
   '0x3D': 'Max HR',
   '0x48': 'Sleep session',
   '0x49': 'HRV',
-  // Gap probes (not in Gadgetbridge enum)
   '0x03': 'probe-03',
   '0x04': 'probe-04',
   '0x08': 'probe-08', '0x09': 'probe-09', '0x0A': 'probe-0A',
@@ -150,29 +58,28 @@ const Map<String, String> typeCodeLabels = {
   '0x1C': 'probe-1C', '0x1D': 'probe-1D', '0x1E': 'probe-1E', '0x1F': 'probe-1F',
   '0x20': 'probe-20', '0x21': 'probe-21', '0x22': 'probe-22', '0x23': 'probe-23',
   '0x24': 'probe-24',
-  '0x27': 'Accelerometer', // raw wrist accel stream — XYZ i8 @ 1/min
+  '0x27': 'Accelerometer — not fetched (raw wrist XYZ)',
   '0x28': 'probe-28', '0x29': 'probe-29',
   '0x2A': 'probe-2A', '0x2B': 'probe-2B', '0x2D': 'probe-2D',
   '0x2F': 'probe-2F', '0x30': 'probe-30', '0x31': 'probe-31', '0x32': 'probe-32',
   '0x33': 'probe-33', '0x34': 'probe-34', '0x35': 'probe-35', '0x36': 'probe-36',
   '0x37': 'probe-37',
-  '0x39': 'Daily readiness',  // confirmed data: 3.4 KB
-  '0x3B': 'Activity sessions', // auto-detected activity bouts, protobuf
+  '0x39': 'Daily readiness',
+  '0x3B': 'Activity sessions',
   '0x3C': 'probe-3C',
   '0x3E': 'probe-3E', '0x3F': 'probe-3F', '0x40': 'probe-40', '0x41': 'probe-41',
   '0x42': 'probe-42', '0x43': 'probe-43', '0x44': 'probe-44', '0x45': 'probe-45',
-  '0x46': 'Continuous HR',  // PPG HR session — 180 samples @ 1/min
+  '0x46': 'Continuous HR — not fetched (PPG session)',
   '0x47': 'probe-47',
-  // Beyond Gadgetbridge enum — Helio 2025 territory
-  '0x4A': 'HRV trend',      // confirmed data
+  '0x4A': 'HRV trend — not fetched',
   '0x4B': 'probe-4B', '0x4C': 'probe-4C', '0x4D': 'probe-4D',
-  '0x4E': 'Sleep segments', // nap/sleep windows — ts + tz + duration
+  '0x4E': 'Sleep segments',
   '0x4F': 'probe-4F',
   '0x50': 'probe-50', '0x51': 'probe-51', '0x52': 'probe-52', '0x53': 'probe-53',
-  '0x54': 'probe-54',  '0x55': 'RR intervals',     // confirmed data: ~9 MB raw RR stream
+  '0x54': 'probe-54', '0x55': 'RR intervals — not fetched (~9 MB)',
   '0x56': 'probe-56',
-  '0x57': 'RR blocks',        // confirmed data: ~1.8 MB RR block format
-  '0x58': 'Raw PPG dump',   // 859k pkts — full-res PPG/accel, like 0x07
+  '0x57': 'RR blocks — not fetched (~1.8 MB)',
+  '0x58': 'Raw PPG dump — not fetched',
   '0x59': 'probe-59', '0x5A': 'probe-5A', '0x5B': 'probe-5B',
   '0x5C': 'probe-5C', '0x5D': 'probe-5D', '0x5E': 'probe-5E', '0x5F': 'probe-5F',
   '0x60': 'probe-60', '0x61': 'probe-61', '0x62': 'probe-62', '0x63': 'probe-63',
@@ -183,7 +90,6 @@ const Map<String, String> typeCodeLabels = {
   '0x74': 'probe-74', '0x75': 'probe-75', '0x76': 'probe-76', '0x77': 'probe-77',
   '0x78': 'probe-78', '0x79': 'probe-79', '0x7A': 'probe-7A', '0x7B': 'probe-7B',
   '0x7C': 'probe-7C', '0x7D': 'probe-7D', '0x7E': 'probe-7E', '0x7F': 'probe-7F',
-  // 0x80–0xFF extended range
   '0x80': 'probe-80', '0x81': 'probe-81', '0x82': 'probe-82', '0x83': 'probe-83',
   '0x84': 'probe-84', '0x85': 'probe-85', '0x86': 'probe-86', '0x87': 'probe-87',
   '0x88': 'probe-88', '0x89': 'probe-89', '0x8A': 'probe-8A', '0x8B': 'probe-8B',
@@ -219,12 +125,54 @@ const Map<String, String> typeCodeLabels = {
 };
 
 const String liveHeartRateTypeCode = '0x2a37';
+const String devApiBaseUrl = 'http://192.168.0.102:8080';
+const String devSigningSecret = 'CONFIGURE_IN_APP_SETTINGS';
+const String appBuildMarker = 'v1';
 const String appDocsSubdir = 'heliolytics';
 const String sessionsSubdir = 'sessions';
 const String authKeyStorageKey = 'heliolytics.auth_key';
 const String strapMacStorageKey = 'heliolytics.strap_mac';
-const int defaultFetchWindowHours = 48;
+
+/// Overlap when resuming from backend [dataThrough] (avoids boundary gaps).
+const int syncCoverageOverlapMinutes = 60;
+
+/// First strap sync backfills this many days when backend has no data.
+const int initialSyncBackfillDays = 10;
+
+/// Workout blobs are event-based; always backfill this window even on incremental sync.
+const Set<String> workoutBackfillTypeCodes = {'0x05', '0x06', '0x3B'};
+
+/// API read window for daily metrics UI (not BLE fetch depth).
+const int devFetchWindowDays = 10;
+
+/// API read window for workouts list (not BLE fetch depth).
+const int devWorkoutFetchDays = 90;
+
+/// Home trend + heatmap window (days).
+const int homeTrendDays = 7;
+
+/// API read window for auto-detected activity sessions.
+const int devActivitySessionFetchDays = 90;
+
+const int metricProgressSleepMax = 100;
+const int metricProgressStressMax = 100;
+const int metricProgressHrvMax = 120;
+const int metricProgressPaiMax = 100;
+const int metricProgressRhrMin = 40;
+const int metricProgressRhrMax = 100;
 const int defaultListenDurationSec = 300;
 const int scanTimeoutSec = 10;
 const int chunkReceiveTimeoutSec = 5;
 const int chunkRetryCount = 1;
+
+const String batteryServiceUuid = '0000180f-0000-1000-8000-00805f9b34fb';
+const String batteryLevelUuid = '00002a19-0000-1000-8000-00805f9b34fb';
+
+const int spo2HeaderByte = 0x02;
+const int spo2RecordSize = 65;
+const int paiRecordSize = 61;
+const int paiMarkerByte = 0x05;
+const int readinessRecordSize = 569;
+const int napRecordStride = 9;
+const int napMinDurationSec = 45 * 60;
+const int napMinStartHourIst = 11;

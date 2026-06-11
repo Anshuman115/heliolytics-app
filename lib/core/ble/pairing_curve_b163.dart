@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 /// Huami sect163k1 (B-163) ECDH for the Amazfit/Zepp BLE auth handshake.
 ///
-/// Interop-focused implementation aligned with Gadgetbridge `ECDH_B163`.
+/// Interop-focused B-163 ECDH for the Huami/Zepp BLE auth handshake.
 /// NOT constant-time — do not reuse beyond strap pairing.
 ///
 /// Representation: a field element / scalar is a little-endian `Uint32List` of

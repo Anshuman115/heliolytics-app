@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:heliolytics/core/utils/ist_time.dart';
+
 /// Huami 8-byte time encoding used by the activity-fetch start command,
 /// and the parser for the device's start-date metadata reply.
 /// Bytes: year(u16 LE) month day hour minute second(=0) tz(15-min units).
@@ -36,7 +38,10 @@ class HuamiTime {
     final expected = ByteData.sublistView(d, 3, 7).getUint32(0, Endian.little);
     if (expected == 0) return (expected: 0, start: DateTime.now());
     final year = ByteData.sublistView(d, 7, 9).getUint16(0, Endian.little);
-    final start = DateTime(year, d[9], d[10], d[11], d[12], d[13]);
+    final start = DateTime.fromMillisecondsSinceEpoch(
+      istWallToEpochSec(year, d[9], d[10], d[11], d[12], d[13]) * 1000,
+      isUtc: true,
+    );
     return (expected: expected, start: start);
   }
 }

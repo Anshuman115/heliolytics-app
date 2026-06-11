@@ -1,48 +1,64 @@
-# Heliolytics
+# Heliolytics App
 
-Flutter app that connects directly to the **Amazfit Helio Strap 2025** over BLE, extracts health data (raw binary), and stores it locally. No Zepp cloud involved after the initial auth key setup.
+Flutter mobile client for Heliolytics: BLE strap sync, cloud upload, health UI.
 
-## What This App Does
+Part of a **3-repo system**:
 
-1. Authenticates with the strap using a user-pasted auth key (ECDH + AES)
-2. Fetches health data type codes over the Huami chunked BLE protocol
-3. Saves raw `.bin` files per data type + session metadata JSON
-4. Phase 2: parse and sync to a TimescaleDB backend (separate repo)
+| Repo | Role |
+|------|------|
+| **Heliolytics_App** (here) | Flutter · BLE · Play Store |
+| **Heliolytics** | Go API · PostgreSQL |
+| **Heliolytics_Web** | Next.js dashboard |
 
-## Project Structure
+## Run (debug)
+
+```bash
+flutter pub get
+flutter run -d android
+```
+
+Connect your phone over USB with **USB debugging** enabled. If only one Android device is attached, `flutter run -d android` picks it automatically.
+
+## Release build
+
+1. Copy `android/key.properties.example` → `android/key.properties` and fill in your release keystore
+2. Build AAB for Play Store:
+
+```bash
+flutter build appbundle --release
+```
+
+Or APK:
+
+```bash
+flutter build apk --release
+```
+
+## API setup
+
+1. Start the stack from the **Heliolytics** repo (`deploy/install.sh`)
+2. App **Settings → Cloud API**:
+   - **API URL:** your server HTTPS endpoint (or `http://LAN:8080` in debug)
+   - **API key:** same as `HELIOLYTICS_SIGNING_SECRET` in `deploy/.env`
+
+The app mints short-lived HMAC tokens — you never paste tokens manually.
+
+## Security
+
+- Strap **auth key** (first-time setup) is BLE-only — not sent to the API
+- **API key** signs requests to your Heliolytics server
+- Device lock (PIN/biometrics) required when screen lock is enabled on the phone
+
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md) for Play Store / data handling summary.
+
+## Layout
 
 ```
-lib/
-  core/ble/        → BLE engine (fetch, auth, chunked protocol, parsers)
-  features/        → UI (auth, scan, fetch, sessions)
+lib/core/ble/     Protocol, sync engine
+lib/features/     Feature modules (data / domain / presentation)
+lib/shared/       Shared widgets and providers
 ```
 
-Local-only artifacts (not in git): see `.gitignore`.
-
-## Supported Hardware
-
-- **Device:** Amazfit Helio Strap 2025 (ZeppOS 4.x)
-- **Protocol:** Huami/ZeppOS BLE activity-fetch (Gadgetbridge-compatible)
-- **Timezone:** Per-user; device tz byte `0x16` often means UTC+5:30
-
-## Data Types (confirmed)
-
-| Code | Name | Notes |
-|------|------|-------|
-| `0x01` | Activity (HR + steps + kind) | 8 B/min, round-relative time |
-| `0x05` | Workout summary | protobuf |
-| `0x13` | Stress (auto) | 4 B/min |
-| `0x25` | SpO₂ spot | session-based |
-| `0x2E` | Skin temperature | 8 B/min |
-| `0x38` | Sleep respiratory rate | 8 B/min |
-| `0x3A` | Resting HR | 6 B, absolute ts |
-| `0x3D` | Max HR | 6 B, absolute ts |
-| `0x48` | Sleep sessions | 594 B/session |
-| `0x49` | HRV RMSSD | 6 B, absolute ts |
-
-## Getting Started
-
-1. Obtain a 32-character hex auth key for your strap (Zepp API / account tools)
-2. Open the app, paste the auth key
-3. Scan and select your Helio Strap, then tap **Connect** to run a fetch session
-4. Session metadata is written to app-private storage (`session.json`, `types.json`)
+Server and web live in sibling repos — not in this project.

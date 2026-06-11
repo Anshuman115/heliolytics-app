@@ -24,7 +24,7 @@ class _AuthKeyScreenState extends ConsumerState<AuthKeyScreen> {
   }
 
   Future<void> _save() async {
-    final keyReason = AuthKeyValidator.validate(_keyCtrl.text);
+    final keyReason = AuthKeyValidator.validate(_keyCtrl.text.trim());
     setState(() => _keyError = keyReason);
     if (keyReason != null) return;
 
@@ -32,7 +32,7 @@ class _AuthKeyScreenState extends ConsumerState<AuthKeyScreen> {
     try {
       await ref
           .read(syncOrchestratorProvider.notifier)
-          .saveAuthKey(_keyCtrl.text);
+          .saveAuthKey(_keyCtrl.text.trim());
     } catch (e) {
       setState(() {
         _keyError = e.toString();
@@ -59,9 +59,9 @@ class _AuthKeyScreenState extends ConsumerState<AuthKeyScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               '32 hex chars — from Zepp account or a compatible companion app',
-              style: TextStyle(color: Colors.grey, fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -87,10 +87,10 @@ class _AuthKeyScreenState extends ConsumerState<AuthKeyScreen> {
                   : const Text('Save Key'),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'After saving, tap Connect on the next screen to scan for your Helio Strap.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
             ),
           ],
         ),

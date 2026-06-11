@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:heliolytics/core/ble/parsers/activity_parser.dart';
 import 'package:heliolytics/core/ble/sync_page_anchor.dart';
-import 'package:heliolytics/core/ble/record_stride.dart';
 import 'package:heliolytics/core/utils/huami_time.dart';
 
 /// Huami activity-fetch over plaintext GATT (control 0x0004, data 0x0005).
@@ -124,26 +124,27 @@ class TypeSyncEngine {
     job.allRaw.add(raw);
     log?.call('  round ${job.rounds}: ${raw.length}B raw');
 
-    if (raw.isNotEmpty && job.rounds < job.maxRounds) {
-      final nextSince = _nextSince(job.code, raw, job.roundStart);
-      final now = DateTime.now();
-      if (nextSince != null &&
-          nextSince.isBefore(now.subtract(const Duration(seconds: 30))) &&
-          nextSince.isAfter(job.since)) {
-        job.since = nextSince;
-        _startRound();
-        return;
+    if (job.rounds < job.maxRounds) {
+      final last = ActivityParser.lastSampleTime(
+        job.code,
+        job.code == 0x05 ? job.allRaw.toBytes() : raw,
+        job.roundStart,
+      );
+      if (last != null) {
+        final nextSince = last.add(const Duration(minutes: 1));
+        final now = DateTime.now();
+        if (nextSince.isBefore(now.subtract(const Duration(seconds: 30))) &&
+            nextSince.isAfter(job.since)) {
+          if (job.code == 0x05) {
+            log?.call('  workouts paging from ${nextSince.toIso8601String()}');
+          }
+          job.since = nextSince;
+          _startRound();
+          return;
+        }
       }
     }
     _finishOk();
-  }
-
-  DateTime? _nextSince(int code, Uint8List raw, DateTime roundStart) {
-    if (!isRoundRelative(code)) return null;
-    final stride = recordStride(code, raw.length);
-    final count = raw.length ~/ stride;
-    if (count == 0) return null;
-    return roundStart.add(Duration(minutes: count));
   }
 
   void _ackThenFinish() {

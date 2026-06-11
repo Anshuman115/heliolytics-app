@@ -58,6 +58,21 @@ class SessionStore {
     await f.writeAsBytes(bytes, mode: FileMode.append, flush: true);
   }
 
+  Future<void> writeTypeBytes(
+    String sessionId,
+    String typeCode,
+    List<int> bytes,
+  ) async {
+    final f = File(p.join(_sessionDir(sessionId).path, _binFileName(typeCode)));
+    await f.parent.create(recursive: true);
+    await f.writeAsBytes(bytes, flush: true);
+  }
+
+  Future<String?> latestSessionId() async {
+    final ids = await listSessions();
+    return ids.isEmpty ? null : ids.first;
+  }
+
   Future<void> writeSessionJson(Session s) async {
     final f = File(p.join(_sessionDir(s.sessionId).path, 'session.json'));
     await f.writeAsString(jsonEncode(s.toJson()), flush: true);
@@ -78,6 +93,7 @@ class SessionStore {
       mode: SessionModeX.parse(m['mode'] as String),
       entries: c?.chunked ?? const [],
       unsolicited: c?.unsolicited ?? const [],
+      batteryPercent: (m['batteryPercent'] as num?)?.toInt(),
     );
   }
 
