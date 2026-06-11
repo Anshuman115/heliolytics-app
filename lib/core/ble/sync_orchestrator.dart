@@ -17,6 +17,7 @@ import 'package:heliolytics/features/ble_discovery/data/session_store.dart';
 import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
 import 'package:heliolytics/core/utils/logger.dart';
 import 'package:heliolytics/features/cloud_sync/domain/models/sync_payload.dart';
+import 'package:heliolytics/features/cloud_sync/presentation/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/features/health_data/presentation/providers/live_health_provider.dart';
 class SyncOrchestrator extends Notifier<SessionSnapshot> {
   late AuthKeyStorage _authStorage;
@@ -101,6 +102,17 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       return;
     }
 
+    if (!await ref.read(apiConfiguredProvider.future)) {
+      _log('Connect skipped: configure Cloud API in Settings first');
+      state = state.copyWith(
+        state: SessionState.error,
+        lastErrorMessage: cloudApiRequiredBeforeSyncMessage,
+      );
+      _flush();
+      _connecting = false;
+      return;
+    }
+
     await _run(mac);
     _connecting = false;
   }
@@ -126,6 +138,11 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     if (!await hasSavedMac()) return;
     if (state.state != SessionState.idle) return;
     if (_connecting) return;
+    if (!await ref.read(apiConfiguredProvider.future)) {
+      _log('Auto-sync skipped: configure Cloud API in Settings first');
+      _flush();
+      return;
+    }
     _log('Auto-sync: connecting to saved strap');
     _flush();
     await connect();
@@ -157,6 +174,16 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     }
     final store = _store;
     if (store == null) return;
+
+    if (!await ref.read(apiConfiguredProvider.future)) {
+      _log('Refetch skipped: configure Cloud API in Settings first');
+      state = state.copyWith(
+        state: SessionState.error,
+        lastErrorMessage: cloudApiRequiredBeforeSyncMessage,
+      );
+      _flush();
+      return;
+    }
 
     _connecting = true;
     state = state.copyWith(

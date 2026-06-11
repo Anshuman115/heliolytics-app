@@ -133,6 +133,14 @@ const String sessionsSubdir = 'sessions';
 const String authKeyStorageKey = 'heliolytics.auth_key';
 const String strapMacStorageKey = 'heliolytics.strap_mac';
 
+/// Shown when strap sync is blocked until Cloud API is configured.
+const String cloudApiRequiredBeforeSyncMessage =
+    'Configure Cloud API in Settings before syncing.';
+
+/// Proactive UI hint before the user taps Sync.
+const String cloudApiSetupHintMessage =
+    'Add your API URL and key in Settings → Cloud API before your first strap sync.';
+
 /// Overlap when resuming from backend [dataThrough] (avoids boundary gaps).
 const int syncCoverageOverlapMinutes = 60;
 
