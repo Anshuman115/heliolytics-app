@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:heliolytics/core/utils/chart_bounds.dart';
 import 'package:heliolytics/core/utils/formatters.dart';
 import 'package:heliolytics/features/health_data/domain/entities/health_sample.dart';
 
@@ -35,8 +36,8 @@ class MinuteSeriesChart extends StatelessWidget {
       spots.add(FlSpot(x, s.value));
     }
     final vals = points.map((s) => s.value);
-    final minY = vals.reduce((a, b) => a < b ? a : b) * 0.95;
-    final maxY = vals.reduce((a, b) => a > b ? a : b) * 1.05;
+    final (minY, maxY) = chartYBounds(vals);
+    final ySpan = (maxY - minY).clamp(0.1, double.infinity);
 
     return SizedBox(
       height: height,
@@ -47,7 +48,7 @@ class MinuteSeriesChart extends StatelessWidget {
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            horizontalInterval: (maxY - minY) / 4,
+            horizontalInterval: ySpan / 4,
             getDrawingHorizontalLine: (_) => FlLine(color: Colors.white10, strokeWidth: 1),
           ),
           titlesData: FlTitlesData(
@@ -65,7 +66,7 @@ class MinuteSeriesChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 22,
-                interval: spots.length > 1 ? spots.last.x / 4 : 1,
+                interval: chartXInterval(spots.last.x),
                 getTitlesWidget: (v, _) {
                   final idx = spots.indexWhere((s) => (s.x - v).abs() < 0.5);
                   if (idx < 0) return const SizedBox.shrink();

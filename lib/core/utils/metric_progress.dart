@@ -15,3 +15,7 @@ double metricProgress(MetricKind kind, int? value) {
           .clamp(0.0, 1.0),
   };
 }
+
+/// Guards fl_chart / CircularProgressIndicator from NaN or infinite values.
+double safeProgress(double progress) =>
+    progress.isFinite ? progress.clamp(0.0, 1.0) : 0.0;

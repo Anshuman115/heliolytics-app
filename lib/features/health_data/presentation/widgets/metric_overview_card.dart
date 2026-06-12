@@ -29,32 +29,53 @@ class _MetricOverviewCardState extends State<MetricOverviewCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stats = MetricStats.fromSamples(widget.samples);
+    final valueText =
+        '${widget.valueLabel}${widget.def.unit.isEmpty ? '' : ' ${widget.def.unit}'}';
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Column(
         children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: widget.def.color.withValues(alpha: 0.15),
-              child: Icon(widget.def.icon, color: widget.def.color, size: 20),
-            ),
-            title: Text(widget.def.title),
-            subtitle: Text(widget.def.note, maxLines: _expanded ? 4 : 1, overflow: TextOverflow.ellipsis),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${widget.valueLabel}${widget.def.unit.isEmpty ? '' : ' ${widget.def.unit}'}',
-                  style: theme.textTheme.titleMedium?.copyWith(color: widget.def.color),
-                ),
-                IconButton(
-                  icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
-                  onPressed: () => setState(() => _expanded = !_expanded),
-                ),
-              ],
-            ),
+          InkWell(
             onTap: widget.onOpenDetail,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.sm, AppSpacing.sm),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: widget.def.color.withValues(alpha: 0.15),
+                    child: Icon(widget.def.icon, color: widget.def.color, size: 20),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.def.title, style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.def.note,
+                          maxLines: _expanded ? 4 : 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          valueText,
+                          style: theme.textTheme.titleMedium?.copyWith(color: widget.def.color),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                    onPressed: () => setState(() => _expanded = !_expanded),
+                  ),
+                ],
+              ),
+            ),
           ),
           if (widget.samples.isNotEmpty)
             Padding(
