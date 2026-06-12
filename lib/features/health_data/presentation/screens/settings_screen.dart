@@ -12,6 +12,7 @@ import 'package:heliolytics/features/cloud_sync/presentation/providers/cloud_syn
 import 'package:heliolytics/features/health_data/presentation/providers/live_health_provider.dart';
 import 'package:heliolytics/features/health_data/presentation/widgets/sync_log_panel.dart';
 import 'package:heliolytics/features/health_data/presentation/widgets/sync_status_bar.dart';
+import 'package:heliolytics/shared/widgets/cloud_api_setup_banner.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -37,6 +38,13 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           SliverToBoxAdapter(child: SyncStatusBar(snap: snap)),
+          SliverToBoxAdapter(
+            child: apiReady.when(
+              data: (ok) => ok ? const SizedBox.shrink() : const CloudApiSetupBanner(),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
           SliverPadding(
             padding: const EdgeInsets.all(AppSpacing.md),
             sliver: SliverList(
@@ -65,7 +73,9 @@ class SettingsScreen extends ConsumerWidget {
                   leading: const Icon(Icons.cloud),
                   title: const Text('API configuration'),
                   subtitle: apiReady.when(
-                    data: (ok) => Text(ok ? 'Connected' : 'Not configured'),
+                    data: (ok) => Text(
+                      ok ? 'Connected' : 'Required before first strap sync',
+                    ),
                     loading: () => const Text('Checking…'),
                     error: (_, __) => const Text('Check failed'),
                   ),

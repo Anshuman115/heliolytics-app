@@ -50,7 +50,8 @@ class _ApiSettingsScreenState extends ConsumerState<ApiSettingsScreen> {
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
               Text(
-                'Enter your Heliolytics API URL and API key.',
+                'Enter your Heliolytics API URL and API key. '
+                'Required before your first strap sync.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.md),

@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
 import 'package:heliolytics/core/ble/sync_orchestrator.dart';
-import 'package:heliolytics/core/constants.dart';
 import 'package:heliolytics/core/theme/app_spacing.dart';
 import 'package:heliolytics/core/theme/app_theme.dart';
 import 'package:heliolytics/core/utils/error_messages.dart';
 import 'package:heliolytics/features/cloud_sync/presentation/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/features/health_data/presentation/widgets/sync_log_panel.dart';
 import 'package:heliolytics/features/health_data/presentation/widgets/sync_status_bar.dart';
+import 'package:heliolytics/shared/widgets/cloud_api_setup_banner.dart';
 
 class SyncScreen extends ConsumerWidget {
   const SyncScreen({super.key});
@@ -40,6 +40,13 @@ class SyncScreen extends ConsumerWidget {
             ],
           ),
           SliverToBoxAdapter(child: SyncStatusBar(snap: snap)),
+          SliverToBoxAdapter(
+            child: apiReady.when(
+              data: (ok) => ok ? const SizedBox.shrink() : const CloudApiSetupBanner(),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
           SliverToBoxAdapter(child: SyncLogPanel(logs: snap.logs)),
           SliverPadding(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -58,10 +65,12 @@ class SyncScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 apiReady.when(
-                  data: (ok) => Text(
-                    ok ? 'API configured ✓' : 'Set API URL + key in Settings',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  data: (ok) => ok
+                      ? Text(
+                          'API configured ✓',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        )
+                      : const SizedBox.shrink(),
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const Text('API check failed'),
                 ),
