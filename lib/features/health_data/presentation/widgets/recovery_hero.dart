@@ -15,6 +15,7 @@ class RecoveryHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final readiness = day.readiness?.toString() ?? '—';
+    final progress = safeProgress(metricProgress(MetricKind.readiness, day.readiness));
 
     return Card(
       child: InkWell(
@@ -22,53 +23,59 @@ class RecoveryHero extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: metricProgress(MetricKind.readiness, day.readiness).clamp(0, 1),
-                      strokeWidth: 10,
-                      backgroundColor: MetricColors.readiness.withValues(alpha: 0.15),
-                      color: MetricColors.readiness,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 340;
+              final ring = compact ? 88.0 : 120.0;
+              return Row(
+                children: [
+                  SizedBox(
+                    width: ring,
+                    height: ring,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CircularProgressIndicator(
+                          value: progress,
+                          strokeWidth: compact ? 8 : 10,
+                          backgroundColor: MetricColors.readiness.withValues(alpha: 0.15),
+                          color: MetricColors.readiness,
+                        ),
+                        Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(readiness, style: theme.textTheme.headlineSmall),
+                              Text('Readiness', style: theme.textTheme.labelSmall),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(readiness, style: theme.textTheme.headlineSmall),
-                          Text('Readiness', style: theme.textTheme.labelSmall),
-                        ],
-                      ),
+                  ),
+                  SizedBox(width: compact ? AppSpacing.md : AppSpacing.lg),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Recovery score', style: theme.textTheme.titleMedium),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(formatSteps(day.steps), style: theme.textTheme.bodyMedium),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          day.readiness == null
+                              ? 'Re-sync after updating the API to load readiness'
+                              : 'Tap for readiness details',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Recovery score', style: theme.textTheme.titleMedium),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(formatSteps(day.steps), style: theme.textTheme.bodyMedium),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      day.readiness == null
-                          ? 'Re-sync after updating the API to load readiness'
-                          : 'Tap for readiness details',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

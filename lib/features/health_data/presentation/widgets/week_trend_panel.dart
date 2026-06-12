@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:heliolytics/core/constants.dart';
 import 'package:heliolytics/core/theme/app_spacing.dart';
 import 'package:heliolytics/core/theme/metric_colors.dart';
+import 'package:heliolytics/core/utils/chart_bounds.dart';
 import 'package:heliolytics/core/utils/formatters.dart';
 import 'package:heliolytics/features/health_data/domain/entities/day_metric.dart';
 
@@ -79,9 +80,7 @@ class _WeekTrendPanelState extends State<WeekTrendPanel> {
   }
 
   LineChartData _chart(List<FlSpot> spots, List<DayMetric> slice, TrendMetric m) {
-    final vals = spots.map((s) => s.y);
-    final minY = vals.reduce((a, b) => a < b ? a : b) * 0.9;
-    final maxY = vals.reduce((a, b) => a > b ? a : b) * 1.1;
+    final (minY, maxY) = chartYBounds(spots.map((s) => s.y));
     return LineChartData(
       minY: minY,
       maxY: maxY,

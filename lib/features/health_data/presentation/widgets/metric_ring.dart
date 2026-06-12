@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:heliolytics/core/utils/metric_progress.dart';
 
 class MetricRing extends StatelessWidget {
   final String label;
@@ -31,7 +32,7 @@ class MetricRing extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 CircularProgressIndicator(
-                  value: progress.clamp(0, 1),
+                  value: safeProgress(progress),
                   strokeWidth: 6,
                   backgroundColor: color.withValues(alpha: 0.15),
                   color: color,

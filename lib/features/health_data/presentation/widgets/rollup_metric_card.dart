@@ -53,9 +53,13 @@ class _RollupMetricCardState extends State<RollupMetricCard> {
                       ],
                     ),
                   ),
-                  Text(
-                    widget.valueLabel,
-                    style: theme.textTheme.headlineSmall?.copyWith(color: widget.def.color),
+                  Flexible(
+                    child: Text(
+                      widget.valueLabel,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: theme.textTheme.headlineSmall?.copyWith(color: widget.def.color),
+                    ),
                   ),
                 ],
               ),

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:heliolytics/core/theme/app_spacing.dart';
 import 'package:heliolytics/core/theme/metric_colors.dart';
 import 'package:heliolytics/core/utils/formatters.dart';
+import 'package:heliolytics/features/health_data/domain/entities/day_metric.dart';
+import 'package:heliolytics/features/health_data/domain/entities/temp_sample.dart';
 import 'package:heliolytics/features/health_data/domain/metric_catalog.dart';
 import 'package:heliolytics/features/health_data/presentation/providers/live_health_provider.dart';
 import 'package:heliolytics/features/health_data/presentation/providers/selected_day_provider.dart';
@@ -63,7 +65,7 @@ class HealthHomeScreen extends ConsumerWidget {
       ];
     }
 
-    final day = ref.watch(selectedDayProvider)!;
+    final day = ref.watch(selectedDayProvider) ?? data.days.first;
     final snap = data;
     final series = snap.seriesByMetric(day.dayKey);
     final kcal = snap.caloriesFor(day.dayKey);
@@ -165,8 +167,9 @@ class HealthHomeScreen extends ConsumerWidget {
 
   String defSummary(day, String id) => MetricCatalog.byId(id)!.summaryValue(day);
 
-  Widget _tempCard(BuildContext ctx, day, temps, VoidCallback onTap) {
+  Widget _tempCard(BuildContext ctx, DayMetric day, List<TempSample> temps, VoidCallback onTap) {
     final def = MetricCatalog.byId('temperature')!;
+    final value = def.summaryValue(day);
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: InkWell(
@@ -177,17 +180,24 @@ class HealthHomeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  backgroundColor: def.color.withValues(alpha: 0.15),
-                  child: Icon(def.icon, color: def.color, size: 20),
-                ),
-                title: Text(def.title),
-                trailing: Text(
-                  def.summaryValue(day),
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(color: def.color),
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: def.color.withValues(alpha: 0.15),
+                    child: Icon(def.icon, color: def.color, size: 20),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(def.title, style: Theme.of(ctx).textTheme.titleMedium),
+                        Text(value, style: Theme.of(ctx).textTheme.titleMedium?.copyWith(color: def.color)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               Text(def.note, style: Theme.of(ctx).textTheme.bodySmall),
               if (temps.isNotEmpty) ...[

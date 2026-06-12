@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:heliolytics/core/theme/metric_colors.dart';
+import 'package:heliolytics/core/utils/chart_bounds.dart';
 import 'package:heliolytics/core/utils/formatters.dart';
 import 'package:heliolytics/features/health_data/domain/entities/temp_sample.dart';
 
@@ -22,8 +23,7 @@ class TemperatureChart extends StatelessWidget {
       final x = s.sampledAt.millisecondsSinceEpoch / 60000.0 - start;
       spots.add(FlSpot(x, s.celsius));
     }
-    final minY = points.map((s) => s.celsius).reduce((a, b) => a < b ? a : b) - 0.3;
-    final maxY = points.map((s) => s.celsius).reduce((a, b) => a > b ? a : b) + 0.3;
+    final (minY, maxY) = chartYBounds(points.map((s) => s.celsius));
 
     return SizedBox(
       height: height,
@@ -48,7 +48,7 @@ class TemperatureChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 22,
-                interval: spots.length > 1 ? spots.last.x / 4 : 1,
+                interval: chartXInterval(spots.last.x),
                 getTitlesWidget: (v, _) {
                   final idx = spots.indexWhere((s) => (s.x - v).abs() < 0.5);
                   if (idx < 0) return const SizedBox.shrink();
