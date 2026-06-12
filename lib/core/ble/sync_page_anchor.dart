@@ -1,3 +1,5 @@
+import 'package:heliolytics/core/utils/ist_time.dart' show formatRoundStartIst, parseRoundStartIst;
+
 /// One page of a paged Huami activity-fetch (byte offset + roundStart anchor).
 /// Each round has its own device-reported [roundStart].
 class SyncPageAnchor {
@@ -11,12 +13,12 @@ class SyncPageAnchor {
 
   Map<String, dynamic> toJson() => {
         'byteOffset': byteOffset,
-        'roundStart': roundStart.toIso8601String(),
+        'roundStart': formatRoundStartIst(roundStart),
       };
 
   factory SyncPageAnchor.fromJson(Map<String, dynamic> j) =>
       SyncPageAnchor(
         byteOffset: (j['byteOffset'] as num).toInt(),
-        roundStart: DateTime.parse(j['roundStart'] as String),
+        roundStart: parseRoundStartIst(j['roundStart'] as String),
       );
 }

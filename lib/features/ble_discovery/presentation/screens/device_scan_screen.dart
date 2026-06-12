@@ -5,6 +5,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:heliolytics/core/ble/sync_orchestrator.dart';
+import 'package:heliolytics/core/utils/error_messages.dart';
 
 /// Scans for all nearby BLE devices and lets the user pick the Helio Strap.
 /// On selection, stores the MAC and proceeds to auth + fetch automatically.
@@ -18,6 +19,7 @@ class DeviceScanScreen extends ConsumerStatefulWidget {
 class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
   final Map<String, _Device> _devices = {};
   bool _scanning = false;
+  bool _connecting = false;
   String? _error;
   StreamSubscription<List<ScanResult>>? _sub;
 
@@ -75,7 +77,7 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
           .first
           .timeout(const Duration(seconds: 20));
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyError(e));
     } finally {
       setState(() => _scanning = false);
     }
@@ -84,13 +86,19 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
   Future<void> _pick(_Device device) async {
     await FlutterBluePlus.stopScan();
     await _sub?.cancel();
-
     if (!mounted) return;
-    await ref
-        .read(syncOrchestratorProvider.notifier)
-        .saveMacAndConnect(device.mac);
-
-    if (mounted) Navigator.of(context).pop();
+    setState(() {
+      _connecting = true;
+      _error = null;
+    });
+    try {
+      await ref.read(syncOrchestratorProvider.notifier).saveMacAndConnect(device.mac);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) setState(() => _error = friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _connecting = false);
+    }
   }
 
   @override
@@ -118,14 +126,16 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
             ),
         ],
       ),
-      body: Column(
+      body: Stack(
+        children: [
+          Column(
         children: [
           if (_scanning)
             const LinearProgressIndicator(),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+              child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
           if (sorted.isEmpty && !_scanning)
             const Expanded(
@@ -172,6 +182,13 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+        ],
+      ),
+          if (_connecting)
+            const ColoredBox(
+              color: Color(0x88000000),
+              child: Center(child: CircularProgressIndicator()),
+            ),
         ],
       ),
     );

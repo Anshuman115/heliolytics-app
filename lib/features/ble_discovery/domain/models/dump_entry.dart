@@ -1,4 +1,5 @@
 import 'package:heliolytics/core/ble/sync_page_anchor.dart';
+import 'package:heliolytics/core/utils/ist_time.dart' show formatRoundStartIst, parseRoundStartIst;
 import 'package:heliolytics/features/ble_discovery/domain/models/dump_status.dart';
 
 class DumpEntry {
@@ -31,7 +32,8 @@ class DumpEntry {
         'bytes': bytes,
         if (file != null) 'file': file,
         if (errorByte != null) 'errorByte': errorByte,
-        if (roundStart != null) 'roundStart': roundStart!.toIso8601String(),
+        if (roundStart != null)
+          'roundStart': formatRoundStartIst(roundStart!),
         if (roundSegments.isNotEmpty)
           'roundSegments': roundSegments.map((s) => s.toJson()).toList(),
       };
@@ -44,7 +46,7 @@ class DumpEntry {
         file: j['file'] as String?,
         errorByte: j['errorByte'] as String?,
         roundStart: j['roundStart'] != null
-            ? DateTime.parse(j['roundStart'] as String)
+            ? parseRoundStartIst(j['roundStart'] as String)
             : null,
         roundSegments: (j['roundSegments'] as List<dynamic>?)
                 ?.map((e) => SyncPageAnchor.fromJson(

@@ -6,6 +6,7 @@ import 'package:heliolytics/core/ble/type_sync_engine.dart';
 import 'package:heliolytics/core/ble/sync_page_anchor.dart';
 import 'package:heliolytics/core/ble/encrypted_endpoint.dart';
 import 'package:heliolytics/core/ble/device_handshake.dart';
+import 'package:heliolytics/core/constants.dart';
 
 /// BLE connect, ZeppOS auth, and activity-fetch for the Helio Strap.
 /// The caller provides a [log] callback and sets [onUpdate] to react to data.
@@ -28,6 +29,7 @@ class BandLink {
   DeviceHandshake? auth;
   EncryptedEndpoint? comms;
   TypeSyncEngine? fetcher;
+  int? batteryPercent;
 
   void Function(Uint8List)? _notifyHandler;
   StreamSubscription<List<int>>? _notifySub;
@@ -70,6 +72,7 @@ class BandLink {
 
     log('→ discovering services');
     final services = await _device!.discoverServices();
+    await _readBattery(services);
     for (final s in services) {
       for (final c in s.characteristics) {
         final u = c.uuid.str.toLowerCase();
@@ -179,10 +182,16 @@ class BandLink {
       );
     }
 
-    await f.fetchType(code, since,
-        probeOnly: false,
-        maxRounds: 99999,
-        timeout: const Duration(days: 7));
+    final isWorkout = code == 0x05;
+    await f.fetchType(
+      code,
+      since,
+      probeOnly: false,
+      maxRounds: isWorkout ? 100 : 400,
+      timeout: isWorkout
+          ? const Duration(seconds: 150)
+          : const Duration(days: 7),
+    );
     final expected = f.lastExpected;
     final roundStart = f.firstRoundStart;
     final roundSegments = List<SyncPageAnchor>.from(f.roundSegments);
@@ -196,15 +205,7 @@ class BandLink {
         roundSegments: roundSegments,
       );
     }
-    if (expected == 0) {
-      return (
-        raw: Uint8List(0),
-        expected: 0,
-        skipped: false,
-        roundStart: roundStart,
-        roundSegments: roundSegments,
-      );
-    }
+    // expected==0 on the last page is normal; lastRaw still holds all rounds.
     return (
       raw: f.lastRaw,
       expected: expected,
@@ -243,6 +244,26 @@ class BandLink {
       log('✓ SERVICES ($n): ${services.join(' ')}');
       log('  0x004b supported: $has4b');
     }
+  }
+
+  Future<void> _readBattery(List<BluetoothService> services) async {
+    for (final s in services) {
+      if (s.uuid.str.toLowerCase() != batteryServiceUuid) continue;
+      for (final c in s.characteristics) {
+        if (c.uuid.str.toLowerCase() != batteryLevelUuid) continue;
+        try {
+          final v = await c.read();
+          if (v.isNotEmpty) {
+            batteryPercent = v[0].clamp(0, 100);
+            log('• battery $batteryPercent%');
+          }
+        } catch (e) {
+          log('• battery read failed: $e');
+        }
+        return;
+      }
+    }
+    log('• battery service not found');
   }
 
   Future<void> disconnect() async {

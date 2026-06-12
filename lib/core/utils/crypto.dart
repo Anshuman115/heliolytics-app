@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:pointycastle/export.dart';
 
 // CRC-32 (IEEE, zlib/ISO-HDLC) — used in Huami chunked frame trailer.
-// CRC32 for Huami chunk checksums (Gadgetbridge-compatible polynomial).
 final List<int> _crc32Table = _buildCrc32Table();
 List<int> _buildCrc32Table() {
   final t = List<int>.filled(256, 0);

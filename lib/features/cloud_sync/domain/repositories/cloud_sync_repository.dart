@@ -1,5 +1,5 @@
-/// Phase 3 — push parsed sessions to Heliolytics backend (TimescaleDB ETL).
+import 'package:heliolytics/features/cloud_sync/domain/models/sync_payload.dart';
+
 abstract class CloudSyncRepository {
-  Future<void> uploadSession(String sessionId);
-  Future<void> uploadPending();
+  Future<void> uploadPayload(SyncPayload payload);
 }

@@ -1,0 +1,215 @@
+import 'package:flutter/material.dart';
+import 'package:heliolytics/core/theme/metric_colors.dart';
+import 'package:heliolytics/features/health_data/domain/entities/day_metric.dart';
+import 'package:heliolytics/features/health_data/domain/entities/health_sample.dart';
+import 'package:heliolytics/features/health_data/domain/entities/temp_sample.dart';
+
+/// UI catalog for home cards and drill-down routes.
+class MetricCatalog {
+  static const homeOrder = [
+    'readiness',
+    'sleep',
+    'stress',
+    'hrv',
+    'rhr',
+    'spo2',
+    'temperature',
+    'pai',
+    'steps',
+  ];
+
+  static MetricDef? byId(String id) => _all[id];
+
+  static final _all = <String, MetricDef>{
+    'readiness': MetricDef(
+      id: 'readiness',
+      title: 'Readiness',
+      seriesKey: null,
+      color: MetricColors.readiness,
+      icon: Icons.bolt,
+      unit: '',
+      note: 'Daily recovery score from the strap. Higher means you bounced back well from strain and sleep debt.',
+      detail: 'Readiness combines sleep quality, resting HR, and recent load. Use it to decide how hard to push training today.',
+    ),
+    'sleep': MetricDef(
+      id: 'sleep',
+      title: 'Sleep',
+      seriesKey: null,
+      color: MetricColors.sleep,
+      icon: Icons.bedtime,
+      unit: '',
+      note: 'Overnight sleep score and stage breakdown (deep, REM, light).',
+      detail: 'Score reflects duration and architecture. Deep and REM support recovery; light sleep is transitional.',
+    ),
+    'stress': MetricDef(
+      id: 'stress',
+      title: 'Stress',
+      seriesKey: 'stress',
+      color: MetricColors.stress,
+      icon: Icons.psychology,
+      unit: '',
+      note: 'Auto stress score each minute (0–100). Lower is calmer.',
+      detail: 'Derived from HR variability patterns during the day. Spikes often align with meetings, workouts, or poor sleep.',
+    ),
+    'hrv': MetricDef(
+      id: 'hrv',
+      title: 'HRV',
+      seriesKey: 'hrv',
+      color: MetricColors.hrv,
+      icon: Icons.favorite,
+      unit: 'ms',
+      note: 'RMSSD heart-rate variability. Higher usually means better recovery.',
+      detail: 'Measured during sleep and rest. Track your personal baseline — compare to yourself, not others.',
+    ),
+    'rhr': MetricDef(
+      id: 'rhr',
+      title: 'Resting HR',
+      seriesKey: 'rhr',
+      color: MetricColors.restingHr,
+      icon: Icons.monitor_heart,
+      unit: 'bpm',
+      note: 'Resting heart-rate readings through the day.',
+      detail: 'Elevated RHR vs your baseline can signal illness, poor sleep, or accumulated fatigue.',
+    ),
+    'spo2': MetricDef(
+      id: 'spo2',
+      title: 'SpO₂',
+      seriesKey: 'spo2',
+      color: MetricColors.spo2,
+      icon: Icons.air,
+      unit: '%',
+      note: 'Blood oxygen spot checks during the day.',
+      detail: 'Typical healthy range is 95–100%. Sustained dips warrant medical follow-up.',
+    ),
+    'spo2_sleep': MetricDef(
+      id: 'spo2_sleep',
+      title: 'SpO₂ sleep',
+      seriesKey: 'spo2_sleep',
+      color: MetricColors.spo2,
+      icon: Icons.nights_stay,
+      unit: '%',
+      note: 'Overnight blood oxygen during sleep.',
+      detail: 'Useful for spotting breathing disturbances. Compare night-to-night trends.',
+    ),
+    'resp_rate': MetricDef(
+      id: 'resp_rate',
+      title: 'Respiratory rate',
+      seriesKey: 'resp_rate',
+      color: MetricColors.spo2,
+      icon: Icons.air,
+      unit: 'br/min',
+      note: 'Breaths per minute during sleep.',
+      detail: 'Stable baseline is personal. Sudden sustained increases can reflect illness or altitude.',
+    ),
+    'max_hr': MetricDef(
+      id: 'max_hr',
+      title: 'Max HR',
+      seriesKey: 'max_hr',
+      color: MetricColors.restingHr,
+      icon: Icons.favorite,
+      unit: 'bpm',
+      note: 'Peak heart rate samples recorded that day.',
+      detail: 'Reflects workout peaks and daily maximums from the strap.',
+    ),
+    'temperature': MetricDef(
+      id: 'temperature',
+      title: 'Skin temperature',
+      seriesKey: null,
+      color: MetricColors.temperature,
+      icon: Icons.thermostat,
+      unit: '°C',
+      note: 'Wrist skin temperature minute samples.',
+      detail: 'Relative changes vs your baseline matter more than absolute values. Useful for illness and cycle tracking.',
+    ),
+    'pai': MetricDef(
+      id: 'pai',
+      title: 'PAI',
+      seriesKey: null,
+      color: MetricColors.pai,
+      icon: Icons.local_fire_department,
+      unit: '',
+      note: 'Personal Activity Intelligence — weekly cardio load score.',
+      detail: 'Helio/Zepp PAI rewards elevated heart rate. Aim to stay above your personal target over 7 days.',
+    ),
+    'steps': MetricDef(
+      id: 'steps',
+      title: 'Steps',
+      seriesKey: null,
+      color: MetricColors.pai,
+      icon: Icons.directions_walk,
+      unit: '',
+      note: 'Total steps counted for the calendar day (IST).',
+      detail: 'Includes walking and general movement from the strap accelerometer pipeline.',
+    ),
+  };
+}
+
+class MetricDef {
+  final String id;
+  final String title;
+  final String? seriesKey;
+  final Color color;
+  final IconData icon;
+  final String unit;
+  final String note;
+  final String detail;
+
+  const MetricDef({
+    required this.id,
+    required this.title,
+    required this.seriesKey,
+    required this.color,
+    required this.icon,
+    required this.unit,
+    required this.note,
+    required this.detail,
+  });
+
+  String summaryValue(DayMetric day) => switch (id) {
+        'readiness' => _i(day.readiness),
+        'sleep' => _i(day.sleepScore),
+        'stress' => _i(day.stressAvg),
+        'hrv' => day.hrvRmssd != null ? '${day.hrvRmssd}' : '—',
+        'rhr' => day.restingHr != null ? '${day.restingHr}' : '—',
+        'spo2' => day.spo2Avg != null ? '${day.spo2Avg}' : '—',
+        'pai' => _i(day.paiScore),
+        'steps' => '${day.steps}',
+        'temperature' => day.tempAvgC != null ? day.tempAvgC!.toStringAsFixed(1) : '—',
+        _ => '—',
+      };
+
+  String _i(int? v) => v?.toString() ?? '—';
+}
+
+class MetricStats {
+  final double? min;
+  final double? max;
+  final double? avg;
+  final int count;
+
+  const MetricStats({this.min, this.max, this.avg, required this.count});
+
+  static MetricStats fromSamples(List<HealthSample> samples) {
+    if (samples.isEmpty) return const MetricStats(count: 0);
+    final vals = samples.map((s) => s.value).toList();
+    final sum = vals.fold<double>(0, (a, b) => a + b);
+    return MetricStats(
+      min: vals.reduce((a, b) => a < b ? a : b),
+      max: vals.reduce((a, b) => a > b ? a : b),
+      avg: sum / vals.length,
+      count: vals.length,
+    );
+  }
+
+  static MetricStats fromTemp(List<TempSample> samples) {
+    if (samples.isEmpty) return const MetricStats(count: 0);
+    final vals = samples.map((s) => s.celsius).toList();
+    final sum = vals.fold<double>(0, (a, b) => a + b);
+    return MetricStats(
+      min: vals.reduce((a, b) => a < b ? a : b),
+      max: vals.reduce((a, b) => a > b ? a : b),
+      avg: sum / vals.length,
+      count: vals.length,
+    );
+  }
+}

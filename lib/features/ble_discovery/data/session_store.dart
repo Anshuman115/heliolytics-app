@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/core/constants.dart' show appDocsSubdir;
@@ -57,6 +58,21 @@ class SessionStore {
     await f.writeAsBytes(bytes, mode: FileMode.append, flush: true);
   }
 
+  Future<void> writeTypeBytes(
+    String sessionId,
+    String typeCode,
+    List<int> bytes,
+  ) async {
+    final f = File(p.join(_sessionDir(sessionId).path, _binFileName(typeCode)));
+    await f.parent.create(recursive: true);
+    await f.writeAsBytes(bytes, flush: true);
+  }
+
+  Future<String?> latestSessionId() async {
+    final ids = await listSessions();
+    return ids.isEmpty ? null : ids.first;
+  }
+
   Future<void> writeSessionJson(Session s) async {
     final f = File(p.join(_sessionDir(s.sessionId).path, 'session.json'));
     await f.writeAsString(jsonEncode(s.toJson()), flush: true);
@@ -77,6 +93,7 @@ class SessionStore {
       mode: SessionModeX.parse(m['mode'] as String),
       entries: c?.chunked ?? const [],
       unsolicited: c?.unsolicited ?? const [],
+      batteryPercent: (m['batteryPercent'] as num?)?.toInt(),
     );
   }
 
@@ -100,6 +117,12 @@ class SessionStore {
       throw StateError('No types.json for session $sessionId');
     }
     return c;
+  }
+
+  Future<Uint8List?> readTypeBytes(String sessionId, String typeCode) async {
+    final f = File(p.join(_sessionDir(sessionId).path, _binFileName(typeCode)));
+    if (!f.existsSync()) return null;
+    return f.readAsBytes();
   }
 
   Future<List<String>> listSessions() async {
