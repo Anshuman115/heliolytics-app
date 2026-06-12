@@ -147,9 +147,6 @@ const int syncCoverageOverlapMinutes = 60;
 /// First strap sync backfills this many days when backend has no data.
 const int initialSyncBackfillDays = 10;
 
-/// Workout blobs are event-based; always backfill this window even on incremental sync.
-const Set<String> workoutBackfillTypeCodes = {'0x05', '0x06', '0x3B'};
-
 /// API read window for daily metrics UI (not BLE fetch depth).
 const int devFetchWindowDays = 10;
 
