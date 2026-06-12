@@ -7,11 +7,8 @@ import 'package:heliolytics/core/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/core/ble/session_state.dart';
 import 'package:heliolytics/core/ble/band_link.dart';
 import 'package:heliolytics/core/ble/cloud_upload.dart';
-import 'package:heliolytics/core/ble/parsers/activity_parser.dart';
 import 'package:heliolytics/core/ble/sync_refetch_runner.dart';
 import 'package:heliolytics/core/ble/sync_coverage_resolver.dart';
-import 'package:heliolytics/core/ble/sync_cursor.dart';
-import 'package:heliolytics/core/ble/sync_watermark.dart';
 import 'package:heliolytics/core/constants.dart';
 import 'package:heliolytics/features/ble_discovery/data/session_store.dart';
 import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
@@ -164,14 +161,14 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       currentTypeCode: codeStr,
       error: SessionError.none,
     );
-    _log('→ refetch $codeStr only (since last sync cursor)');
+    _log('→ refetch $codeStr only (per-type coverage)');
     _flush();
 
     state = state.copyWith(state: SessionState.fetching);
     _flush();
 
     try {
-      final plan = await resolveSyncFetchSince(ref, ref.read(authKeyStoreProvider));
+      final plan = await resolveSyncFetchSince(ref);
       final since = plan.since;
       final result = await SyncRefetchRunner(_log).run(
         _authStorage,
@@ -272,9 +269,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     state = state.copyWith(state: SessionState.fetching);
     _results.clear();
 
-    final wm = SyncWatermark(ref.read(authKeyStoreProvider));
-    final cursor = SyncCursor(ref.read(authKeyStoreProvider));
-    final plan = await resolveSyncFetchSince(ref, ref.read(authKeyStoreProvider));
+    final plan = await resolveSyncFetchSince(ref);
     final since = plan.since;
     final dumpWindowHours = DateTime.now().difference(since).inHours.clamp(
       1,
@@ -309,15 +304,13 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       _flush();
 
       try {
-        final metric = _watermarkMetric(codeStr);
         final fetchSince = resolveTypeFetchSince(
           typeCode: codeStr,
           defaultSince: since,
           types: plan.typeCoverage,
         );
-        if (fetchSince != since) {
-          _log('  $codeStr: workout backfill from ${fetchSince.toIso8601String()}');
-        }
+        final typeLog = typeFetchLogLine(codeStr, fetchSince, since);
+        if (typeLog.isNotEmpty) _log(typeLog);
         final result = await client.fetchCode(typeInt, fetchSince);
         final raw = result.raw;
         final expected = result.expected;
@@ -372,11 +365,6 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
 
         if (raw.isNotEmpty) {
           rawByCode[codeStr] = raw;
-          if (metric != null) {
-            final anchor = roundStart ?? since;
-            final last = ActivityParser.lastSampleTime(typeInt, raw, anchor);
-            if (last != null) await wm.write(metric, last);
-          }
         }
         entries.add(entry);
       } catch (e) {
@@ -432,9 +420,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     _flush();
     try {
       await tryCloudUpload(ref, _lastPayload!, _log);
-      await cursor.markSuccess(ended);
       ref.invalidate(liveHealthProvider);
-      _log('✓ sync cursor → ${ended.toIso8601String()}');
     } catch (e) {
       state = state.copyWith(
         state: SessionState.error,
@@ -460,25 +446,6 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       rawByCode: const {},
     );
   }
-
-  String? _watermarkMetric(String code) => switch (code) {
-        '0x01' => 'steps',
-        '0x05' => 'workout',
-        '0x0D' => 'pai',
-        '0x13' => 'stress',
-        '0x25' => 'spo2',
-        '0x26' => 'spo2_sleep',
-        '0x2E' => 'temperature',
-        '0x38' => 'respiratory_rate',
-        '0x39' => 'readiness',
-        '0x3A' => 'resting_hr',
-        '0x3B' => 'activity_session',
-        '0x3D' => 'max_hr',
-        '0x48' => 'sleep',
-        '0x49' => 'hrv',
-        '0x4E' => 'nap',
-        _ => null,
-      };
 }
 
 final syncOrchestratorProvider =
