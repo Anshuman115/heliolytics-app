@@ -20,6 +20,7 @@ Future<SyncFetchPlan> resolveSyncFetchSince(Ref ref, AuthKeyStore store) async {
         return SyncFetchPlan(
           since: since,
           backendDataThrough: through,
+          typeCoverage: cov.types.isEmpty ? null : cov.types,
           logLine:
               'Fetch: backend data through ${through.toIso8601String()} → '
               'strap from ${since.toIso8601String()}',
@@ -29,6 +30,7 @@ Future<SyncFetchPlan> resolveSyncFetchSince(Ref ref, AuthKeyStore store) async {
         final since = DateTime.now().subtract(const Duration(days: initialSyncBackfillDays));
         return SyncFetchPlan(
           since: since,
+          typeCoverage: cov.types.isEmpty ? null : cov.types,
           logLine: 'Fetch: backend empty — first sync last $initialSyncBackfillDays days',
         );
       }
@@ -48,9 +50,17 @@ Future<SyncFetchPlan> resolveSyncFetchSince(Ref ref, AuthKeyStore store) async {
   );
 }
 
-/// Event-based types (workouts) need full backfill — incremental [since] can skip sessions.
-DateTime resolveTypeFetchSince(String typeCode, DateTime since) {
-  if (!workoutBackfillTypeCodes.contains(typeCode)) return since;
-  final full = DateTime.now().subtract(const Duration(days: initialSyncBackfillDays));
-  return since.isBefore(full) ? since : full;
+DateTime resolveTypeFetchSince({
+  required String typeCode,
+  required DateTime defaultSince,
+  Map<String, DateTime?>? types,
+}) {
+  if (types == null || !types.containsKey(typeCode)) {
+    return defaultSince;
+  }
+  final through = types[typeCode];
+  if (through == null) {
+    return DateTime.now().subtract(const Duration(days: initialSyncBackfillDays));
+  }
+  return through.subtract(const Duration(minutes: syncCoverageOverlapMinutes));
 }

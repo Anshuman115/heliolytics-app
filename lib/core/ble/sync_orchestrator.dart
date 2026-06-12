@@ -310,7 +310,11 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
 
       try {
         final metric = _watermarkMetric(codeStr);
-        final fetchSince = resolveTypeFetchSince(codeStr, since);
+        final fetchSince = resolveTypeFetchSince(
+          typeCode: codeStr,
+          defaultSince: since,
+          types: plan.typeCoverage,
+        );
         if (fetchSince != since) {
           _log('  $codeStr: workout backfill from ${fetchSince.toIso8601String()}');
         }
