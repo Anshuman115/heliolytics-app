@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:heliolytics/core/ble/band_link_port.dart';
 import 'package:heliolytics/core/ble/type_sync_engine.dart';
 import 'package:heliolytics/core/ble/sync_page_anchor.dart';
 import 'package:heliolytics/core/ble/encrypted_endpoint.dart';
@@ -10,7 +11,7 @@ import 'package:heliolytics/core/constants.dart';
 
 /// BLE connect, ZeppOS auth, and activity-fetch for the Helio Strap.
 /// The caller provides a [log] callback and sets [onUpdate] to react to data.
-class BandLink {
+class BandLink implements BandLinkPort {
   static const String writeUuid  = '00000016-0000-3512-2118-0009af100700';
   static const String notifyUuid = '00000017-0000-3512-2118-0009af100700';
   static const String controlUuid = '00000004-0000-3512-2118-0009af100700';
@@ -29,6 +30,7 @@ class BandLink {
   DeviceHandshake? auth;
   EncryptedEndpoint? comms;
   TypeSyncEngine? fetcher;
+  @override
   int? batteryPercent;
 
   void Function(Uint8List)? _notifyHandler;
@@ -37,6 +39,7 @@ class BandLink {
   StreamSubscription<List<int>>? _dataSub;
   StreamSubscription<BluetoothConnectionState>? _connSub;
 
+  @override
   Future<bool> connectAndAuth({
     required String mac,
     required Uint8List authKey,
@@ -161,13 +164,8 @@ class BandLink {
   /// Probes first — if expected packets > [maxExpected], skips the download
   /// and returns the packet count as a 4-byte LE integer (for logging).
   /// This prevents 0x07 GPS / other huge types from hanging the scan.
-  Future<({
-    Uint8List raw,
-    int expected,
-    bool skipped,
-    DateTime? roundStart,
-    List<SyncPageAnchor> roundSegments,
-  })> fetchCode(
+  @override
+  Future<TypeFetchResult> fetchCode(
     int code,
     DateTime since,
   ) async {
@@ -266,6 +264,7 @@ class BandLink {
     log('• battery service not found');
   }
 
+  @override
   Future<void> disconnect() async {
     await _notifySub?.cancel();
     await _controlSub?.cancel();

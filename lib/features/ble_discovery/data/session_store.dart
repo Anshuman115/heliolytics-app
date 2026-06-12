@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/core/constants.dart' show appDocsSubdir;
+import 'package:heliolytics/core/ble/sync_session_port.dart';
 import 'package:heliolytics/features/ble_discovery/domain/models/models.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -15,7 +16,7 @@ final sessionStoreProvider = FutureProvider<SessionStore>((ref) async {
   return SessionStore(rootDir: dir);
 });
 
-class SessionStore {
+class SessionStore implements SyncSessionPort {
   final Directory rootDir;
   SessionStore({required this.rootDir});
 
