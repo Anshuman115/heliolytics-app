@@ -58,9 +58,6 @@ dependencies:
   # Utilities
   path_provider: ^2.1.0
   path: ^1.9.0
-  share_plus: ^12.0.2
-  archive: ^3.6.0
-  uuid: ^4.5.0
   intl: ^0.19.0
   talker: ^5.1.17
   talker_dio_logger: ^5.1.17

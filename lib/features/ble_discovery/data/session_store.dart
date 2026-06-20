@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/core/constants.dart' show appDocsSubdir;
@@ -23,9 +22,6 @@ class SessionStore implements SyncSessionPort {
   Directory _sessionDir(String id) =>
       Directory(p.join(rootDir.path, 'sessions', id));
 
-  /// Matches catalog `DumpEntry.file` (e.g. `0x01_raw.bin`).
-  String _binFileName(String code) => '${code}_raw.bin';
-
   Future<String> createSession({
     required String? deviceMac,
     required int fetchWindowHours,
@@ -47,26 +43,6 @@ class SessionStore implements SyncSessionPort {
     );
     await writeSessionJson(s);
     return id;
-  }
-
-  Future<void> appendBytes(
-    String sessionId,
-    String typeCode,
-    List<int> bytes,
-  ) async {
-    final f = File(p.join(_sessionDir(sessionId).path, _binFileName(typeCode)));
-    await f.parent.create(recursive: true);
-    await f.writeAsBytes(bytes, mode: FileMode.append, flush: true);
-  }
-
-  Future<void> writeTypeBytes(
-    String sessionId,
-    String typeCode,
-    List<int> bytes,
-  ) async {
-    final f = File(p.join(_sessionDir(sessionId).path, _binFileName(typeCode)));
-    await f.parent.create(recursive: true);
-    await f.writeAsBytes(bytes, flush: true);
   }
 
   Future<String?> latestSessionId() async {
@@ -110,20 +86,6 @@ class SessionStore implements SyncSessionPort {
     final tmp = File('${f.path}.tmp');
     await tmp.writeAsString(jsonEncode(c.toJson()), flush: true);
     await tmp.rename(f.path);
-  }
-
-  Future<SessionCatalog> readCatalogJson(String sessionId) async {
-    final c = await _readCatalogIfPresent(sessionId);
-    if (c == null) {
-      throw StateError('No types.json for session $sessionId');
-    }
-    return c;
-  }
-
-  Future<Uint8List?> readTypeBytes(String sessionId, String typeCode) async {
-    final f = File(p.join(_sessionDir(sessionId).path, _binFileName(typeCode)));
-    if (!f.existsSync()) return null;
-    return f.readAsBytes();
   }
 
   Future<List<String>> listSessions() async {

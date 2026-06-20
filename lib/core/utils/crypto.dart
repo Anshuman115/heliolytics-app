@@ -26,27 +26,6 @@ int crc32Huami(Uint8List data, [int start = 0, int? end]) {
 }
 
 class CryptoUtils {
-  static String bytesToHex(Uint8List bytes) {
-    final sb = StringBuffer();
-    for (final b in bytes) {
-      sb.write(b.toRadixString(16).padLeft(2, '0'));
-    }
-    return sb.toString();
-  }
-
-  static Uint8List hexToBytes(String hex) {
-    if (hex.length % 2 != 0) {
-      throw FormatException('Hex string must have even length (got ${hex.length}).');
-    }
-    final out = Uint8List(hex.length ~/ 2);
-    for (var i = 0; i < out.length; i++) {
-      final v = int.tryParse(hex.substring(i * 2, i * 2 + 2), radix: 16);
-      if (v == null) throw FormatException('Invalid hex at ${i * 2}');
-      out[i] = v;
-    }
-    return out;
-  }
-
   static Uint8List aes128EcbEncrypt(Uint8List input, Uint8List key) {
     if (key.length != 16) {
       throw ArgumentError('AES key must be 16 bytes (got ${key.length}).');

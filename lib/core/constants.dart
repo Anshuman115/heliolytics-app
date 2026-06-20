@@ -4,10 +4,10 @@ const String chunkedWriteUUID = '00000016-0000-3512-2118-0009af100700';
 const String chunkedNotifyUUID = '00000017-0000-3512-2118-0009af100700';
 
 /// Deprecated alias for [chunkedNotifyUUID]. Kept for backward compatibility.
+/// (no importers — kept for source compatibility with external tools)
 const String chunkedReadUUID = chunkedNotifyUUID;
 const String activityControlUUID = '00000004-0000-3512-2118-0009af100700';
 const String activityDataUUID    = '00000005-0000-3512-2118-0009af100700';
-const String liveHeartRateUUID   = '00002a37-0000-1000-8000-00805f9b34fb';
 
 /// BLE types fetched during sync — must have a Go ingest parser wired.
 const List<String> fetchTypeCodes = [
@@ -124,12 +124,16 @@ const Map<String, String> typeCodeLabels = {
   '0xFC': 'probe-FC', '0xFD': 'probe-FD', '0xFE': 'probe-FE', '0xFF': 'probe-FF',
 };
 
-const String liveHeartRateTypeCode = '0x2a37';
-const String devApiBaseUrl = 'http://192.168.0.102:8080';
-const String devSigningSecret = 'CONFIGURE_IN_APP_SETTINGS';
+/// Build-time defaults — injected via `flutter run --dart-define=...` or
+/// `flutter build apk --dart-define=...`. Leave empty for user to enter
+/// in Settings on first launch. Override examples:
+///   flutter run --dart-define=API_URL=http://192.168.0.106:8080 \
+///               --dart-define=API_SIGNING_SECRET=changeme
+const String defaultApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
+const String defaultApiSigningSecret =
+    String.fromEnvironment('API_SIGNING_SECRET', defaultValue: '');
 const String appBuildMarker = 'v1';
 const String appDocsSubdir = 'heliolytics';
-const String sessionsSubdir = 'sessions';
 const String authKeyStorageKey = 'heliolytics.auth_key';
 const String strapMacStorageKey = 'heliolytics.strap_mac';
 
@@ -165,10 +169,7 @@ const int metricProgressHrvMax = 120;
 const int metricProgressPaiMax = 100;
 const int metricProgressRhrMin = 40;
 const int metricProgressRhrMax = 100;
-const int defaultListenDurationSec = 300;
-const int scanTimeoutSec = 10;
 const int chunkReceiveTimeoutSec = 5;
-const int chunkRetryCount = 1;
 
 const String batteryServiceUuid = '0000180f-0000-1000-8000-00805f9b34fb';
 const String batteryLevelUuid = '00002a19-0000-1000-8000-00805f9b34fb';

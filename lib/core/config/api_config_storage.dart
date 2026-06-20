@@ -43,13 +43,13 @@ class ApiConfigStorage {
     await _store.delete(_legacyApiKeyKey);
   }
 
-  /// Seeds dev URL/secret when missing (e.g. after reinstall).
+  /// Seeds defaults (env-injected at build time) when missing (e.g. after reinstall).
   Future<void> ensureDevDefaults() async {
     final url = await readBaseUrl();
     final secret = await readSigningSecret();
-    final nextUrl = (url == null || url.isEmpty) ? devApiBaseUrl : url;
+    final nextUrl = (url == null || url.isEmpty) ? defaultApiUrl : url;
     final nextSecret =
-        (secret == null || secret.isEmpty) ? devSigningSecret : secret;
+        (secret == null || secret.isEmpty) ? defaultApiSigningSecret : secret;
     if (nextUrl != url || nextSecret != secret) {
       await save(baseUrl: nextUrl, signingSecret: nextSecret);
     }
