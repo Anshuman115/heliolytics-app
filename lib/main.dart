@@ -5,11 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:heliolytics/app.dart';
-import 'package:heliolytics/core/ble/auth/auth_key_storage.dart';
-import 'package:heliolytics/core/ble/auth/auth_key_store.dart';
-import 'package:heliolytics/core/config/api_config_storage.dart';
-import 'package:heliolytics/core/utils/logger.dart';
-import 'package:heliolytics/core/utils/talker_log.dart';
+import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
+import 'package:heliolytics/services/ble/auth/auth_key_store.dart';
+import 'package:heliolytics/services/config/api_config_storage.dart';
+import 'package:heliolytics/constants/constants.dart';
 
 class _SecureStore implements AuthKeyStore {
   final _s = const FlutterSecureStorage(
@@ -28,21 +27,6 @@ class _SecureStore implements AuthKeyStore {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final talker = appTalker();
-  FlutterError.onError = (details) {
-    talker.handle(
-      details.exception,
-      details.stack ?? StackTrace.current,
-      'flutter_error',
-    );
-    appLog(details.exceptionAsString(), tag: 'flutter_error');
-    if (kDebugMode) FlutterError.presentError(details);
-  };
-  PlatformDispatcher.instance.onError = (error, stack) {
-    talker.handle(error, stack, 'platform_error');
-    appLog('$error\n$stack', tag: 'platform_error');
-    return true;
-  };
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -50,7 +34,11 @@ Future<void> main() async {
     ),
   );
   final store = _SecureStore();
-  if (kDebugMode) {
+
+  //To get signing key and api url from env vars
+  final seedApiConfig = kDebugMode ||
+      (defaultApiUrl.isNotEmpty && defaultApiSigningSecret.isNotEmpty);
+  if (seedApiConfig) {
     await ApiConfigStorage(store).ensureDevDefaults();
   }
   runApp(

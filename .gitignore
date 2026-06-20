@@ -42,6 +42,9 @@ app.*.map.json
 /android/app/release
 
 # Personal / local-only — never commit
+.env
+*.env.local
+build.env
 CLAUDE.md
 test/
 .tmp_phone_session/

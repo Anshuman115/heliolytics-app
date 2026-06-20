@@ -1,0 +1,238 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:heliolytics/utils/formatters.dart';
+import 'package:heliolytics/utils/metric_progress.dart';
+import 'package:heliolytics/design_system/components/helio_empty_state.dart';
+import 'package:heliolytics/design_system/components/helio_insight_card.dart';
+import 'package:heliolytics/design_system/components/helio_loading.dart';
+import 'package:heliolytics/design_system/components/helio_score_ring.dart';
+import 'package:heliolytics/design_system/components/helio_surface_card.dart';
+import 'package:heliolytics/design_system/components/helio_top_bar.dart';
+import 'package:heliolytics/design_system/tokens/helio_colors.dart';
+import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
+import 'package:heliolytics/design_system/tokens/helio_typography.dart';
+import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
+import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/metric_catalog.dart';
+import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/widgets/metric_stats_row.dart';
+import 'package:heliolytics/widgets/minute_series_chart.dart';
+import 'package:heliolytics/widgets/sleep_metric_body.dart';
+import 'package:heliolytics/widgets/temperature_chart.dart';
+import 'package:heliolytics/utils/hr_chart_samples.dart';
+import 'package:heliolytics/design_system/tokens/helio_metric_colors.dart';
+
+class MetricDetailScreen extends ConsumerWidget {
+  final String dayKey;
+  final String metricId;
+
+  const MetricDetailScreen({super.key, required this.dayKey, required this.metricId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final def = MetricCatalog.byId(metricId);
+    if (def == null) {
+      return Scaffold(
+        appBar: HelioTopBar(showBack: true, onBack: () => context.pop()),
+        body: const Center(child: Text('Unknown metric')),
+      );
+    }
+
+    final health = ref.watch(liveHealthProvider);
+    return health.when(
+      loading: () => Scaffold(
+        appBar: HelioTopBar(showBack: true, onBack: () => context.pop()),
+        body: const HelioLoading(),
+      ),
+      error: (e, _) => Scaffold(
+        appBar: HelioTopBar(showBack: true, onBack: () => context.pop()),
+        body: HelioEmptyState(
+          icon: Icons.error_outline,
+          title: 'Failed to load',
+          message: e.toString(),
+          actionLabel: 'Retry',
+          onAction: () => ref.invalidate(liveHealthProvider),
+        ),
+      ),
+      data: (snap) => _loaded(context, def, snap),
+    );
+  }
+
+  Widget _loaded(BuildContext context, MetricDef def, CloudMetricsSnapshot? snap) {
+    DayMetric? day;
+    for (final d in snap?.days ?? const <DayMetric>[]) {
+      if (d.dayKey == dayKey) {
+        day = d;
+        break;
+      }
+    }
+
+    if (snap == null || day == null) {
+      return Scaffold(
+        appBar: HelioTopBar(showBack: true, onBack: () => context.pop()),
+        body: const HelioEmptyState(
+          icon: Icons.calendar_today_outlined,
+          title: 'Day not found',
+          message: 'No metrics for this date. Try syncing your strap.',
+        ),
+      );
+    }
+
+    return Scaffold(
+      appBar: HelioTopBar(
+        showBack: true,
+        onBack: () => context.pop(),
+        dayLabel: '${def.title} · ${formatDayLabel(dayKey)}',
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(HelioSpacing.lg),
+        children: [
+          if (def.id != 'continuous_hr') _hero(def, day),
+          if (def.id == 'readiness' && day.readiness == null) ...[
+            const SizedBox(height: HelioSpacing.lg),
+            HelioInsightCard(
+              message: _readinessHint(snap),
+              icon: Icons.info_outline,
+            ),
+          ],
+          const SizedBox(height: HelioSpacing.lg),
+          ..._body(def, snap, day),
+        ],
+      ),
+    );
+  }
+
+  String _readinessHint(CloudMetricsSnapshot snap) {
+    final hasType = snap.coverage?.types.containsKey('0x39') ?? false;
+    if (hasType) {
+      return 'Readiness not synced for this day yet. Pull to refresh after your next strap sync.';
+    }
+    return 'Readiness requires daily score data (type 0x39). Sync your strap to backfill.';
+  }
+
+  Widget _hero(MetricDef def, DayMetric day) {
+    final value = def.summaryValue(day);
+    final progress = _progressFor(def.id, day);
+    final color = def.id == 'readiness' ? recoveryColorFor(day.readiness) : def.color;
+
+    return Center(
+      child: HelioScoreRing(
+        size: HelioRingSize.hero,
+        progress: progress,
+        label: def.title,
+        value: value,
+        color: color,
+      ),
+    );
+  }
+
+  double? _progressFor(String id, DayMetric day) {
+    return switch (id) {
+      'readiness' => metricProgress(MetricKind.readiness, day.readiness),
+      'sleep' => metricProgress(MetricKind.sleep, day.sleepScore),
+      'stress' => metricProgress(MetricKind.stress, day.stressAvg),
+      'hrv' => metricProgress(MetricKind.hrv, day.hrvRmssd),
+      'rhr' => metricProgress(MetricKind.restingHr, day.restingHr),
+      'pai' => metricProgress(MetricKind.pai, day.paiScore),
+      _ => null,
+    };
+  }
+
+  List<Widget> _body(MetricDef def, CloudMetricsSnapshot snap, DayMetric day) {
+    if (def.id == 'sleep') {
+      return [HelioSurfaceCard(child: SleepMetricBody(snap: snap, day: day))];
+    }
+    if (def.id == 'continuous_hr') return _continuousHrBody(snap, day);
+    if (def.id == 'temperature') return _tempBody(snap);
+    if (def.seriesKey == null) {
+      return [
+        HelioSurfaceCard(
+          padding: const EdgeInsets.all(HelioSpacing.lg),
+          child: Text(def.detail, style: HelioTypography.bodyMuted),
+        ),
+      ];
+    }
+    final samples = snap.series.where((s) => s.dayKey == dayKey && s.metric == def.seriesKey).toList();
+    final stats = MetricStats.fromSamples(samples);
+    return [
+      MetricStatsRow(stats: stats, unit: def.unit),
+      const SizedBox(height: HelioSpacing.md),
+      HelioSurfaceCard(
+        padding: const EdgeInsets.all(HelioSpacing.sm),
+        child: MinuteSeriesChart(
+          samples: samples,
+          color: def.color,
+          unit: def.unit,
+          height: 280,
+          maxPoints: 480,
+        ),
+      ),
+      const SizedBox(height: HelioSpacing.md),
+      HelioSurfaceCard(
+        padding: const EdgeInsets.all(HelioSpacing.lg),
+        child: Text(def.detail, style: HelioTypography.bodyMuted),
+      ),
+    ];
+  }
+
+  List<Widget> _continuousHrBody(CloudMetricsSnapshot snap, DayMetric day) {
+    final hr = snap.heartRateFor(dayKey);
+    final stats = MetricStats.fromHeartRate(hr);
+    final latest = snap.latestHeartRateFor(dayKey);
+    final heroValue = latest != null ? '${latest.bpm}' : (day.restingHr?.toString() ?? '—');
+    return [
+      Center(
+        child: Text(
+          heroValue,
+          style: HelioTypography.scoreMedium.copyWith(fontSize: 48, color: HelioMetricColors.restingHr),
+        ),
+      ),
+      if (latest != null)
+        Center(
+          child: Text(
+            'Latest at ${formatChartTime(latest.sampledAt)}',
+            style: HelioTypography.bodyMuted,
+          ),
+        ),
+      const SizedBox(height: HelioSpacing.lg),
+      MetricStatsRow(stats: stats, unit: 'bpm'),
+      const SizedBox(height: HelioSpacing.md),
+      HelioSurfaceCard(
+        padding: const EdgeInsets.all(HelioSpacing.sm),
+        child: hr.isEmpty
+            ? Text(MetricCatalog.byId('continuous_hr')!.detail, style: HelioTypography.bodyMuted)
+            : MinuteSeriesChart(
+                samples: heartRateAsChartSamples(hr),
+                color: HelioMetricColors.restingHr,
+                unit: 'bpm',
+                height: 280,
+                maxPoints: 1200,
+                showDots: false,
+              ),
+      ),
+      const SizedBox(height: HelioSpacing.md),
+      HelioSurfaceCard(
+        padding: const EdgeInsets.all(HelioSpacing.lg),
+        child: Text(MetricCatalog.byId('continuous_hr')!.detail, style: HelioTypography.bodyMuted),
+      ),
+    ];
+  }
+
+  List<Widget> _tempBody(CloudMetricsSnapshot snap) {
+    final temps = snap.tempFor(dayKey);
+    final stats = MetricStats.fromTemp(temps);
+    return [
+      MetricStatsRow(stats: stats, unit: '°C'),
+      const SizedBox(height: HelioSpacing.md),
+      HelioSurfaceCard(
+        padding: const EdgeInsets.all(HelioSpacing.sm),
+        child: TemperatureChart(samples: temps, height: 280),
+      ),
+      HelioSurfaceCard(
+        padding: const EdgeInsets.all(HelioSpacing.lg),
+        child: Text(MetricCatalog.byId('temperature')!.detail, style: HelioTypography.bodyMuted),
+      ),
+    ];
+  }
+}

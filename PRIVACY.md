@@ -19,6 +19,11 @@ Heliolytics is a personal health tool. Data stays under your control.
 - Strap auth key and API credentials: Android EncryptedSharedPreferences / iOS Keychain (via `flutter_secure_storage`)
 - Session metadata during sync: app documents directory on your phone
 
+## Debug logging
+
+- In debug builds, the app may write diagnostic logs to the device logcat / IDE console (BLE sync steps, API errors)
+- Logs are not uploaded automatically; they stay on your device unless you share them manually
+
 ## Your choices
 
 - You choose the API server URL and key
@@ -28,3 +33,8 @@ Heliolytics is a personal health tool. Data stays under your control.
 ## Contact
 
 Maintained as a personal open-source project. Update this file with your contact email before Play Store submission.
+
+## Related docs
+
+- [README.md](README.md) — run, build, project layout
+- [ARCHITECTURE.md](ARCHITECTURE.md) — data flow and layer structure

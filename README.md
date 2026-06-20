@@ -28,18 +28,27 @@ Connect your phone over USB with **USB debugging** enabled. If only one Android 
 flutter build appbundle --release
 ```
 
-Or APK:
+Personal APK (API URL + key baked in at build time):
 
 ```bash
-flutter build apk --release
+cp build.env.example build.env
+# edit build.env — same URL/secret as Heliolytics/deploy/.env
+chmod +x tool/build_apk.sh
+./tool/build_apk.sh
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
+
+Play Store AAB (configure API in app Settings after install):
+
+```bash
+flutter build appbundle --release
 ```
 
 ## API setup
 
 1. Start the stack from the **Heliolytics** repo (`deploy/install.sh`)
-2. App **Settings → Cloud API**:
-   - **API URL:** your server HTTPS endpoint (or `http://LAN:8080` in debug)
-   - **API key:** same as `HELIOLYTICS_SIGNING_SECRET` in `deploy/.env`
+2. Personal install: set `API_URL` and `API_SIGNING_SECRET` in `build.env` before `./tool/build_apk.sh`
+3. Play Store / manual: **Settings → Cloud API** on first launch
 
 The app mints short-lived HMAC tokens — you never paste tokens manually.
 
@@ -55,10 +64,23 @@ See [PRIVACY.md](PRIVACY.md) for Play Store / data handling summary.
 
 ## Layout
 
+Layer-first project structure (separation of concerns):
+
 ```
-lib/core/ble/     Protocol, sync engine
-lib/features/     Feature modules (data / domain / presentation)
-lib/shared/       Shared widgets and providers
+lib/
+  screens/          UI pages (Home, Sleep, Settings, …)
+  widgets/          Screen-specific UI chunks (charts, sections)
+  providers/        Riverpod state (controllers)
+  services/         BLE engine, API client, repos, config, network
+  models/           Data classes (API + session JSON)
+  router/           GoRouter
+  utils/            Helpers, logging, formatters
+  constants/        App-wide literals
+  design_system/    Shared tokens + reusable components
 ```
 
+**Flow:** `screens → providers → services → models`
+
 Server and web live in sibling repos — not in this project.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for data flow and folder details.
