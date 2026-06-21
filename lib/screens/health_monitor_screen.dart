@@ -25,13 +25,13 @@ class HealthMonitorScreen extends ConsumerStatefulWidget {
 
 class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
   @override
-  void dispose() {
+  void deactivate() {
     // Only stop if currently live
     final liveState = ref.read(liveHrProvider);
     if (liveState.isLive || liveState.isConnecting) {
       ref.read(liveHrProvider.notifier).stopMonitoring();
     }
-    super.dispose();
+    super.deactivate();
   }
 
   @override
