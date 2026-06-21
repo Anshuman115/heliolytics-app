@@ -154,7 +154,7 @@ class SettingsHubScreen extends ConsumerWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: HelioSpacing.xxs),
+                    const SizedBox(height: HelioSpacing.xs),
                     Text(
                       'Version $appBuildMarker',
                       style: HelioTypography.bodyMuted.copyWith(fontSize: 9),
