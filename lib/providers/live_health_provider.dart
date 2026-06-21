@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/config/api_config_storage.dart';
 import 'package:heliolytics/services/network/api_dio.dart';
 import 'package:heliolytics/utils/error_messages.dart';
@@ -88,6 +89,11 @@ class LiveHealthNotifier extends AsyncNotifier<CloudMetricsSnapshot?> {
       battery = s.batteryPercent;
     } else if (ids.isNotEmpty) {
       battery = (await store.readSessionJson(ids.first)).batteryPercent;
+    }
+    // Fallback: read last-known battery from secure storage (persisted on sync)
+    if (battery == null) {
+      final auth = AuthKeyStorage(store: ref.read(authKeyStoreProvider));
+      battery = await auth.readBattery();
     }
     return CloudMetricsSnapshot(
       days: days,

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/band_link.dart';
 import 'package:heliolytics/services/ble/band_link_port.dart';
 import 'package:heliolytics/services/ble/sync_fetch_outcome.dart';
@@ -20,11 +21,13 @@ typedef BandLinkFactory = BandLinkPort Function(void Function(String) log);
 class SyncFetcher {
   final void Function(String) log;
   final SyncSessionPort store;
+  final AuthKeyStorage auth;
   final BandLinkFactory linkFactory;
 
   SyncFetcher({
     required this.log,
     required this.store,
+    required this.auth,
     BandLinkFactory? linkFactory,
   }) : linkFactory = linkFactory ?? ((l) => BandLink(l));
 
@@ -127,6 +130,7 @@ class SyncFetcher {
       sessionId: sessionId,
       catalog: catalog,
       client: client,
+      auth: auth,
     );
     return SyncFetchOutcome(
       payload: SyncPayload(session: session, catalog: catalog, rawByCode: rawByCode),

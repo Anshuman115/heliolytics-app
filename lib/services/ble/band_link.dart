@@ -8,7 +8,6 @@ import 'package:heliolytics/services/ble/sync_page_anchor.dart';
 import 'package:heliolytics/services/ble/encrypted_endpoint.dart';
 import 'package:heliolytics/services/ble/device_handshake.dart';
 import 'package:heliolytics/services/ble/live_hr_stream.dart';
-import 'package:heliolytics/constants/constants.dart';
 
 /// BLE connect, ZeppOS auth, and activity-fetch for the Helio Strap.
 /// The caller provides a [log] callback and sets [onUpdate] to react to data.
@@ -278,23 +277,34 @@ class BandLink implements BandLinkPort {
   }
 
   Future<void> _readBattery(List<BluetoothService> services) async {
+    // Use substring match — the strap may expose 0x2A19 under a vendor
+    // service UUID rather than the standard 0x180F, so an exact match fails.
+    // This is identical to how healthee/app reads battery.
+    BluetoothCharacteristic? batteryChar;
     for (final s in services) {
-      if (s.uuid.str.toLowerCase() != batteryServiceUuid) continue;
       for (final c in s.characteristics) {
-        if (c.uuid.str.toLowerCase() != batteryLevelUuid) continue;
-        try {
-          final v = await c.read();
-          if (v.isNotEmpty) {
-            batteryPercent = v[0].clamp(0, 100);
-            log('• battery $batteryPercent%');
-          }
-        } catch (e) {
-          log('• battery read failed: $e');
+        if (c.uuid.str.toLowerCase().contains('2a19')) {
+          batteryChar = c;
+          break;
         }
-        return;
       }
+      if (batteryChar != null) break;
     }
-    log('• battery service not found');
+
+    if (batteryChar == null) {
+      log('• battery char (2A19) not found in any service');
+      return;
+    }
+
+    try {
+      final v = await batteryChar.read();
+      if (v.isNotEmpty && v[0] >= 0 && v[0] <= 100) {
+        batteryPercent = v[0];
+        log('• battery $batteryPercent%');
+      }
+    } catch (e) {
+      log('• battery read failed: $e');
+    }
   }
 
   @override

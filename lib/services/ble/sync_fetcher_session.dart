@@ -1,5 +1,6 @@
 import 'package:heliolytics/services/ble/band_link_port.dart';
 import 'package:heliolytics/services/ble/sync_session_port.dart';
+import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/models/dump_entry.dart';
 import 'package:heliolytics/models/session.dart';
 import 'package:heliolytics/models/session_catalog.dart';
@@ -9,9 +10,18 @@ Future<Session> finalizeFetchSession({
   required String sessionId,
   required SessionCatalog catalog,
   required BandLinkPort client,
+  required AuthKeyStorage auth,
 }) async {
   await store.writeCatalogJson(catalog);
   final base = await store.readSessionJson(sessionId);
+  final batt = client.batteryPercent;
+
+  // Persist battery to secure storage so the UI can show it even before
+  // the next BLE sync (identical pattern to healthee/app strap_client).
+  if (batt != null) {
+    await auth.saveBattery(batt);
+  }
+
   await store.writeSessionJson(Session(
     sessionId: base.sessionId,
     startedAt: base.startedAt,
@@ -22,7 +32,7 @@ Future<Session> finalizeFetchSession({
     mode: base.mode,
     entries: base.entries,
     unsolicited: base.unsolicited,
-    batteryPercent: client.batteryPercent,
+    batteryPercent: batt,
   ));
   return store.readSessionJson(sessionId);
 }

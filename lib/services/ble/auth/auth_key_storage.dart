@@ -12,6 +12,9 @@ final authKeyStoreProvider = Provider<AuthKeyStore>(
 
 class AuthKeyStorage {
   final AuthKeyStore _store;
+  // Expose store for callers that need to write arbitrary meta keys
+  // (e.g., sync_fetcher_session persisting strap battery).
+  AuthKeyStore get store => _store;
   AuthKeyStorage({required AuthKeyStore store}) : _store = store;
 
   Future<void> save(String key) async {
@@ -38,4 +41,14 @@ class AuthKeyStorage {
   Future<String?> readMac() => _store.read(strapMacStorageKey);
 
   Future<bool> hasMac() async => (await readMac()) != null;
+
+  /// Strap battery — persisted after each successful BLE sync so the UI
+  /// can display it even when not currently connected.
+  Future<void> saveBattery(int percent) =>
+      _store.write(strapBatteryStorageKey, '$percent');
+
+  Future<int?> readBattery() async {
+    final s = await _store.read(strapBatteryStorageKey);
+    return s == null ? null : int.tryParse(s);
+  }
 }

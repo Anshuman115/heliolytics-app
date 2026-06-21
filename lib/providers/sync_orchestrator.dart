@@ -131,6 +131,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     }
     await runFullSync(
       ref: ref,
+      auth: _authStorage,
       store: store,
       sessionLog: _sessionLog,
       mac: mac,

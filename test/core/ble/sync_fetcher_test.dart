@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
+import 'package:heliolytics/services/ble/auth/auth_key_store.dart';
 import 'package:heliolytics/services/ble/band_link_port.dart';
 import 'package:heliolytics/services/ble/sync_fetcher.dart';
 import 'package:heliolytics/services/ble/sync_page_anchor.dart';
@@ -98,6 +100,18 @@ class _FakeStore implements SyncSessionPort {
       sessions.isEmpty ? null : sessions.keys.first;
 }
 
+class _FakeAuthKeyStore implements AuthKeyStore {
+  final _data = <String, String>{};
+  @override
+  Future<void> write(String key, String value) async => _data[key] = value;
+  @override
+  Future<String?> read(String key) async => _data[key];
+  @override
+  Future<void> delete(String key) async => _data.remove(key);
+}
+
+AuthKeyStorage _fakeAuth() => AuthKeyStorage(store: _FakeAuthKeyStore());
+
 SyncPayload _basePayload() => SyncPayload(
       session: Session(
         sessionId: 'base',
@@ -125,6 +139,7 @@ void main() {
     final fetcher = SyncFetcher(
       log: (_) {},
       store: _FakeStore(),
+      auth: _fakeAuth(),
       linkFactory: (_) => client,
     );
 

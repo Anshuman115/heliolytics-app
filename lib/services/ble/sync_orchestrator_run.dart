@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/sync_fetcher.dart';
 import 'package:heliolytics/services/ble/sync_orchestrator_helpers.dart';
 import 'package:heliolytics/services/ble/sync_session_log.dart';
@@ -11,6 +12,7 @@ import 'package:heliolytics/models/sync_payload.dart';
 
 Future<void> runFullSync({
   required Ref ref,
+  required AuthKeyStorage auth,
   required SyncSessionPort store,
   required SyncSessionLog sessionLog,
   required String mac,
@@ -33,7 +35,7 @@ Future<void> runFullSync({
 
   results.clear();
   emit(syncSnap(SessionState.fetching, sessionLog, results));
-  final outcome = await SyncFetcher(log: sessionLog.log, store: store).run(
+  final outcome = await SyncFetcher(log: sessionLog.log, store: store, auth: auth).run(
     mac: mac,
     authKey: authKey,
     plan: plan,

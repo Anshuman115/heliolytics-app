@@ -46,7 +46,7 @@ Future<void> runRefetch({
   }
 
   final results = <TypeCodeResult>[];
-  final outcome = await SyncFetcher(log: sessionLog.log, store: store).run(
+  final outcome = await SyncFetcher(log: sessionLog.log, store: store, auth: auth).run(
     mac: mac,
     authKey: authKey,
     plan: plan,
