@@ -27,6 +27,14 @@ class _HelioShellState extends ConsumerState<HelioShell> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(syncOrchestratorProvider.notifier).scheduleAutoConnect();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final tab = ref.watch(helioNavProvider);
 

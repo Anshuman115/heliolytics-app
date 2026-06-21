@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
-import 'package:heliolytics/services/ble/auto_strap_service.dart';
 import 'package:heliolytics/models/session_state.dart';
 import 'package:heliolytics/services/ble/sync_committer.dart';
 import 'package:heliolytics/services/ble/sync_orchestrator_refetch.dart';
@@ -9,6 +8,7 @@ import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/services/session_store.dart';
 import 'package:heliolytics/models/sync_payload.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
+import 'package:heliolytics/providers/live_hr_provider.dart';
 
 Future<void> orchestratorConnect({
   required Ref ref,
@@ -20,12 +20,19 @@ Future<void> orchestratorConnect({
   required void Function(SessionSnapshot) emit,
   required void Function(SyncPayload?) setPayload,
   required Future<void> Function(String mac) runSync,
-  required void Function(bool) setConnecting,
 }) async {
   if (state.state != SessionState.idle && state.state != SessionState.error) {
     return;
   }
-  setConnecting(true);
+  final live = ref.read(liveHrProvider);
+  if (live.isLive || live.isConnecting) {
+    sessionLog.log('Connect skipped: stop live HR first');
+    emit(state.copyWith(
+      lastErrorMessage: 'Stop live HR before syncing',
+      logs: sessionLog.logs,
+    ));
+    return;
+  }
   if (state.state == SessionState.error) {
     emit(state.copyWith(state: SessionState.idle, error: SessionError.none));
   }
@@ -38,7 +45,6 @@ Future<void> orchestratorConnect({
       lastErrorMessage: 'No strap MAC saved.',
       logs: sessionLog.logs,
     ));
-    setConnecting(false);
     return;
   }
   if (!await ref.read(apiConfiguredProvider.future)) {
@@ -48,11 +54,9 @@ Future<void> orchestratorConnect({
       lastErrorMessage: cloudApiRequiredBeforeSyncMessage,
       logs: sessionLog.logs,
     ));
-    setConnecting(false);
     return;
   }
   await runSync(mac);
-  setConnecting(false);
 }
 
 Future<void> orchestratorRefetch({
@@ -72,6 +76,15 @@ Future<void> orchestratorRefetch({
   if (connecting ||
       state.state == SessionState.fetching ||
       state.state == SessionState.connecting) {
+    return;
+  }
+  final live = ref.read(liveHrProvider);
+  if (live.isLive || live.isConnecting) {
+    sessionLog.log('Refetch skipped: stop live HR first');
+    emit(state.copyWith(
+      lastErrorMessage: 'Stop live HR before syncing',
+      logs: sessionLog.logs,
+    ));
     return;
   }
   if (!await ref.read(apiConfiguredProvider.future)) {
@@ -128,74 +141,29 @@ Future<void> orchestratorRetryUpload({
   emit(state.copyWith(logs: sessionLog.logs));
 }
 
-Future<void> orchestratorTryAutoConnect({
-  required Ref ref,
-  required AuthKeyStorage auth,
-  required bool connecting,
-  required SessionSnapshot state,
-  required SyncSessionLog sessionLog,
-  required void Function(SessionSnapshot) emit,
-  required Future<void> Function() connect,
-  required AutoStrapService autoStrap,
-  required void Function(bool) setAutoConnectPending,
-}) async {
-  if (!await auth.hasKey()) return;
-
-  if (!await ref.read(apiConfiguredProvider.future)) {
-    sessionLog.log('Auto-sync skipped: configure Cloud API in Settings first');
-    emit(state.copyWith(logs: sessionLog.logs));
-    return;
-  }
-
-  if (state.state != SessionState.idle || connecting) {
-    setAutoConnectPending(true);
-    return;
-  }
-
-  setAutoConnectPending(false);
-
-  var mac = await auth.readMac();
-  if (mac == null || mac.isEmpty) {
-    sessionLog.log('Auto-scan: no MAC saved, scanning…');
-    emit(state.copyWith(state: SessionState.scanning, logs: sessionLog.logs));
-    mac = await autoStrap.scanAndPair();
-    emit(state.copyWith(state: SessionState.idle, logs: sessionLog.logs));
-    if (mac == null || mac.isEmpty) {
-      sessionLog.log('Auto-scan: no Helio strap found');
-      emit(state.copyWith(logs: sessionLog.logs));
-      return;
-    }
-    await auth.saveMac(mac);
-    sessionLog.log('Auto-scan: paired $mac');
-    emit(state.copyWith(logs: sessionLog.logs));
-  }
-
-  sessionLog.log('Auto-sync: connecting to strap');
-  emit(state.copyWith(logs: sessionLog.logs));
-  await connect();
-}
-
 Future<void> orchestratorAutoConnect({
   required Ref ref,
   required AuthKeyStorage auth,
   required Future<bool> Function() hasSavedMac,
-  required bool autoConnectPending,
-  required void Function(bool) setAutoConnectPending,
-  required bool connecting,
-  required SessionSnapshot state,
+  required bool Function() isConnecting,
+  required SessionSnapshot Function() readState,
   required SyncSessionLog sessionLog,
   required void Function(SessionSnapshot) emit,
   required Future<void> Function() connect,
-  required AutoStrapService autoStrap,
-}) =>
-    orchestratorTryAutoConnect(
-      ref: ref,
-      auth: auth,
-      connecting: connecting,
-      state: state,
-      sessionLog: sessionLog,
-      emit: emit,
-      connect: connect,
-      autoStrap: autoStrap,
-      setAutoConnectPending: setAutoConnectPending,
-    );
+}) async {
+  if (!await auth.hasKey()) return;
+  if (!await hasSavedMac()) return;
+  final snap = readState();
+  if (snap.state != SessionState.idle || isConnecting()) return;
+  if (!await ref.read(apiConfiguredProvider.future)) {
+    sessionLog.log('Auto-sync skipped: configure Cloud API in Settings first');
+    emit(snap.copyWith(logs: sessionLog.logs));
+    return;
+  }
+  // Let flutter_blue_plus finish post-hot-restart cleanup before connecting.
+  await Future<void>.delayed(const Duration(milliseconds: 800));
+  if (isConnecting() || readState().state != SessionState.idle) return;
+  sessionLog.log('Auto-sync: connecting to saved strap');
+  emit(readState().copyWith(logs: sessionLog.logs));
+  await connect();
+}

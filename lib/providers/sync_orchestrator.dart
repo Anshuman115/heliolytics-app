@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
-import 'package:heliolytics/services/ble/auto_strap_service.dart';
 import 'package:heliolytics/models/session_state.dart';
 import 'package:heliolytics/services/ble/sync_orchestrator_actions.dart';
 import 'package:heliolytics/services/ble/sync_orchestrator_run.dart';
@@ -13,14 +12,15 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   late AuthKeyStorage _authStorage;
   SessionStore? _store;
   bool _connecting = false;
-  bool _autoConnectPending = false;
-  final _autoStrap = AutoStrapService();
   final _sessionLog = SyncSessionLog();
   final _results = <TypeCodeResult>[];
   SyncPayload? _lastPayload;
 
+  bool get connecting => _connecting;
+
   @override
   SessionSnapshot build() {
+    ref.keepAlive();
     _authStorage = AuthKeyStorage(store: ref.read(authKeyStoreProvider));
     _initAsync();
     return SessionSnapshot.initial;
@@ -34,21 +34,6 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     state = state.copyWith(state: hasKey ? SessionState.idle : SessionState.noAuthKey);
     _sessionLog.log('App initialized. Auth key: ${hasKey ? "present" : "missing"}');
     _emit(state.copyWith(logs: _sessionLog.logs));
-    if (hasKey) {
-      await orchestratorAutoConnect(
-      ref: ref,
-      auth: _authStorage,
-      hasSavedMac: hasSavedMac,
-      autoConnectPending: _autoConnectPending,
-      setAutoConnectPending: (v) => _autoConnectPending = v,
-      connecting: _connecting,
-      state: state,
-      sessionLog: _sessionLog,
-      emit: _emit,
-      connect: connect,
-      autoStrap: _autoStrap,
-      );
-    }
   }
 
   Future<void> saveAuthKey(String key) async {
@@ -65,7 +50,10 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     state = state.copyWith(state: SessionState.noAuthKey, logs: [], typeResults: []);
   }
 
-  Future<void> connect() => orchestratorConnect(
+  Future<void> connect() async {
+    _connecting = true;
+    try {
+      await orchestratorConnect(
         ref: ref,
         auth: _authStorage,
         store: _store,
@@ -74,39 +62,36 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
         state: state,
         emit: _emit,
         setPayload: (p) => _lastPayload = p,
-        setConnecting: (v) => _connecting = v,
         runSync: _run,
       );
+    } finally {
+      _connecting = false;
+    }
+  }
 
-  Future<void> saveAuthKeyAndMac(String key, String mac) async {
-    await _authStorage.save(key);
+  Future<void> saveMac(String mac) async {
     await _authStorage.saveMac(mac);
-    state = state.copyWith(state: SessionState.idle);
+    _sessionLog.log('Strap MAC saved: $mac');
+    _emit(state.copyWith(logs: _sessionLog.logs));
   }
 
   Future<void> saveMacAndConnect(String mac) async {
-    await _authStorage.saveMac(mac);
+    await saveMac(mac);
     await connect();
   }
 
   Future<bool> hasSavedMac() => _authStorage.hasMac();
 
-  Future<void> tryAutoConnect() => orchestratorTryAutoConnect(
+  Future<void> scheduleAutoConnect() => orchestratorAutoConnect(
         ref: ref,
         auth: _authStorage,
-        connecting: _connecting,
-        state: state,
+        hasSavedMac: hasSavedMac,
+        isConnecting: () => _connecting,
+        readState: () => state,
         sessionLog: _sessionLog,
         emit: _emit,
         connect: connect,
-        autoStrap: _autoStrap,
-        setAutoConnectPending: (v) => _autoConnectPending = v,
       );
-
-  void retryAutoConnectIfPending() {
-    if (!_autoConnectPending || _connecting) return;
-    tryAutoConnect();
-  }
 
   SyncPayload? get lastPayload => _lastPayload;
 
@@ -122,18 +107,18 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     final store = _store;
     if (store == null) return;
     await orchestratorRefetch(
-        ref: ref,
-        auth: _authStorage,
-        store: store,
-        sessionLog: _sessionLog,
-        connecting: _connecting,
-        readState: () => state,
-        lastPayload: _lastPayload,
-        emit: _emit,
-        setPayload: (p) => _lastPayload = p,
-        setConnecting: (v) => _connecting = v,
-        codeStr: codeStr,
-      );
+      ref: ref,
+      auth: _authStorage,
+      store: store,
+      sessionLog: _sessionLog,
+      connecting: _connecting,
+      readState: () => state,
+      lastPayload: _lastPayload,
+      emit: _emit,
+      setPayload: (p) => _lastPayload = p,
+      setConnecting: (v) => _connecting = v,
+      codeStr: codeStr,
+    );
   }
 
   Future<void> _run(String mac) async {

@@ -39,7 +39,13 @@ class SyncFetcher {
     TypeProgressFn? onTypeProgress,
   }) async {
     final client = linkFactory(log);
-    if (!await client.connectAndAuth(mac: mac, authKey: authKey)) return null;
+    var authed = await client.connectAndAuth(mac: mac, authKey: authKey);
+    if (!authed) {
+      log('• connect/auth failed — retrying once');
+      await Future<void>.delayed(const Duration(seconds: 1));
+      authed = await client.connectAndAuth(mac: mac, authKey: authKey);
+    }
+    if (!authed) return null;
     try {
       return await fetch(
         client: client,
