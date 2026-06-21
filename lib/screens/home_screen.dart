@@ -5,8 +5,11 @@ import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/design_system/components/helio_cloud_banner.dart';
 import 'package:heliolytics/design_system/components/helio_empty_state.dart';
 import 'package:heliolytics/design_system/components/helio_loading.dart';
+import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
+import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
+import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/widgets/home_activities_section.dart';
@@ -113,11 +116,58 @@ class HomeScreen extends ConsumerWidget {
           onHealthTap: () => context.push('/health/${day.dayKey}'),
           onStressTap: () => open('stress'),
         ),
+        const SizedBox(height: HelioSpacing.lg),
+        _stepsCard(day),
         const SizedBox(height: HelioSpacing.xl),
         HomeMyDaySection(onTap: () => open('readiness')),
         const SizedBox(height: HelioSpacing.xl),
         HomeActivitiesSection(snap: snap, day: day),
       ],
+    );
+  }
+
+  Widget _stepsCard(day) {
+    final steps = day.steps as int;
+    final stepsStr = steps > 0
+        ? (steps >= 1000
+            ? '${(steps / 1000).toStringAsFixed(1)}k'
+            : '$steps')
+        : '—';
+    return HelioSurfaceCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: HelioSpacing.lg,
+        vertical: HelioSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: HelioColors.strainBlue.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.directions_walk_outlined,
+              size: 18,
+              color: HelioColors.strainBlue,
+            ),
+          ),
+          const SizedBox(width: HelioSpacing.md),
+          Text(
+            'STEPS',
+            style: HelioTypography.capsLabel,
+          ),
+          const Spacer(),
+          Text(
+            stepsStr,
+            style: HelioTypography.scoreLarge.copyWith(
+              fontSize: 28,
+              color: steps > 0 ? HelioColors.strainBlue : HelioColors.textMuted,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

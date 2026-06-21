@@ -97,13 +97,6 @@ class HomePrimaryRings extends StatelessWidget {
           onTap: () => onRingTap('temperature'),
         ),
         _divider(),
-        HomeVitalRow(
-          icon: Icons.directions_walk_outlined,
-          label: 'Steps',
-          value: day.steps > 0 ? _formatStepsShort(day.steps) : '—',
-          unit: '',
-        ),
-        _divider(),
       ],
     );
   }
@@ -135,10 +128,5 @@ class HomePrimaryRings extends StatelessWidget {
   int? _strainFromSteps(int steps) {
     if (steps <= 0) return null;
     return (steps / 150).clamp(0, 100).round();
-  }
-
-  String _formatStepsShort(int steps) {
-    if (steps >= 1000) return '${(steps / 1000).toStringAsFixed(1)}k';
-    return '$steps';
   }
 }
