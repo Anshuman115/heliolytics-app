@@ -15,6 +15,7 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
   final bool canGoNext;
   final int? batteryPercent;
   final bool syncActive;
+  final bool strapConnected;
   final bool showProfile;
   final List<Widget> actions;
 
@@ -30,6 +31,7 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.canGoNext = true,
     this.batteryPercent,
     this.syncActive = false,
+    this.strapConnected = false,
     this.showProfile = false,
     this.actions = const [],
   });
@@ -45,11 +47,21 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
         height: 60,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.md),
-          child: Row(
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              SizedBox(width: 40, child: _leading()),
-              Expanded(child: Center(child: _center())),
-              _trailing(),
+              // Truly centered center content
+              Center(child: _center()),
+              // Leading (left)
+              Positioned(
+                left: 0,
+                child: SizedBox(width: 40, child: _leading()),
+              ),
+              // Trailing (right)
+              Positioned(
+                right: 0,
+                child: _trailing(),
+              ),
             ],
           ),
         ),
@@ -108,47 +120,95 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         ...actions,
-        if (syncActive)
-          Container(
-            width: 8,
-            height: 8,
-            margin: const EdgeInsets.only(right: HelioSpacing.sm),
-            decoration: const BoxDecoration(
-              color: HelioColors.syncActive,
-              shape: BoxShape.circle,
-            ),
+        // Strap status chip
+        if (strapConnected || syncActive)
+          Padding(
+            padding: const EdgeInsets.only(right: HelioSpacing.sm),
+            child: _StrapChip(connected: strapConnected, syncing: syncActive),
           ),
+        // Battery
         if (batteryPercent != null) ...[
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(Icons.watch_outlined, size: 22, color: HelioColors.textSecondary),
-              Positioned(
-                right: -2,
-                bottom: -2,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: HelioColors.optimalGreen,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: HelioColors.canvas, width: 1.5),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 6),
+          _BatteryIcon(percent: batteryPercent!),
+          const SizedBox(width: 4),
           Text(
             '$batteryPercent%',
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 12,
               color: HelioColors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ],
+    );
+  }
+}
+
+class _StrapChip extends StatelessWidget {
+  final bool connected;
+  final bool syncing;
+
+  const _StrapChip({required this.connected, required this.syncing});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = syncing
+        ? HelioColors.recoveryMid
+        : HelioColors.optimalGreen;
+    final label = syncing ? 'SYNCING' : 'STRAP';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              color: color,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BatteryIcon extends StatelessWidget {
+  final int percent;
+
+  const _BatteryIcon({required this.percent});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = percent <= 20
+        ? HelioColors.recoveryLow
+        : percent <= 50
+            ? HelioColors.recoveryMid
+            : HelioColors.optimalGreen;
+
+    return Icon(
+      percent <= 20
+          ? Icons.battery_1_bar
+          : percent <= 50
+              ? Icons.battery_4_bar
+              : Icons.battery_full,
+      size: 18,
+      color: color,
     );
   }
 }

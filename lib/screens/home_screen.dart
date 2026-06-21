@@ -71,6 +71,12 @@ class HomeScreen extends ConsumerWidget {
     final keys = ref.watch(availableDayKeysProvider);
     final idx = day == null ? -1 : keys.indexOf(day.dayKey);
     final snap = health.valueOrNull;
+    final sync = ref.watch(syncOrchestratorProvider);
+    final isConnected = sync.state == SessionState.connected ||
+        sync.state == SessionState.fetching ||
+        sync.state == SessionState.authenticating ||
+        sync.state == SessionState.connecting;
+
     return HelioTopBar(
       showProfile: true,
       dayLabel: day != null ? formatNavDayLabel(day.dayKey) : '—',
@@ -80,6 +86,7 @@ class HomeScreen extends ConsumerWidget {
       canGoNext: idx >= 0 && idx < keys.length - 1,
       batteryPercent: snap?.batteryPercent,
       syncActive: syncBusy,
+      strapConnected: isConnected,
     );
   }
 
