@@ -14,8 +14,8 @@ class SleepStagePoint {
   SleepStageKind get kind => SleepStageKind.fromType(type);
 
   factory SleepStagePoint.fromJson(Map<String, dynamic> j) => SleepStagePoint(
-        start: DateTime.parse(j['start'] as String),
-        end: DateTime.parse(j['end'] as String),
+        start: DateTime.parse(j['start'] as String).toLocal(),
+        end: DateTime.parse(j['end'] as String).toLocal(),
         type: (j['type'] as num).toInt(),
       );
 }

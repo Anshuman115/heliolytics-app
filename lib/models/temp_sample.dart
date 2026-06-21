@@ -11,7 +11,7 @@ class TempSample {
 
   factory TempSample.fromJson(Map<String, dynamic> j) => TempSample(
         dayKey: j['dayKey'] as String,
-        sampledAt: DateTime.parse(j['sampledAt'] as String),
+        sampledAt: DateTime.parse(j['sampledAt'] as String).toLocal(),
         celsius: (j['celsius'] as num).toDouble(),
       );
 }

@@ -41,6 +41,21 @@ Future<void> main() async {
   if (seedApiConfig) {
     await ApiConfigStorage(store).ensureDevDefaults();
   }
+
+  // Seed strap auth key and MAC from dart-define if provided
+  if (defaultStrapAuthKey.isNotEmpty) {
+    final existing = await store.read(authKeyStorageKey);
+    if (existing == null || existing.isEmpty) {
+      await store.write(authKeyStorageKey, defaultStrapAuthKey);
+    }
+  }
+  if (defaultStrapMac.isNotEmpty) {
+    final existing = await store.read(strapMacStorageKey);
+    if (existing == null || existing.isEmpty) {
+      await store.write(strapMacStorageKey, defaultStrapMac);
+    }
+  }
+
   runApp(
     ProviderScope(
       overrides: [
@@ -50,3 +65,4 @@ Future<void> main() async {
     ),
   );
 }
+

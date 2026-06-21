@@ -40,9 +40,9 @@ class Session {
 
   factory Session.fromJson(Map<String, dynamic> j) => Session(
         sessionId: j['sessionId'] as String,
-        startedAt: DateTime.parse(j['startedAt'] as String),
+        startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
         endedAt: j['endedAt'] != null
-            ? DateTime.parse(j['endedAt'] as String)
+            ? DateTime.parse(j['endedAt'] as String).toLocal()
             : null,
         deviceMac: j['deviceMac'] as String?,
         fetchWindowHours: (j['fetchWindowHours'] as num).toInt(),

@@ -60,7 +60,7 @@ class DayMetric {
         activitySessionCount: (j['activitySessionCount'] as num?)?.toInt() ?? 0,
         napCount: (j['napCount'] as num?)?.toInt() ?? 0,
         updatedAt: j['updatedAt'] != null
-            ? DateTime.parse(j['updatedAt'] as String)
+            ? DateTime.parse(j['updatedAt'] as String).toLocal()
             : null,
       );
 }
@@ -94,7 +94,7 @@ class SleepMetric {
     final rawStages = j['stages'] as List<dynamic>? ?? [];
     return SleepMetric(
       dayKey: j['dayKey'] as String,
-      startedAt: DateTime.parse(j['startedAt'] as String),
+      startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
       score: (j['score'] as num).toInt(),
       totalMins: (j['totalMins'] as num).toInt(),
       deepMins: (j['deepMins'] as num).toInt(),
@@ -133,7 +133,7 @@ class ActivitySessionMetric {
 
   factory ActivitySessionMetric.fromJson(Map<String, dynamic> j) => ActivitySessionMetric(
         dayKey: j['dayKey'] as String,
-        startedAt: DateTime.parse(j['startedAt'] as String),
+        startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
         sportType: (j['sportType'] as num).toInt(),
         sportName: j['sportName'] as String? ?? '',
         durationSec: (j['durationSec'] as num).toInt(),
@@ -166,7 +166,7 @@ class WorkoutMetric {
 
   factory WorkoutMetric.fromJson(Map<String, dynamic> j) => WorkoutMetric(
         dayKey: j['dayKey'] as String,
-        startedAt: DateTime.parse(j['startedAt'] as String),
+        startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
         sportType: (j['sportType'] as num).toInt(),
         sportName: j['sportName'] as String? ?? '',
         durationSec: (j['durationSec'] as num).toInt(),

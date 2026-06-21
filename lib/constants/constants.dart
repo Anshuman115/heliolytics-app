@@ -131,6 +131,14 @@ const Map<String, String> typeCodeLabels = {
 const String defaultApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
 const String defaultApiSigningSecret =
     String.fromEnvironment('API_SIGNING_SECRET', defaultValue: '');
+
+/// Strap auth key and MAC — injected via `--dart-define=STRAP_AUTH_KEY=...`
+/// and `--dart-define=STRAP_MAC=...` at build / run time.
+/// When non-empty, main.dart seeds them into secure storage on first launch.
+const String defaultStrapAuthKey =
+    String.fromEnvironment('STRAP_AUTH_KEY', defaultValue: '');
+const String defaultStrapMac =
+    String.fromEnvironment('STRAP_MAC', defaultValue: '');
 const String appBuildMarker = 'v3-helio1';
 const String appDocsSubdir = 'heliolytics';
 const String authKeyStorageKey = 'heliolytics.auth_key';

@@ -86,13 +86,14 @@ class BandLink implements BandLinkPort {
         if (u == notifyUuid)  _notify  = c;
         if (u == controlUuid) _control = c;
         if (u == dataUuid)    _data    = c;
-        if (u == heartRateMeasurementUuid) _hrChar = c;
+        if (u.contains('2a37')) _hrChar = c;
       }
     }
     if (_write == null || _notify == null) {
       log('✗ chunked chars not found');
       return false;
     }
+    log('char resolution: write=${_write != null}, notify=${_notify != null}, control=${_control != null}, data=${_data != null}, hrChar=${_hrChar != null}');
     log('✓ found chunked chars');
 
     auth = DeviceHandshake(
