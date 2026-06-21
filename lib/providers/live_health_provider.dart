@@ -54,20 +54,31 @@ class LiveHealthNotifier extends AsyncNotifier<CloudMetricsSnapshot?> {
   Future<CloudMetricsSnapshot?> build() => _load();
 
   Future<CloudMetricsSnapshot?> _load() async {
-    final configured = await ref.watch(apiConfiguredProvider.future);
+    final configured = await ref.read(apiConfiguredProvider.future);
     if (!configured) return null;
 
-    final client = ref.watch(metricsApiClientProvider);
-    final days = await client.fetchDays();
-    final sleep = await _optional(client.fetchSleep(), 'sleep');
-    final workouts = await _optional(client.fetchWorkouts(), 'workouts');
-    final activitySessions = await _optional(client.fetchActivitySessions(), 'activitySessions');
-    final temperature = await _optional(client.fetchTemperature(), 'temperature');
-    final series = await _optional(client.fetchSeries(), 'series');
-    final heartRate = await _optional(client.fetchHeartRate(), 'heartRate');
-    final coverage = await _optionalCoverage(client.fetchCoverage());
+    final client = ref.read(metricsApiClientProvider);
+    final (
+      days,
+      sleep,
+      workouts,
+      activitySessions,
+      temperature,
+      series,
+      heartRate,
+      coverage,
+    ) = await (
+      client.fetchDays(),
+      _optional(client.fetchSleep(), 'sleep'),
+      _optional(client.fetchWorkouts(), 'workouts'),
+      _optional(client.fetchActivitySessions(), 'activitySessions'),
+      _optional(client.fetchTemperature(), 'temperature'),
+      _optional(client.fetchSeries(), 'series'),
+      _optional(client.fetchHeartRate(), 'heartRate'),
+      _optionalCoverage(client.fetchCoverage()),
+    ).wait;
 
-    final store = await ref.watch(sessionStoreProvider.future);
+    final store = await ref.read(sessionStoreProvider.future);
     final ids = await store.listSessions();
     DateTime? syncedAt = coverage?.lastIngestAt ?? coverage?.dataThrough;
     int? battery;

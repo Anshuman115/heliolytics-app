@@ -68,6 +68,7 @@ class _AuthKeyScreenState extends ConsumerState<AuthKeyScreen> {
               controller: _keyCtrl,
               hint: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
               maxLength: 32,
+              hexOnly: true,
               errorText: _keyError,
             ),
             const SizedBox(height: HelioSpacing.xl),

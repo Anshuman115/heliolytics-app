@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
@@ -13,6 +14,7 @@ class HelioTextField extends StatelessWidget {
   final int? maxLength;
   final TextInputType? keyboardType;
   final Widget? suffix;
+  final bool hexOnly;
 
   const HelioTextField({
     super.key,
@@ -24,6 +26,7 @@ class HelioTextField extends StatelessWidget {
     this.maxLength,
     this.keyboardType,
     this.suffix,
+    this.hexOnly = false,
   });
 
   @override
@@ -39,9 +42,13 @@ class HelioTextField extends StatelessWidget {
           controller: controller,
           obscureText: obscureText,
           maxLength: maxLength,
-          keyboardType: keyboardType,
+          keyboardType: keyboardType ?? (hexOnly ? TextInputType.text : null),
           autocorrect: false,
           enableSuggestions: false,
+          inputFormatters: [
+            if (hexOnly) FilteringTextInputFormatter.allow(RegExp(r'[0-9a-fA-F]')),
+            if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+          ],
           style: HelioTypography.body,
           decoration: InputDecoration(
             hintText: hint,
