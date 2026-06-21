@@ -16,8 +16,8 @@ Future<Session> finalizeFetchSession({
   final base = await store.readSessionJson(sessionId);
   final batt = client.batteryPercent;
 
-  // Persist battery to secure storage so the UI can show it even before
-  // the next BLE sync (identical pattern to healthee/app strap_client).
+  // Persist battery to secure storage so it survives app restarts
+  // and is visible in the UI even before the next BLE sync.
   if (batt != null) {
     await auth.saveBattery(batt);
   }

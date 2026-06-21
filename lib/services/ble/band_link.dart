@@ -277,9 +277,8 @@ class BandLink implements BandLinkPort {
   }
 
   Future<void> _readBattery(List<BluetoothService> services) async {
-    // Use substring match — the strap may expose 0x2A19 under a vendor
-    // service UUID rather than the standard 0x180F, so an exact match fails.
-    // This is identical to how healthee/app reads battery.
+    // Use substring match — the strap exposes 0x2A19 under a vendor service
+    // UUID, not the standard 0x180F, so an exact service-level match fails.
     BluetoothCharacteristic? batteryChar;
     for (final s in services) {
       for (final c in s.characteristics) {
