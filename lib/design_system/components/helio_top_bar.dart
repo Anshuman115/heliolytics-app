@@ -16,6 +16,7 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
   final int? batteryPercent;
   final bool syncActive;
   final bool showProfile;
+  final List<Widget> actions;
 
   const HelioTopBar({
     super.key,
@@ -30,6 +31,7 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.batteryPercent,
     this.syncActive = false,
     this.showProfile = false,
+    this.actions = const [],
   });
 
   @override
@@ -96,6 +98,7 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        ...actions,
         if (syncActive)
           Container(
             width: 8,

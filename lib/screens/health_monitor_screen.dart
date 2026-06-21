@@ -19,10 +19,13 @@ class HealthMonitorScreen extends ConsumerStatefulWidget {
   const HealthMonitorScreen({super.key, required this.dayKey});
 
   @override
-  ConsumerState<HealthMonitorScreen> createState() => _HealthMonitorScreenState();
+  ConsumerState<HealthMonitorScreen> createState() =>
+      _HealthMonitorScreenState();
 }
 
 class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
+  /// Cached so we can call stopMonitoring() safely in dispose()
+  /// without touching ref after the widget is unmounted.
   LiveHrNotifier? _liveHrNotifier;
 
   @override
@@ -30,7 +33,6 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _liveHrNotifier = ref.read(liveHrProvider.notifier);
-      _liveHrNotifier!.startMonitoring();
     });
   }
 
@@ -43,6 +45,8 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
   @override
   Widget build(BuildContext context) {
     final health = ref.watch(liveHealthProvider);
+    final live = ref.watch(liveHrProvider);
+
     return Scaffold(
       backgroundColor: HelioColors.canvas,
       body: Column(
@@ -51,6 +55,9 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
             showBack: true,
             onBack: () => context.pop(),
             title: 'Health Monitor',
+            actions: [
+              _LiveHrButton(live: live, notifier: _liveHrNotifier),
+            ],
           ),
           Expanded(
             child: health.when(
@@ -64,7 +71,11 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
     );
   }
 
-  Widget _body(BuildContext context, CloudMetricsSnapshot? snap, String dayKey) {
+  Widget _body(
+    BuildContext context,
+    CloudMetricsSnapshot? snap,
+    String dayKey,
+  ) {
     DayMetric? day;
     for (final d in snap?.days ?? const <DayMetric>[]) {
       if (d.dayKey == dayKey) {
@@ -94,6 +105,81 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
           onMetricTap: (id) => context.push('/metric/$dayKey/$id'),
         ),
       ],
+    );
+  }
+}
+
+class _LiveHrButton extends StatelessWidget {
+  final LiveHrState live;
+  final LiveHrNotifier? notifier;
+
+  const _LiveHrButton({required this.live, required this.notifier});
+
+  @override
+  Widget build(BuildContext context) {
+    if (live.isConnecting) {
+      return const Padding(
+        padding: EdgeInsets.only(right: HelioSpacing.md),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: HelioColors.recoveryLow,
+          ),
+        ),
+      );
+    }
+
+    final isLive = live.isLive;
+    return GestureDetector(
+      onTap: () {
+        if (isLive) {
+          notifier?.stopMonitoring();
+        } else {
+          notifier?.startMonitoring();
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(right: HelioSpacing.md),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(
+            horizontal: HelioSpacing.sm,
+            vertical: 4,
+          ),
+          decoration: BoxDecoration(
+            color: isLive
+                ? HelioColors.recoveryLow.withValues(alpha: 0.18)
+                : HelioColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isLive ? HelioColors.recoveryLow : HelioColors.border,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isLive ? Icons.favorite : Icons.favorite_border,
+                size: 13,
+                color: isLive ? HelioColors.recoveryLow : HelioColors.textMuted,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isLive ? 'LIVE' : 'START HR',
+                style: HelioTypography.capsLabel.copyWith(
+                  fontSize: 10,
+                  color: isLive
+                      ? HelioColors.recoveryLow
+                      : HelioColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
