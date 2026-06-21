@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/services/ble/encrypted_endpoint.dart';
+import 'package:heliolytics/services/ble/live_hr_bpm.dart';
 
 /// Real-time HR via endpoint 0x001d + standard BLE Heart Rate Measurement notify.
 class LiveHrStream {
@@ -68,9 +69,8 @@ class LiveHrStream {
   }
 
   void _onHrNotify(List<int> value) {
-    if (value.length < 2 || value[0] != liveHrNotifyFlagsByte) return;
-    final bpm = value[1] & 0xff;
-    if (bpm <= 0) return;
+    final bpm = bpmFromGattNotify(value);
+    if (bpm == null) return;
     _bpmController.add(bpm);
   }
 

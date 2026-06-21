@@ -50,10 +50,15 @@ class BandLink implements BandLinkPort {
     final done = Completer<bool>();
     _device = BluetoothDevice.fromId(mac);
 
+    var physicallyConnected = false;
     _connSub = _device!.connectionState.listen((s) {
       log('• connection: ${s.name}');
-      if (s == BluetoothConnectionState.disconnected && !done.isCompleted) {
+      if (s == BluetoothConnectionState.connected) physicallyConnected = true;
+      if (s == BluetoothConnectionState.disconnected &&
+          physicallyConnected &&
+          !done.isCompleted) {
         log('• disconnected before auth completed');
+        done.complete(false);
       }
     });
 
@@ -165,7 +170,11 @@ class BandLink implements BandLinkPort {
     });
 
     _liveHr = LiveHrStream(comms: comms!, hrChar: _hrChar, log: log);
-    if (_hrChar == null) log('• live HR char not found — streaming unavailable');
+    if (_hrChar != null) {
+      log('✓ live HR char found');
+    } else {
+      log('• live HR char not found — streaming unavailable');
+    }
 
     log('✓ post-auth setup complete — ready to fetch');
     onUpdate?.call();

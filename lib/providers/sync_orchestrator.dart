@@ -34,6 +34,21 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     state = state.copyWith(state: hasKey ? SessionState.idle : SessionState.noAuthKey);
     _sessionLog.log('App initialized. Auth key: ${hasKey ? "present" : "missing"}');
     _emit(state.copyWith(logs: _sessionLog.logs));
+    if (hasKey) {
+      await orchestratorAutoConnect(
+      ref: ref,
+      auth: _authStorage,
+      hasSavedMac: hasSavedMac,
+      autoConnectPending: _autoConnectPending,
+      setAutoConnectPending: (v) => _autoConnectPending = v,
+      connecting: _connecting,
+      state: state,
+      sessionLog: _sessionLog,
+      emit: _emit,
+      connect: connect,
+      autoStrap: _autoStrap,
+      );
+    }
   }
 
   Future<void> saveAuthKey(String key) async {
