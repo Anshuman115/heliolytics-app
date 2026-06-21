@@ -14,10 +14,31 @@ class HomeMyDaySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: HelioSpacing.sm),
-          child: Text('My Day', style: HelioTypography.body.copyWith(fontSize: 18)),
+        // Section header with + button
+        Row(
+          children: [
+            Text(
+              'MY DAY',
+              style: HelioTypography.sectionTitle,
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: onTap,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: HelioColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: HelioColors.border),
+                ),
+                child: const Icon(Icons.add, size: 16, color: HelioColors.textSecondary),
+              ),
+            ),
+          ],
         ),
+        const SizedBox(height: HelioSpacing.md),
+        // Daily Outlook row
         GestureDetector(
           onTap: onTap,
           child: Container(
@@ -29,7 +50,7 @@ class HomeMyDaySection extends StatelessWidget {
               borderRadius: BorderRadius.circular(HelioRadii.card),
               gradient: LinearGradient(
                 colors: [
-                  HelioColors.outlookGold.withValues(alpha: 0.35),
+                  HelioColors.outlookGold.withValues(alpha: 0.25),
                   HelioColors.surface,
                 ],
                 begin: Alignment.centerLeft,
@@ -39,30 +60,28 @@ class HomeMyDaySection extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: HelioColors.surfaceElevated,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'H',
-                      style: HelioTypography.body.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
+                Icon(Icons.wb_sunny_outlined, color: HelioColors.outlookGold, size: 18),
                 const SizedBox(width: HelioSpacing.md),
-                Icon(Icons.wb_sunny_outlined, color: HelioColors.outlookGold, size: 20),
-                const SizedBox(width: HelioSpacing.sm),
                 Expanded(
-                  child: Text(
-                    'Your Daily Outlook',
-                    style: HelioTypography.body.copyWith(fontWeight: FontWeight.w600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'YOUR DAILY OUTLOOK',
+                        style: HelioTypography.capsLabel.copyWith(
+                          fontSize: 10,
+                          color: HelioColors.outlookGold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'View readiness & recovery tips',
+                        style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: HelioColors.textMuted, size: 20),
+                const Icon(Icons.chevron_right, color: HelioColors.textMuted, size: 18),
               ],
             ),
           ),

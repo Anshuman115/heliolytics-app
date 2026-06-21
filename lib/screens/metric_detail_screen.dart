@@ -116,13 +116,17 @@ class MetricDetailScreen extends ConsumerWidget {
     final progress = _progressFor(def.id, day);
     final color = def.id == 'readiness' ? recoveryColorFor(day.readiness) : def.color;
 
-    return Center(
-      child: HelioScoreRing(
-        size: HelioRingSize.hero,
-        progress: progress,
-        label: def.title,
-        value: value,
-        color: color,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: HelioSpacing.xl),
+      child: Center(
+        child: HelioScoreRing(
+          size: HelioRingSize.whoopHero,
+          progress: progress,
+          label: def.title,
+          value: value,
+          color: color,
+          showChevron: false,
+        ),
       ),
     );
   }

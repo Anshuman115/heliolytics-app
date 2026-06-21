@@ -5,4 +5,5 @@ abstract final class HelioSpacing {
   static const double lg = 16;
   static const double xl = 24;
   static const double xxl = 32;
+  static const double xxxl = 40;
 }

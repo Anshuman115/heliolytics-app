@@ -35,14 +35,14 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => const Size.fromHeight(60);
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       bottom: false,
       child: SizedBox(
-        height: 56,
+        height: 60,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.md),
           child: Row(
@@ -91,7 +91,16 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
         style: HelioTypography.sectionTitle.copyWith(color: HelioColors.textPrimary),
       );
     }
-    return const SizedBox.shrink();
+    // Default: HELIOLYTICS wordmark
+    return Text(
+      'HELIOLYTICS',
+      style: HelioTypography.sectionTitle.copyWith(
+        color: HelioColors.textPrimary,
+        letterSpacing: 3,
+        fontWeight: FontWeight.w800,
+        fontSize: 13,
+      ),
+    );
   }
 
   Widget _trailing() {

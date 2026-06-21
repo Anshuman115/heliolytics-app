@@ -6,7 +6,6 @@ import 'package:heliolytics/design_system/components/helio_cloud_banner.dart';
 import 'package:heliolytics/design_system/components/helio_empty_state.dart';
 import 'package:heliolytics/design_system/components/helio_loading.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
-import 'package:heliolytics/design_system/components/helio_wordmark.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
@@ -33,7 +32,6 @@ class HomeScreen extends ConsumerWidget {
     return Column(
       children: [
         _topBar(ref, health, syncBusy),
-        const HelioWordmark(),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () => ref.read(liveHealthProvider.notifier).reload(),

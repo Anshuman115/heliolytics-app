@@ -37,6 +37,7 @@ class ActivityDetailScreen extends StatelessWidget {
 
   Widget _scaffold(BuildContext context, _ActivityView view) {
     return Scaffold(
+      backgroundColor: HelioColors.canvas,
       appBar: HelioTopBar(
         showBack: true,
         onBack: () => context.pop(),
@@ -45,15 +46,35 @@ class ActivityDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(HelioSpacing.lg),
         children: [
+          // Hero icon with glow
           Center(
-            child: Icon(view.icon, size: 56, color: HelioColors.strainBlue),
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: HelioColors.strainBlue.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: HelioColors.strainBlue.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Icon(view.icon, size: 38, color: HelioColors.strainBlue),
+            ),
           ),
           const SizedBox(height: HelioSpacing.xl),
+
+          // Stats card
           HelioSurfaceCard(
+            padding: EdgeInsets.zero,
             child: Column(
-              children: view.rows
-                  .map((r) => _statRow(r.$1, r.$2))
-                  .toList(),
+              children: [
+                for (int i = 0; i < view.rows.length; i++) ...[
+                  if (i > 0)
+                    const Divider(height: 1, color: Color(0x14FFFFFF)),
+                  _statRow(view.rows[i].$1, view.rows[i].$2),
+                ],
+              ],
             ),
           ),
         ],
@@ -63,16 +84,17 @@ class ActivityDetailScreen extends StatelessWidget {
 
   Widget _statRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: HelioSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: HelioSpacing.lg,
+        vertical: HelioSpacing.md,
+      ),
       child: Row(
         children: [
-          Expanded(
-            flex: 2,
-            child: Text(label.toUpperCase(), style: HelioTypography.capsLabel),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(value, style: HelioTypography.body, textAlign: TextAlign.end),
+          Text(label.toUpperCase(), style: HelioTypography.capsLabel),
+          const Spacer(),
+          Text(
+            value,
+            style: HelioTypography.body.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),

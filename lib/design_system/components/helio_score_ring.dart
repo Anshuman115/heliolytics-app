@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 
-enum HelioRingSize { hero, triple, standard }
+enum HelioRingSize { whoopHero, hero, triple, standard }
 
 class HelioScoreRing extends StatelessWidget {
   final double? progress;
@@ -27,18 +27,21 @@ class HelioScoreRing extends StatelessWidget {
   });
 
   double get _diameter => switch (size) {
+        HelioRingSize.whoopHero => 200,
         HelioRingSize.hero => 132,
         HelioRingSize.triple => 108,
         HelioRingSize.standard => 80,
       };
 
   double get _stroke => switch (size) {
+        HelioRingSize.whoopHero => 14,
         HelioRingSize.hero => 10,
         HelioRingSize.triple => 9,
         HelioRingSize.standard => 7,
       };
 
   double get _valueSize => switch (size) {
+        HelioRingSize.whoopHero => 60,
         HelioRingSize.hero => 36,
         HelioRingSize.triple => 28,
         HelioRingSize.standard => 22,
@@ -56,14 +59,16 @@ class HelioScoreRing extends StatelessWidget {
           stroke: _stroke,
         ),
         child: Center(
-          child: Text(
-            value,
-            style: HelioTypography.scoreMedium.copyWith(
-              fontSize: _valueSize,
-              fontWeight: FontWeight.w700,
-              height: 1,
-            ),
-          ),
+          child: size == HelioRingSize.whoopHero
+              ? _heroCenter()
+              : Text(
+                  value,
+                  style: HelioTypography.scoreMedium.copyWith(
+                    fontSize: _valueSize,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                  ),
+                ),
         ),
       ),
     );
@@ -79,9 +84,9 @@ class HelioScoreRing extends StatelessWidget {
             letterSpacing: 1.4,
           ),
         ),
-        if (showChevron) ...[
+        if (showChevron && size != HelioRingSize.whoopHero) ...[
           const SizedBox(width: 2),
-          Icon(Icons.chevron_right, size: 14, color: HelioColors.textSecondary),
+          const Icon(Icons.chevron_right, size: 14, color: HelioColors.textSecondary),
         ],
       ],
     );
@@ -100,6 +105,23 @@ class HelioScoreRing extends StatelessWidget {
 
     if (onTap == null) return content;
     return GestureDetector(onTap: onTap, behavior: HitTestBehavior.opaque, child: content);
+  }
+
+  Widget _heroCenter() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: HelioTypography.heroValue,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label.toUpperCase(),
+          style: HelioTypography.heroUnit,
+        ),
+      ],
+    );
   }
 }
 

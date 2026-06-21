@@ -4,7 +4,6 @@ import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/models/day_metric.dart';
-import 'package:intl/intl.dart';
 
 class HomeStatusRow extends StatelessWidget {
   final DayMetric day;
@@ -24,44 +23,45 @@ class HomeStatusRow extends StatelessWidget {
     final total = _vitalsTotal(day);
     final stress = day.stressAvg;
     final stressLabel = _stressLabel(stress);
-    final now = DateFormat.jm().format(DateTime.now());
+    final stressColor = _stressColor(stress);
 
     return Row(
       children: [
         Expanded(
-          child: _monitorCard(
+          child: _card(
             title: 'Health Monitor',
             onTap: onHealthTap,
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: HelioColors.optimalGreen.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: HelioColors.optimalGreen.withValues(alpha: 0.4)),
-                  ),
-                  child: Icon(Icons.check, size: 18, color: HelioColors.optimalGreen),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: total > 0 && inRange == total
+                            ? HelioColors.optimalGreen
+                            : HelioColors.recoveryMid,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: HelioSpacing.sm),
+                    Text(
+                      total > 0 && inRange == total ? 'ALL CLEAR' : 'CHECK METRICS',
+                      style: HelioTypography.capsLabel.copyWith(
+                        fontSize: 10,
+                        color: total > 0 && inRange == total
+                            ? HelioColors.optimalGreen
+                            : HelioColors.recoveryMid,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: HelioSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        total > 0 && inRange == total ? 'WITHIN RANGE' : 'CHECK METRICS',
-                        style: HelioTypography.capsLabel.copyWith(
-                          color: HelioColors.optimalGreen,
-                          fontSize: 10,
-                        ),
-                      ),
-                      Text(
-                        total > 0 ? '$inRange/$total Metrics' : 'No vitals yet',
-                        style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: HelioSpacing.xs),
+                Text(
+                  total > 0 ? '$inRange / $total in range' : 'No vitals yet',
+                  style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
                 ),
               ],
             ),
@@ -69,42 +69,38 @@ class HomeStatusRow extends StatelessWidget {
         ),
         const SizedBox(width: HelioSpacing.sm),
         Expanded(
-          child: _monitorCard(
+          child: _card(
             title: 'Stress Monitor',
             onTap: onStressTap,
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: HelioColors.stressLow.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    stress != null ? (stress / 10).toStringAsFixed(1) : '—',
-                    style: HelioTypography.body.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: HelioColors.stressLow,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: HelioSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        stressLabel,
-                        style: HelioTypography.capsLabel.copyWith(
-                          color: HelioColors.stressLow,
-                          fontSize: 10,
-                        ),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: stressColor,
+                        shape: BoxShape.circle,
                       ),
-                      Text(now, style: HelioTypography.bodyMuted.copyWith(fontSize: 12)),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: HelioSpacing.sm),
+                    Text(
+                      stressLabel,
+                      style: HelioTypography.capsLabel.copyWith(
+                        fontSize: 10,
+                        color: stressColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: HelioSpacing.xs),
+                Text(
+                  stress != null
+                      ? '${(stress / 10).toStringAsFixed(1)} stress level'
+                      : 'No data yet',
+                  style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
                 ),
               ],
             ),
@@ -114,7 +110,7 @@ class HomeStatusRow extends StatelessWidget {
     );
   }
 
-  Widget _monitorCard({
+  Widget _card({
     required String title,
     required Widget child,
     VoidCallback? onTap,
@@ -133,7 +129,7 @@ class HomeStatusRow extends StatelessWidget {
                   style: HelioTypography.capsLabel.copyWith(fontSize: 10),
                 ),
               ),
-              Icon(Icons.chevron_right, size: 16, color: HelioColors.textMuted),
+              const Icon(Icons.chevron_right, size: 14, color: HelioColors.textMuted),
             ],
           ),
           const SizedBox(height: HelioSpacing.md),
@@ -141,6 +137,13 @@ class HomeStatusRow extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Color _stressColor(int? stress) {
+    if (stress == null) return HelioColors.textMuted;
+    if (stress <= 40) return HelioColors.optimalGreen;
+    if (stress <= 65) return HelioColors.recoveryMid;
+    return HelioColors.recoveryLow;
   }
 
   String _stressLabel(int? stress) {

@@ -5,6 +5,7 @@ import 'package:heliolytics/design_system/components/helio_score_ring.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/widgets/home_vital_row.dart';
 
 class HomePrimaryRings extends StatelessWidget {
   final DayMetric day;
@@ -15,33 +16,95 @@ class HomePrimaryRings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strain = day.paiScore ?? _strainFromSteps(day.steps);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: HelioSpacing.md),
-      child: Row(
-        children: [
-          Expanded(child: _ring(
-            progress: metricProgress(MetricKind.sleep, day.sleepScore),
-            label: 'Sleep',
-            value: day.sleepScore != null ? '${day.sleepScore}%' : '—',
-            color: HelioColors.sleepBlue,
-            onTap: () => onRingTap('sleep'),
-          )),
-          Expanded(child: _ring(
+    final recoveryColor = recoveryColorFor(day.readiness);
+
+    return Column(
+      children: [
+        // ── Hero recovery ring ──────────────────────────────
+        const SizedBox(height: HelioSpacing.xl),
+        GestureDetector(
+          onTap: () => onRingTap('readiness'),
+          child: HelioScoreRing(
+            size: HelioRingSize.whoopHero,
             progress: metricProgress(MetricKind.readiness, day.readiness),
             label: 'Recovery',
             value: day.readiness != null ? '${day.readiness}%' : '—',
-            color: recoveryColorFor(day.readiness),
-            onTap: () => onRingTap('readiness'),
-          )),
-          Expanded(child: _ring(
-            progress: metricProgress(MetricKind.pai, strain),
-            label: 'Strain',
-            value: formatStrainDecimal(strain),
-            color: HelioColors.strainBlue,
-            onTap: () => onRingTap('pai'),
-          )),
-        ],
-      ),
+            color: recoveryColor,
+            showChevron: false,
+          ),
+        ),
+        const SizedBox(height: HelioSpacing.xxxl),
+
+        // ── Three equal sub-rings ───────────────────────────
+        Row(
+          children: [
+            Expanded(
+              child: _ring(
+                progress: metricProgress(MetricKind.sleep, day.sleepScore),
+                label: 'Sleep',
+                value: day.sleepScore != null ? '${day.sleepScore}%' : '—',
+                color: HelioColors.sleepBlue,
+                onTap: () => onRingTap('sleep'),
+              ),
+            ),
+            Expanded(
+              child: _ring(
+                progress: metricProgress(MetricKind.pai, strain),
+                label: 'Strain',
+                value: formatStrainDecimal(strain),
+                color: HelioColors.strainBlue,
+                onTap: () => onRingTap('pai'),
+              ),
+            ),
+            Expanded(
+              child: _ring(
+                progress: metricProgress(MetricKind.hrv, day.hrvRmssd),
+                label: 'HRV',
+                value: day.hrvRmssd != null ? '${day.hrvRmssd}' : '—',
+                color: recoveryColor,
+                onTap: () => onRingTap('hrv'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: HelioSpacing.xl),
+
+        // ── Vital rows ──────────────────────────────────────
+        _divider(),
+        HomeVitalRow(
+          icon: Icons.favorite_outline,
+          label: 'Resting HR',
+          value: day.restingHr != null ? '${day.restingHr}' : '—',
+          unit: day.restingHr != null ? 'bpm' : '',
+          valueColor: HelioColors.recoveryLow,
+          onTap: () => onRingTap('rhr'),
+        ),
+        _divider(),
+        HomeVitalRow(
+          icon: Icons.show_chart,
+          label: 'HRV',
+          value: day.hrvRmssd != null ? '${day.hrvRmssd}' : '—',
+          unit: day.hrvRmssd != null ? 'ms' : '',
+          valueColor: recoveryColor,
+          onTap: () => onRingTap('hrv'),
+        ),
+        _divider(),
+        HomeVitalRow(
+          icon: Icons.thermostat_outlined,
+          label: 'Skin Temp',
+          value: day.tempAvgC != null ? day.tempAvgC!.toStringAsFixed(1) : '—',
+          unit: day.tempAvgC != null ? '°C' : '',
+          onTap: () => onRingTap('temperature'),
+        ),
+        _divider(),
+        HomeVitalRow(
+          icon: Icons.directions_walk_outlined,
+          label: 'Steps',
+          value: day.steps > 0 ? _formatStepsShort(day.steps) : '—',
+          unit: '',
+        ),
+        _divider(),
+      ],
     );
   }
 
@@ -64,8 +127,18 @@ class HomePrimaryRings extends StatelessWidget {
     );
   }
 
+  Widget _divider() => const Divider(
+        height: 1,
+        color: Color(0x14FFFFFF),
+      );
+
   int? _strainFromSteps(int steps) {
     if (steps <= 0) return null;
     return (steps / 150).clamp(0, 100).round();
+  }
+
+  String _formatStepsShort(int steps) {
+    if (steps >= 1000) return '${(steps / 1000).toStringAsFixed(1)}k';
+    return '$steps';
   }
 }

@@ -21,7 +21,7 @@ class HelioBottomNav extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: HelioColors.surface,
-        border: Border(top: BorderSide(color: HelioColors.border)),
+        border: Border(top: BorderSide(color: Color(0x28FFFFFF), width: 0.5)),
       ),
       child: SafeArea(
         top: false,
@@ -34,22 +34,34 @@ class HelioBottomNav extends StatelessWidget {
               return Expanded(
                 child: InkWell(
                   onTap: () => onChanged(i),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        selected ? tab.$2 : tab.$1,
-                        size: 22,
-                        color: selected ? HelioColors.textPrimary : HelioColors.textMuted,
-                      ),
-                      const SizedBox(height: HelioSpacing.xs),
-                      Text(
-                        tab.$3.toUpperCase(),
-                        style: HelioTypography.navLabel.copyWith(
-                          color: selected ? HelioColors.textPrimary : HelioColors.textMuted,
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          selected ? tab.$2 : tab.$1,
+                          size: 22,
+                          color: selected
+                              ? HelioColors.textPrimary
+                              : HelioColors.textMuted,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: HelioSpacing.xs),
+                        Text(
+                          tab.$3.toUpperCase(),
+                          style: HelioTypography.navLabel.copyWith(
+                            color: selected
+                                ? HelioColors.textPrimary
+                                : HelioColors.textMuted,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
