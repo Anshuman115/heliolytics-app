@@ -65,6 +65,7 @@ class AppLogger {
             printRequestHeaders: true,
             printResponseHeaders: false,
             printResponseMessage: true,
+            printResponseData: false,
             printErrorHeaders: true,
             hiddenHeaders: _hiddenHeaders,
           ),

@@ -27,20 +27,73 @@ class MetricsApiClient {
 
   Future<List<HealthSample>> fetchSeries({int? windowDays}) async {
     final data = await _get('/api/v1/metrics/series', windowDays);
-    final list = data['samples'] as List<dynamic>? ?? [];
-    return list.map((e) => HealthSample.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    final list = data['days'] as List<dynamic>? ?? [];
+    final samples = <HealthSample>[];
+    for (final dayObj in list) {
+      final map = Map<String, dynamic>.from(dayObj as Map);
+      final metric = map['metric'] as String;
+      final dayKey = map['dayKey'] as String;
+      final startTime = DateTime.parse(map['startTime'] as String).toLocal();
+      final offsets = List<dynamic>.from(map['offsets'] as List? ?? []);
+      final values = List<dynamic>.from(map['values'] as List? ?? []);
+      for (var i = 0; i < offsets.length; i++) {
+        final sampledAt = startTime.add(Duration(seconds: (offsets[i] as num).toInt()));
+        final val = (values[i] as num).toDouble();
+        samples.add(HealthSample(
+          metric: metric,
+          dayKey: dayKey,
+          sampledAt: sampledAt,
+          value: val,
+        ));
+      }
+    }
+    return samples;
   }
 
   Future<List<HeartRateSample>> fetchHeartRate({int? windowDays}) async {
     final data = await _get('/api/v1/metrics/hr', windowDays);
-    final list = data['samples'] as List<dynamic>? ?? [];
-    return list.map((e) => HeartRateSample.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    final list = data['days'] as List<dynamic>? ?? [];
+    final samples = <HeartRateSample>[];
+    for (final dayObj in list) {
+      final map = Map<String, dynamic>.from(dayObj as Map);
+      final dayKey = map['dayKey'] as String;
+      final startTime = DateTime.parse(map['startTime'] as String).toLocal();
+      final offsets = List<dynamic>.from(map['offsets'] as List? ?? []);
+      final values = List<dynamic>.from(map['values'] as List? ?? []);
+      for (var i = 0; i < offsets.length; i++) {
+        final sampledAt = startTime.add(Duration(seconds: (offsets[i] as num).toInt()));
+        final bpm = (values[i] as num).toInt();
+        samples.add(HeartRateSample(
+          dayKey: dayKey,
+          sampledAt: sampledAt,
+          bpm: bpm,
+        ));
+      }
+    }
+    return samples;
   }
 
   Future<List<TempSample>> fetchTemperature({int? windowDays}) async {
     final data = await _get('/api/v1/metrics/temperature', windowDays);
-    final list = data['samples'] as List<dynamic>? ?? [];
-    return list.map((e) => TempSample.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    final list = data['days'] as List<dynamic>? ?? [];
+    final samples = <TempSample>[];
+    for (final dayObj in list) {
+      final map = Map<String, dynamic>.from(dayObj as Map);
+      final dayKey = map['dayKey'] as String;
+      final startTime = DateTime.parse(map['startTime'] as String).toLocal();
+      final offsets = List<dynamic>.from(map['offsets'] as List? ?? []);
+      final values = List<dynamic>.from(map['values'] as List? ?? []);
+      for (var i = 0; i < offsets.length; i++) {
+        final sampledAt = startTime.add(Duration(seconds: (offsets[i] as num).toInt()));
+        final celsius = (values[i] as num).toDouble();
+        samples.add(TempSample(
+          dayKey: dayKey,
+          sampledAt: sampledAt,
+          celsius: celsius,
+        ));
+      }
+    }
+    return samples;
   }
 
   Future<List<WorkoutMetric>> fetchWorkouts({int? windowDays}) async {

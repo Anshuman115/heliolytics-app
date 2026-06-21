@@ -22,6 +22,7 @@ class SessionStore implements SyncSessionPort {
   Directory _sessionDir(String id) =>
       Directory(p.join(rootDir.path, 'sessions', id));
 
+  @override
   Future<String> createSession({
     required String? deviceMac,
     required int fetchWindowHours,
@@ -45,16 +46,19 @@ class SessionStore implements SyncSessionPort {
     return id;
   }
 
+  @override
   Future<String?> latestSessionId() async {
     final ids = await listSessions();
     return ids.isEmpty ? null : ids.first;
   }
 
+  @override
   Future<void> writeSessionJson(Session s) async {
     final f = File(p.join(_sessionDir(s.sessionId).path, 'session.json'));
     await f.writeAsString(jsonEncode(s.toJson()), flush: true);
   }
 
+  @override
   Future<Session> readSessionJson(String sessionId) async {
     final f = File(p.join(_sessionDir(sessionId).path, 'session.json'));
     final m = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
@@ -81,6 +85,7 @@ class SessionStore implements SyncSessionPort {
         jsonDecode(await f.readAsString()) as Map<String, dynamic>);
   }
 
+  @override
   Future<void> writeCatalogJson(SessionCatalog c) async {
     final f = File(p.join(_sessionDir(c.sessionId).path, 'types.json'));
     final tmp = File('${f.path}.tmp');

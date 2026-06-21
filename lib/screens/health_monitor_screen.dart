@@ -141,7 +141,7 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
       ),
       _MetricCardData(
         label: 'STRESS',
-        value: day.stressAvg != null ? '${(day.stressAvg! / 10).toStringAsFixed(1)}' : '—',
+        value: day.stressAvg != null ? (day.stressAvg! / 10).toStringAsFixed(1) : '—',
         unit: day.stressAvg != null ? '/10' : '',
         color: day.stressAvg != null && day.stressAvg! > 65
             ? HelioColors.recoveryLow

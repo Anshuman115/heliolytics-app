@@ -67,7 +67,7 @@ class SettingsHubScreen extends ConsumerWidget {
               const SizedBox(height: HelioSpacing.xl),
 
               // ── Cloud section ─────────────────────────────────────────
-              _SectionLabel('CLOUD'),
+              const _SectionLabel('CLOUD'),
               const SizedBox(height: HelioSpacing.sm),
               HelioSurfaceCard(
                 padding: EdgeInsets.zero,
@@ -89,7 +89,7 @@ class SettingsHubScreen extends ConsumerWidget {
               const SizedBox(height: HelioSpacing.xl),
 
               // ── About section ─────────────────────────────────────────
-              _SectionLabel('ABOUT'),
+              const _SectionLabel('ABOUT'),
               const SizedBox(height: HelioSpacing.sm),
               HelioSurfaceCard(
                 padding: const EdgeInsets.symmetric(
