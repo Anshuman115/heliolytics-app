@@ -23,17 +23,20 @@ class HealthMonitorScreen extends ConsumerStatefulWidget {
 }
 
 class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
+  LiveHrNotifier? _liveHrNotifier;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(liveHrProvider.notifier).startMonitoring();
+      _liveHrNotifier = ref.read(liveHrProvider.notifier);
+      _liveHrNotifier!.startMonitoring();
     });
   }
 
   @override
   void dispose() {
-    ref.read(liveHrProvider.notifier).stopMonitoring();
+    _liveHrNotifier?.stopMonitoring();
     super.dispose();
   }
 
