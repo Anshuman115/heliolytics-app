@@ -46,7 +46,6 @@ app.*.map.json
 *.env.local
 build.env
 CLAUDE.md
-test/
 .tmp_phone_session/
 scripts/
 helio_dump/
