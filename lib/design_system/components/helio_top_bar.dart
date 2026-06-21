@@ -103,15 +103,29 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
         style: HelioTypography.sectionTitle.copyWith(color: HelioColors.textPrimary),
       );
     }
-    // Default: HELIOLYTICS wordmark
-    return Text(
-      'HELIOLYTICS',
-      style: HelioTypography.sectionTitle.copyWith(
-        color: HelioColors.textPrimary,
-        letterSpacing: 3,
-        fontWeight: FontWeight.w800,
-        fontSize: 13,
-      ),
+    // Default: HELIOLYTICS wordmark with logo
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Image.asset(
+            'assets/images/logo.png',
+            height: 18,
+            width: 18,
+          ),
+        ),
+        const SizedBox(width: HelioSpacing.xs),
+        Text(
+          'HELIOLYTICS',
+          style: HelioTypography.sectionTitle.copyWith(
+            color: HelioColors.textPrimary,
+            letterSpacing: 3,
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+          ),
+        ),
+      ],
     );
   }
 

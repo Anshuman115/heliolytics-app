@@ -132,6 +132,36 @@ class SettingsHubScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: HelioSpacing.xxl),
+              Center(
+                child: Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        height: 64,
+                        width: 64,
+                      ),
+                    ),
+                    const SizedBox(height: HelioSpacing.md),
+                    Text(
+                      'HELIOLYTICS',
+                      style: HelioTypography.sectionTitle.copyWith(
+                        color: HelioColors.textMuted,
+                        letterSpacing: 4,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: HelioSpacing.xxs),
+                    Text(
+                      'Version $appBuildMarker',
+                      style: HelioTypography.bodyMuted.copyWith(fontSize: 9),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
