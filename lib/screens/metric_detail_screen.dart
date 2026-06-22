@@ -40,6 +40,7 @@ class MetricDetailScreen extends ConsumerWidget {
     }
 
     final health = ref.watch(liveHealthProvider);
+    final detail = ref.watch(detailMetricsProvider).valueOrNull ?? const DetailMetrics();
     return health.when(
       loading: () => Scaffold(
         appBar: HelioTopBar(showBack: true, onBack: () => context.pop()),
@@ -55,11 +56,12 @@ class MetricDetailScreen extends ConsumerWidget {
           onAction: () => ref.invalidate(liveHealthProvider),
         ),
       ),
-      data: (snap) => _loaded(context, def, snap),
+      data: (snap) => _loaded(context, def, snap, detail),
     );
   }
 
-  Widget _loaded(BuildContext context, MetricDef def, CloudMetricsSnapshot? snap) {
+  Widget _loaded(BuildContext context, MetricDef def, CloudMetricsSnapshot? snap,
+      DetailMetrics detail) {
     DayMetric? day;
     for (final d in snap?.days ?? const <DayMetric>[]) {
       if (d.dayKey == dayKey) {
@@ -97,7 +99,7 @@ class MetricDetailScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: HelioSpacing.lg),
-          ..._body(def, snap, day),
+          ..._body(def, snap, day, detail),
         ],
       ),
     );
@@ -143,12 +145,13 @@ class MetricDetailScreen extends ConsumerWidget {
     };
   }
 
-  List<Widget> _body(MetricDef def, CloudMetricsSnapshot snap, DayMetric day) {
+  List<Widget> _body(MetricDef def, CloudMetricsSnapshot snap, DayMetric day,
+      DetailMetrics detail) {
     if (def.id == 'sleep') {
       return [HelioSurfaceCard(child: SleepMetricBody(snap: snap, day: day))];
     }
-    if (def.id == 'continuous_hr') return _continuousHrBody(snap, day);
-    if (def.id == 'temperature') return _tempBody(snap);
+    if (def.id == 'continuous_hr') return _continuousHrBody(detail, day);
+    if (def.id == 'temperature') return _tempBody(detail);
     if (def.seriesKey == null) {
       return [
         HelioSurfaceCard(
@@ -157,7 +160,7 @@ class MetricDetailScreen extends ConsumerWidget {
         ),
       ];
     }
-    final samples = snap.series.where((s) => s.dayKey == dayKey && s.metric == def.seriesKey).toList();
+    final samples = detail.seriesFor(dayKey, def.seriesKey!);
     final stats = MetricStats.fromSamples(samples);
     return [
       MetricStatsRow(stats: stats, unit: def.unit),
@@ -180,10 +183,10 @@ class MetricDetailScreen extends ConsumerWidget {
     ];
   }
 
-  List<Widget> _continuousHrBody(CloudMetricsSnapshot snap, DayMetric day) {
-    final hr = snap.heartRateFor(dayKey);
+  List<Widget> _continuousHrBody(DetailMetrics detail, DayMetric day) {
+    final hr = detail.heartRateFor(dayKey);
     final stats = MetricStats.fromHeartRate(hr);
-    final latest = snap.latestHeartRateFor(dayKey);
+    final latest = hr.isEmpty ? null : hr.last;
     final heroValue = latest != null ? '${latest.bpm}' : (day.restingHr?.toString() ?? '—');
     return [
       Center(
@@ -223,8 +226,8 @@ class MetricDetailScreen extends ConsumerWidget {
     ];
   }
 
-  List<Widget> _tempBody(CloudMetricsSnapshot snap) {
-    final temps = snap.tempFor(dayKey);
+  List<Widget> _tempBody(DetailMetrics detail) {
+    final temps = detail.tempFor(dayKey);
     final stats = MetricStats.fromTemp(temps);
     return [
       MetricStatsRow(stats: stats, unit: '°C'),

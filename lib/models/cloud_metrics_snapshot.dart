@@ -1,17 +1,13 @@
 import 'package:heliolytics/models/day_metric.dart';
-import 'package:heliolytics/models/health_sample.dart';
-import 'package:heliolytics/models/hr_sample.dart';
 import 'package:heliolytics/models/sync_coverage.dart';
-import 'package:heliolytics/models/temp_sample.dart';
 
+/// Core daily snapshot for Home/Sleep/Activity. Heavy per-minute datasets
+/// (series, continuous HR, temperature) live in DetailMetrics, loaded lazily.
 class CloudMetricsSnapshot {
   final List<DayMetric> days;
   final List<SleepMetric> sleep;
   final List<WorkoutMetric> workouts;
   final List<ActivitySessionMetric> activitySessions;
-  final List<TempSample> temperature;
-  final List<HealthSample> series;
-  final List<HeartRateSample> heartRate;
   final DateTime? lastSyncedAt;
   final int? batteryPercent;
   final SyncCoverage? coverage;
@@ -21,9 +17,6 @@ class CloudMetricsSnapshot {
     this.sleep = const [],
     this.workouts = const [],
     this.activitySessions = const [],
-    this.temperature = const [],
-    this.series = const [],
-    this.heartRate = const [],
     this.lastSyncedAt,
     this.batteryPercent,
     this.coverage,
@@ -61,26 +54,4 @@ class CloudMetricsSnapshot {
 
   List<ActivitySessionMetric> activitySessionsFor(String dayKey) =>
       activitySessions.where((s) => s.dayKey == dayKey).toList();
-
-  List<TempSample> tempFor(String dayKey) =>
-      temperature.where((t) => t.dayKey == dayKey).toList();
-
-  List<HeartRateSample> heartRateFor(String dayKey) {
-    final list = heartRate.where((h) => h.dayKey == dayKey).toList()
-      ..sort((a, b) => a.sampledAt.compareTo(b.sampledAt));
-    return list;
-  }
-
-  HeartRateSample? latestHeartRateFor(String dayKey) {
-    final list = heartRateFor(dayKey);
-    return list.isEmpty ? null : list.last;
-  }
-
-  Map<String, List<HealthSample>> seriesByMetric(String dayKey) {
-    final out = <String, List<HealthSample>>{};
-    for (final s in series.where((e) => e.dayKey == dayKey)) {
-      out.putIfAbsent(s.metric, () => []).add(s);
-    }
-    return out;
-  }
 }

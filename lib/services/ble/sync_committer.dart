@@ -26,7 +26,10 @@ class SyncCommitter {
     return SyncCommitter(
       upload: (p) => ref.read(cloudSyncRepositoryProvider).uploadPayload(p),
       isConfigured: () => ref.read(apiConfiguredProvider.future),
-      onHealthRefresh: () => ref.read(liveHealthProvider.notifier).reload(),
+      onHealthRefresh: () {
+        ref.read(liveHealthProvider.notifier).reload();
+        ref.invalidate(detailMetricsProvider); // refresh lazy series/HR/temp too
+      },
       log: log,
     );
   }

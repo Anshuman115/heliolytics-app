@@ -6,10 +6,10 @@ import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_metric_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/health_sample.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
+import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/providers/live_hr_provider.dart';
 import 'package:heliolytics/utils/hr_chart_samples.dart';
 import 'package:heliolytics/widgets/heart_rate_bpm_hero.dart';
@@ -17,13 +17,11 @@ import 'package:heliolytics/widgets/metric_stats_row.dart';
 import 'package:heliolytics/widgets/minute_series_chart.dart';
 
 class HeartRateDaySection extends ConsumerWidget {
-  final CloudMetricsSnapshot snap;
   final DayMetric day;
   final String dayKey;
 
   const HeartRateDaySection({
     super.key,
-    required this.snap,
     required this.day,
     required this.dayKey,
   });
@@ -31,7 +29,8 @@ class HeartRateDaySection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final live = ref.watch(liveHrProvider);
-    final hr = snap.heartRateFor(dayKey);
+    final detail = ref.watch(detailMetricsProvider).valueOrNull;
+    final hr = detail?.heartRateFor(dayKey) ?? const [];
     final latest = hr.isEmpty ? null : hr.last;
     final syncedBpm = latest?.bpm ?? day.restingHr;
     final syncedLabel = latest != null ? 'LATEST BPM' : 'RESTING BPM';

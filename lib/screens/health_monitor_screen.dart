@@ -81,7 +81,7 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
       padding: const EdgeInsets.all(HelioSpacing.lg),
       children: [
         // Live HR + chart section
-        HeartRateDaySection(snap: snap, day: day, dayKey: dayKey),
+        HeartRateDaySection(day: day, dayKey: dayKey),
         const SizedBox(height: HelioSpacing.xl),
 
         // WHOOP-style metric grid
