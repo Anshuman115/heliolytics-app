@@ -43,8 +43,11 @@ class SessionSnapshot {
     this.typeResults = const [],
   });
 
+  // Start in `idle`, not `noAuthKey`: the auth-key check is async, and seeding
+  // `noAuthKey` made the router flash the auth screen for ~1s on every cold
+  // start before storage was read. `_initAsync` sets the real state once known.
   static const initial = SessionSnapshot(
-    state: SessionState.noAuthKey,
+    state: SessionState.idle,
     error: SessionError.none,
   );
 
