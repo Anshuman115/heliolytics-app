@@ -82,8 +82,11 @@ class HomeScreen extends ConsumerWidget {
       dayLabel: day != null ? formatNavDayLabel(day.dayKey) : '—',
       onPrevDay: () => shiftSelectedDay(ref, -1),
       onNextDay: () => shiftSelectedDay(ref, 1),
-      canGoPrev: idx > 0,
-      canGoNext: idx >= 0 && idx < keys.length - 1,
+      // days are DESC (keys[0] = today); older days live at higher indices,
+      // so "previous" is enabled when a higher index exists, "next" when a
+      // lower (newer) one does.
+      canGoPrev: idx >= 0 && idx < keys.length - 1,
+      canGoNext: idx > 0,
       batteryPercent: snap?.batteryPercent,
       syncActive: syncBusy,
       strapConnected: isConnected,
