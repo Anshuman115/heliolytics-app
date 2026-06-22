@@ -107,7 +107,17 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
         icon: Icons.favorite_outline,
         inRange: day.restingHr != null && day.restingHr! >= 40 && day.restingHr! <= 80,
         hasData: day.restingHr != null,
-        onTap: () => context.push('/metric/$dayKey/resting_hr'),
+        onTap: () => context.push('/metric/$dayKey/rhr'),
+      ),
+      _MetricCardData(
+        label: 'MAX HR',
+        value: day.maxHr != null ? '${day.maxHr}' : '—',
+        unit: day.maxHr != null ? 'bpm' : '',
+        color: HelioColors.strainBlue,
+        icon: Icons.favorite,
+        inRange: day.maxHr != null && day.maxHr! >= 100 && day.maxHr! <= 200,
+        hasData: day.maxHr != null,
+        onTap: () => context.push('/metric/$dayKey/max_hr'),
       ),
       _MetricCardData(
         label: 'HRV',
@@ -127,7 +137,18 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
         icon: Icons.air,
         inRange: day.spo2Avg != null && day.spo2Avg! >= 95,
         hasData: day.spo2Avg != null,
-        onTap: () => context.push('/metric/$dayKey/spo2'),
+        // Overnight SpO₂ (0x26) is the populated series; spot (0x25) is usually empty.
+        onTap: () => context.push('/metric/$dayKey/spo2_sleep'),
+      ),
+      _MetricCardData(
+        label: 'RESP RATE',
+        value: day.respRateAvg != null ? '${day.respRateAvg}' : '—',
+        unit: day.respRateAvg != null ? 'br/min' : '',
+        color: HelioColors.strainBlue,
+        icon: Icons.air_outlined,
+        inRange: day.respRateAvg != null && day.respRateAvg! >= 10 && day.respRateAvg! <= 24,
+        hasData: day.respRateAvg != null,
+        onTap: () => context.push('/metric/$dayKey/resp_rate'),
       ),
       _MetricCardData(
         label: 'SKIN TEMP',
@@ -150,16 +171,6 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
         inRange: day.stressAvg != null && day.stressAvg! <= 40,
         hasData: day.stressAvg != null,
         onTap: () => context.push('/metric/$dayKey/stress'),
-      ),
-      _MetricCardData(
-        label: 'BLOOD OXYGEN',
-        value: day.spo2Avg != null ? '${day.spo2Avg!.round()}' : '—',
-        unit: day.spo2Avg != null ? '%' : '',
-        color: HelioColors.strainBlue,
-        icon: Icons.opacity_outlined,
-        inRange: day.spo2Avg != null && day.spo2Avg! >= 95,
-        hasData: day.spo2Avg != null,
-        onTap: () => context.push('/metric/$dayKey/spo2'),
       ),
     ];
 

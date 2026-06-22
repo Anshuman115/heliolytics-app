@@ -8,6 +8,8 @@ class DayMetric {
   final int? spo2Avg;
   final int? hrvRmssd;
   final int? restingHr;
+  final int? maxHr;
+  final int? respRateAvg;
   final int? stressAvg;
   final int? sleepScore;
   final int? sleepMins;
@@ -28,6 +30,8 @@ class DayMetric {
     this.spo2Avg,
     this.hrvRmssd,
     this.restingHr,
+    this.maxHr,
+    this.respRateAvg,
     this.stressAvg,
     this.sleepScore,
     this.sleepMins,
@@ -49,6 +53,8 @@ class DayMetric {
         spo2Avg: (j['spo2Avg'] as num?)?.toInt(),
         hrvRmssd: (j['hrvRmssd'] as num?)?.toInt(),
         restingHr: (j['restingHr'] as num?)?.toInt(),
+        maxHr: (j['maxHr'] as num?)?.toInt(),
+        respRateAvg: (j['respRateAvg'] as num?)?.toInt(),
         stressAvg: (j['stressAvg'] as num?)?.toInt(),
         sleepScore: (j['sleepScore'] as num?)?.toInt(),
         sleepMins: (j['sleepMins'] as num?)?.toInt(),

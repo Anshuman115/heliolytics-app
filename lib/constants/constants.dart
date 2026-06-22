@@ -197,8 +197,6 @@ const int liveHrSampleBufferMax = 60;
 
 const int spo2HeaderByte = 0x02;
 const int spo2RecordSize = 65;
-const int paiRecordSize = 61;
-const int paiMarkerByte = 0x05;
 const int readinessRecordSize = 569;
 const int napRecordStride = 9;
 const int napMinDurationSec = 45 * 60;
