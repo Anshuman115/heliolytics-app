@@ -56,3 +56,7 @@ reports/
 docs/
 .github/
 log.txt
+
+# Local-only dump / export folders (raw strap data, never commit)
+DUMPP/
+ZEPP_EXPORT/

@@ -45,6 +45,8 @@ class TypeSyncEngine {
       if (!probeOnly) log?.call('  fetch 0x${code.toRadixString(16)} timed out');
       lastRaw = job.allRaw.toBytes();
       _job = null;
+      // Tell the strap we're done so it's ready for the next code.
+      writeControl([_cmdAck, _ackKeep]);
       return lastRaw;
     });
   }

@@ -14,6 +14,7 @@ import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/strap_dump_provider.dart';
 import 'package:heliolytics/widgets/sync_log_panel.dart';
 
 class SettingsHubScreen extends ConsumerWidget {
@@ -86,6 +87,12 @@ class SettingsHubScreen extends ConsumerWidget {
                   onTap: () => context.push('/settings/api'),
                 ),
               ),
+              const SizedBox(height: HelioSpacing.xl),
+
+              // ── Diagnostics section ────────────────────────────────────
+              const _SectionLabel('DIAGNOSTICS'),
+              const SizedBox(height: HelioSpacing.sm),
+              const _RawDumpCard(),
               const SizedBox(height: HelioSpacing.xl),
 
               // ── About section ─────────────────────────────────────────
@@ -514,4 +521,226 @@ class _Tile extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Raw Dump Card ─────────────────────────────────────────────────────────────
+class _RawDumpCard extends ConsumerWidget {
+  const _RawDumpCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dump = ref.watch(strapDumpProvider);
+    final isFetching = dump.phase == DumpPhase.fetching ||
+        dump.phase == DumpPhase.connecting;
+
+    return HelioSurfaceCard(
+      padding: EdgeInsets.zero,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: HelioSpacing.lg,
+            vertical: 0,
+          ),
+          leading: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE040FB).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.science_outlined,
+                size: 17, color: Color(0xFFE040FB)),
+          ),
+          title: Text('Raw Strap Dump',
+              style: HelioTypography.body.copyWith(fontWeight: FontWeight.w500)),
+          subtitle: Text(
+            _subtitle(dump),
+            style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
+          ),
+          iconColor: HelioColors.textMuted,
+          collapsedIconColor: HelioColors.textMuted,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                HelioSpacing.lg, 0, HelioSpacing.lg, HelioSpacing.md,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Fetches all 255 type codes (0x01→0xFF) for the last 2 days '
+                    'from the strap and saves raw bytes for analysis.',
+                    style: HelioTypography.bodyMuted.copyWith(fontSize: 11),
+                  ),
+                  const SizedBox(height: HelioSpacing.md),
+
+                  // Progress
+                  if (isFetching) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: dump.phase == DumpPhase.connecting
+                                  ? null
+                                  : dump.progress,
+                              backgroundColor: HelioColors.surfaceElevated,
+                              color: const Color(0xFFE040FB),
+                              minHeight: 6,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: HelioSpacing.sm),
+                        Text(
+                          dump.phase == DumpPhase.connecting
+                              ? 'Connecting…'
+                              : '${dump.currentCode} (${dump.currentIndex + 1}/${dump.totalCodes})',
+                          style: HelioTypography.capsLabel.copyWith(fontSize: 10),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: HelioSpacing.sm),
+                  ],
+
+                  // Done summary
+                  if (dump.phase == DumpPhase.done) ...[
+                    Container(
+                      padding: const EdgeInsets.all(HelioSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: HelioColors.optimalGreen.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: HelioColors.optimalGreen.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '✓ Dump complete',
+                            style: HelioTypography.body.copyWith(
+                              color: HelioColors.optimalGreen,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${dump.codeBytes.length} types with data  •  '
+                            '${dump.codeBytes.values.fold<int>(0, (a, b) => a + b) ~/ 1024} KB total',
+                            style: HelioTypography.bodyMuted.copyWith(fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: HelioSpacing.sm),
+                  ],
+
+                  // Error
+                  if (dump.phase == DumpPhase.error) ...[
+                    Container(
+                      padding: const EdgeInsets.all(HelioSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: HelioColors.recoveryLow.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        dump.errorMessage ?? 'Unknown error',
+                        style: HelioTypography.bodyMuted.copyWith(
+                          color: HelioColors.recoveryLow,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: HelioSpacing.sm),
+                  ],
+
+                  // Logs
+                  if (dump.logs.isNotEmpty) ...[
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      padding: const EdgeInsets.all(HelioSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: HelioColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SingleChildScrollView(
+                        reverse: true,
+                        child: Text(
+                          dump.logs.join('\n'),
+                          style: HelioTypography.bodyMuted.copyWith(
+                            fontSize: 9,
+                            fontFamily: 'monospace',
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: HelioSpacing.sm),
+                  ],
+
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ActionButton(
+                          icon: isFetching ? null : Icons.download_outlined,
+                          label: isFetching ? 'DUMPING…' : 'START DUMP',
+                          color: const Color(0xFFE040FB),
+                          loading: isFetching,
+                          onTap: isFetching
+                              ? null
+                              : () => ref
+                                  .read(strapDumpProvider.notifier)
+                                  .startDump(),
+                        ),
+                      ),
+                      if (dump.phase == DumpPhase.done) ...[
+                        const SizedBox(width: HelioSpacing.sm),
+                        Expanded(
+                          child: _ActionButton(
+                            icon: Icons.share_outlined,
+                            label: 'SHARE',
+                            color: HelioColors.strainBlue,
+                            onTap: () => ref
+                                .read(strapDumpProvider.notifier)
+                                .shareDump(),
+                          ),
+                        ),
+                      ],
+                      if (dump.logs.isNotEmpty &&
+                          dump.phase != DumpPhase.idle) ...[
+                        const SizedBox(width: HelioSpacing.sm),
+                        Expanded(
+                          child: _ActionButton(
+                            icon: Icons.description_outlined,
+                            label: 'SHARE LOGS',
+                            color: const Color(0xFFFF9800),
+                            onTap: () => ref
+                                .read(strapDumpProvider.notifier)
+                                .shareLogs(),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _subtitle(DumpState dump) => switch (dump.phase) {
+        DumpPhase.idle => 'Fetch all type codes (2 days)',
+        DumpPhase.connecting => 'Connecting to strap…',
+        DumpPhase.fetching =>
+          'Fetching ${dump.currentCode} (${dump.currentIndex + 1}/${dump.totalCodes})',
+        DumpPhase.done => '${dump.codeBytes.length} types dumped',
+        DumpPhase.error => 'Error — tap to retry',
+      };
 }

@@ -232,6 +232,57 @@ class BandLink implements BandLinkPort {
     );
   }
 
+  /// Fetch a single type code for the raw dump diagnostic.
+  /// Unlike [fetchCode] (used by normal sync), this method:
+  ///   - Accepts a per-code [timeout] (default 15s) to handle silent codes
+  ///   - Uses the engine's internal timeout which sends ACK on expiry
+  ///   - Has no round limit to allow full data download
+  ///   - Does NOT affect normal sync behavior
+  Future<TypeFetchResult> dumpCode(
+    int code,
+    DateTime since, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
+    final f = fetcher;
+    if (f == null) {
+      return (
+        raw: Uint8List(0),
+        expected: -1,
+        skipped: false,
+        roundStart: null,
+        roundSegments: <SyncPageAnchor>[],
+      );
+    }
+
+    await f.fetchType(
+      code,
+      since,
+      probeOnly: false,
+      maxRounds: 9999,
+      timeout: timeout,
+    );
+    final expected = f.lastExpected;
+    final roundStart = f.firstRoundStart;
+    final roundSegments = List<SyncPageAnchor>.from(f.roundSegments);
+
+    if (expected < 0) {
+      return (
+        raw: Uint8List(0),
+        expected: expected,
+        skipped: false,
+        roundStart: null,
+        roundSegments: roundSegments,
+      );
+    }
+    return (
+      raw: f.lastRaw,
+      expected: expected,
+      skipped: false,
+      roundStart: roundStart,
+      roundSegments: roundSegments,
+    );
+  }
+
   @override
   Future<void> startLiveHeartRate() => _liveHr?.start() ?? Future.value();
 
