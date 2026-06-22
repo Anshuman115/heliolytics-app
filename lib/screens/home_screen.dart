@@ -138,11 +138,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _stepsCard(day) {
     final steps = day.steps as int;
-    final stepsStr = steps > 0
-        ? (steps >= 1000
-            ? '${(steps / 1000).toStringAsFixed(1)}k'
-            : '$steps')
-        : '—';
+    final stepsStr = steps > 0 ? formatStepCount(steps) : '—';
     return HelioSurfaceCard(
       padding: const EdgeInsets.symmetric(
         horizontal: HelioSpacing.lg,

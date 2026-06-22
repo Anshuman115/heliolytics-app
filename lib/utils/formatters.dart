@@ -6,6 +6,9 @@ final _timeFmt = DateFormat.MMMEd().add_jm();
 
 String formatSteps(int steps) => '${_stepsFmt.format(steps)} steps';
 
+/// Exact step count with thousands separators (e.g. "3,708") — no "k" rounding.
+String formatStepCount(int steps) => _stepsFmt.format(steps);
+
 String formatDayLabel(String dayKey) {
   final parts = dayKey.split('-');
   if (parts.length != 3) return dayKey;
