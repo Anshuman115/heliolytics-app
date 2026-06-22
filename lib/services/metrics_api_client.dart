@@ -169,7 +169,10 @@ class MetricsApiClient {
   }
 
   Map<String, String> _range(int windowDays) {
-    final to = DateTime.now().toUtc();
+    // Use local time so the date window matches the user's calendar day.
+    // Using UTC here caused 1 AM IST (= previous day UTC) to miss "today".
+    final now = DateTime.now();
+    final to = DateTime(now.year, now.month, now.day);
     final from = to.subtract(Duration(days: windowDays));
     String fmt(DateTime d) =>
         '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
