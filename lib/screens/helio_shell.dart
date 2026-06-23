@@ -48,11 +48,19 @@ class _HelioShellState extends ConsumerState<HelioShell> {
     });
 
     return Scaffold(
-      body: Column(
-        children: [
-          const HelioSyncStrip(),
-          Expanded(child: IndexedStack(index: tab, children: _pages)),
-        ],
+      // Consume the status-bar inset once here. The per-screen HelioTopBar also
+      // wraps in SafeArea, but nested SafeArea is idempotent — so inside the
+      // shell it adds nothing (no more empty gap above the date header), while
+      // standalone screens that use HelioTopBar still get their own inset.
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: Column(
+          children: [
+            const HelioSyncStrip(),
+            Expanded(child: IndexedStack(index: tab, children: _pages)),
+          ],
+        ),
       ),
       bottomNavigationBar: HelioBottomNav(
         index: tab,
