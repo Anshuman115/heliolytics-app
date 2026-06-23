@@ -106,11 +106,10 @@ class MetricDetailScreen extends ConsumerWidget {
   }
 
   String _readinessHint(CloudMetricsSnapshot snap) {
-    final hasType = snap.coverage?.types.containsKey('0x39') ?? false;
-    if (hasType) {
-      return 'Readiness not synced for this day yet. Pull to refresh after your next strap sync.';
-    }
-    return 'Readiness requires daily score data (type 0x39). Sync your strap to backfill.';
+    return 'Your recovery score is calculated from overnight HRV, resting heart '
+        'rate, sleep, and breathing rate compared to your personal baseline. It '
+        'needs about 7 nights of data to calibrate — keep wearing the strap '
+        'overnight and it will appear.';
   }
 
   Widget _hero(MetricDef def, DayMetric day) {

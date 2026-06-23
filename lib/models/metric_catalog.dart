@@ -29,8 +29,8 @@ class MetricCatalog {
       color: HelioMetricColors.readiness,
       icon: Icons.bolt,
       unit: '',
-      note: 'Daily recovery score from the strap. Higher means you bounced back well from strain and sleep debt.',
-      detail: 'Readiness combines sleep quality, resting HR, and recent load. Use it to decide how hard to push training today.',
+      note: 'Daily recovery score from overnight HRV, resting HR, sleep, and breathing rate vs your personal baseline.',
+      detail: 'HRV is the biggest driver, then resting HR, sleep, and breathing rate — each compared to your own ~7–60 day baseline. Compare to yourself, not others. Use it to decide how hard to push today.',
     ),
     'sleep': MetricDef(
       id: 'sleep',
