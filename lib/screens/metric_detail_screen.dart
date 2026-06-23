@@ -106,10 +106,10 @@ class MetricDetailScreen extends ConsumerWidget {
   }
 
   String _readinessHint(CloudMetricsSnapshot snap) {
-    return 'Your recovery score is calculated from overnight HRV, resting heart '
-        'rate, sleep, and breathing rate compared to your personal baseline. It '
-        'needs about 7 nights of data to calibrate — keep wearing the strap '
-        'overnight and it will appear.';
+    return 'Your recovery score comes from your strap when available, otherwise '
+        'it is calculated from overnight HRV, resting heart rate, sleep, and '
+        'breathing rate vs your baseline. It appears after about 3 nights and '
+        'sharpens over your first two weeks of wear.';
   }
 
   Widget _hero(MetricDef def, DayMetric day) {
