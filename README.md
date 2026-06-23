@@ -1,86 +1,150 @@
-# Heliolytics App
+# Heliolytics
 
-Flutter mobile client for Heliolytics: BLE strap sync, cloud upload, health UI.
+**A self-hosted health platform for a BLE fitness band** — built end-to-end from the
+device's wireless protocol up to the mobile UI. It reverse-engineers the band's
+Bluetooth Low Energy protocol, uploads raw sessions to a Go ingestion/analytics
+backend, and renders sleep, recovery, and activity insights in a Flutter app.
 
-Part of a **3-repo system**:
+> **This repository is the Flutter mobile client.** It pairs with a Go API + PostgreSQL/TimescaleDB
+> backend and a Next.js dashboard — see [System architecture](#system-architecture).
 
-| Repo | Role |
-|------|------|
-| **Heliolytics_App** (here) | Flutter · BLE · Play Store |
-| **Heliolytics** | Go API · PostgreSQL |
-| **Heliolytics_Web** | Next.js dashboard |
+---
 
-## Run (debug)
+## Engineering highlights
+
+- **Reverse-engineered the wearable's BLE protocol from scratch** (no vendor SDK):
+  ECDH key exchange on the binary curve `sect163k1`, an AES-128 challenge-response
+  handshake, and a custom chunked transport over GATT — all implemented in Dart.
+- **Binary health-data decoding** — per-type-code parsers for ~20 data streams
+  (per-minute activity & heart rate, sleep stages, HRV, SpO₂, skin temperature,
+  workouts, respiratory rate…) across two distinct on-device timestamp models.
+- **Validated against the vendor's own data export** — sleep-stage minutes matched on
+  26/27 nights; per-minute heart rate and full-day step totals matched **exactly** in
+  side-by-side validation.
+- **Thin-client, server-authoritative sync** — the phone uploads raw session bytes; the
+  Go server owns all parsing, storage, and per-type "coverage" windows. Fetch state lives
+  on the server, so it survives app reinstalls, and **no health data is persisted on the device**.
+- **Science-backed recovery score** — a daily readiness score derived from HRV
+  (`ln(RMSSD)`), resting heart rate, sleep, and respiratory rate compared to a personal
+  rolling baseline, following HRV-guided-training research (Plews et al.) and WHOOP/Oura
+  methodology, with documented weighting and cold-start handling.
+- **Production-minded engineering** — TimescaleDB hypertables for per-minute time series;
+  idempotent ingest (overlapping re-syncs never double-count steps); lazy-loaded metrics
+  API to cut mobile bandwidth; a layer-first architecture with a one-responsibility,
+  ≤150-lines-per-file discipline; unit-tested parsers and scoring.
+
+---
+
+## System architecture
+
+Three repositories, one platform:
+
+| Repo | Role | Stack |
+|------|------|-------|
+| **Heliolytics_App** (this repo) | BLE sync, raw upload, health UI | Flutter · Dart · Riverpod |
+| **Heliolytics** | Ingest, parse, store, metrics API | Go · PostgreSQL + TimescaleDB · Docker |
+| **Heliolytics_Web** | Web dashboard | Next.js |
+
+```
+ Band ──BLE (ECDH+AES, chunked)──►  Flutter app  ──HTTPS (HMAC)──►  Go API
+                                    (raw bytes)        POST /ingest     │
+                                                                        ▼
+                                                            parse → PostgreSQL/TimescaleDB
+                                                                   ╱              ╲
+                                                       Flutter GET /metrics     Next.js dashboard
+```
+
+All health parsing happens **server-side** after ingest; the app keeps only the minimal
+on-device logic needed to page data off the band over BLE.
+
+---
+
+## How it works
+
+1. **Pair** — the user provides the band's auth key once (stored in Android
+   EncryptedSharedPreferences / iOS Keychain). No third-party cloud login.
+2. **Sync** — the app performs the ECDH + AES handshake, then fetches each data type in
+   chunks over GATT. The fetch window per data type comes from the server's coverage
+   API, so the client stays stateless and reinstall-safe.
+3. **Upload** — raw session bytes are uploaded with a short-lived HMAC-signed token.
+4. **Parse & store** — the Go server decodes each binary stream into typed samples and
+   writes them to TimescaleDB; daily rollups (steps, sleep, recovery, …) are computed on ingest.
+5. **Render** — the app reads daily metrics and per-minute series from the metrics API and
+   draws rings, charts, and a health-monitor grid.
+
+---
+
+## Tech stack
+
+**Mobile:** Flutter, Dart, Riverpod, `flutter_blue_plus`, `flutter_secure_storage`,
+GoRouter, `fl_chart`, Dio · **Crypto:** ECDH (`sect163k1`), AES-128, HMAC ·
+**Backend (sibling repo):** Go, PostgreSQL + TimescaleDB, `sqlc`, Docker · **Web:** Next.js
+
+---
+
+## Project structure (this repo)
+
+Layer-first, one responsibility per file:
+
+```
+lib/
+  screens/          Full pages (Home, Sleep, Activity, Settings, metric detail…)
+  widgets/          Screen-specific UI chunks (charts, sections, settings cards)
+  providers/        Riverpod state + orchestration
+  services/
+    ble/            BLE protocol, auth handshake, sync pipeline, per-type parsers
+    network/        Dio client + HMAC token minting
+    config/         Secure-storage config
+  models/           Domain + JSON entities
+  router/           GoRouter + auth redirect
+  utils/            Logging, formatters, time/zone helpers
+  constants/        App-wide literals
+  design_system/    Tokens, theme, reusable components
+```
+
+**Flow:** `screens → providers → services → models` · See [ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
+
+## Build & run
 
 ```bash
 flutter pub get
-flutter run -d android
+flutter run -d android        # USB debugging enabled; auto-picks a single device
 ```
 
-Connect your phone over USB with **USB debugging** enabled. If only one Android device is attached, `flutter run -d android` picks it automatically.
-
-## Release build
-
-1. Copy `android/key.properties.example` → `android/key.properties` and fill in your release keystore
-2. Build AAB for Play Store:
+**Personal APK** (API URL + signing secret baked in at build time):
 
 ```bash
-flutter build appbundle --release
-```
-
-Personal APK (API URL + key baked in at build time):
-
-```bash
-cp build.env.example build.env
-# edit build.env — same URL/secret as Heliolytics/deploy/.env
-chmod +x tool/build_apk.sh
+cp build.env.example build.env   # set API_URL and API_SIGNING_SECRET
 ./tool/build_apk.sh
 adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
-Play Store AAB (configure API in app Settings after install):
+**Play Store AAB** (API configured in-app on first launch):
 
 ```bash
 flutter build appbundle --release
 ```
 
-## API setup
+Start the backend stack from the **Heliolytics** repo first. The app mints short-lived
+HMAC tokens itself — no tokens are pasted by hand.
 
-1. Start the stack from the **Heliolytics** repo (`deploy/install.sh`)
-2. Personal install: set `API_URL` and `API_SIGNING_SECRET` in `build.env` before `./tool/build_apk.sh`
-3. Play Store / manual: **Settings → Cloud API** on first launch
+---
 
-The app mints short-lived HMAC tokens — you never paste tokens manually.
+## Security & privacy
 
-## Security
+- The band **auth key** is used only over BLE — it is never sent to the API.
+- API requests are signed with short-lived **HMAC** tokens; credentials live in encrypted
+  device storage.
+- Device lock (PIN/biometrics) gates access when a screen lock is set.
+- Health data is uploaded only to the server **you** configure; nothing is persisted on the
+  device. See [PRIVACY.md](PRIVACY.md).
 
-- Strap **auth key** (first-time setup) is BLE-only — not sent to the API
-- **API key** signs requests to your Heliolytics server
-- Device lock (PIN/biometrics) required when screen lock is enabled on the phone
+---
 
-## Privacy
+## Status
 
-See [PRIVACY.md](PRIVACY.md) for Play Store / data handling summary.
-
-## Layout
-
-Layer-first project structure (separation of concerns):
-
-```
-lib/
-  screens/          UI pages (Home, Sleep, Settings, …)
-  widgets/          Screen-specific UI chunks (charts, sections)
-  providers/        Riverpod state (controllers)
-  services/         BLE engine, API client, repos, config, network
-  models/           Data classes (API + session JSON)
-  router/           GoRouter
-  utils/            Helpers, logging, formatters
-  constants/        App-wide literals
-  design_system/    Shared tokens + reusable components
-```
-
-**Flow:** `screens → providers → services → models`
-
-Server and web live in sibling repos — not in this project.
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for data flow and folder details.
+Actively developed. Current line of work (`v5`): server-computed recovery score,
+lazy-loaded metrics for lower bandwidth, idempotent step ingestion, and a refactored
+settings + health-monitor UI. Deployed to the Play Store from this repo.
