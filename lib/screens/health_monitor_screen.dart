@@ -110,16 +110,6 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
         onTap: () => context.push('/metric/$dayKey/rhr'),
       ),
       _MetricCardData(
-        label: 'MAX HR',
-        value: day.maxHr != null ? '${day.maxHr}' : '—',
-        unit: day.maxHr != null ? 'bpm' : '',
-        color: HelioColors.strainBlue,
-        icon: Icons.favorite,
-        inRange: day.maxHr != null && day.maxHr! >= 100 && day.maxHr! <= 200,
-        hasData: day.maxHr != null,
-        onTap: () => context.push('/metric/$dayKey/max_hr'),
-      ),
-      _MetricCardData(
         label: 'HRV',
         value: day.hrvRmssd != null ? '${day.hrvRmssd!.round()}' : '—',
         unit: day.hrvRmssd != null ? 'ms' : '',
