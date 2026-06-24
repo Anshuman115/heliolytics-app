@@ -103,11 +103,23 @@ class MinuteSeriesChart extends StatelessWidget {
           lineBarsData: [
             LineChartBarData(
               spots: spots,
-              isCurved: false,
+              isCurved: true,
+              curveSmoothness: 0.2,
+              preventCurveOverShooting: true,
               color: color,
-              barWidth: 2,
+              barWidth: 2.5,
               dotData: FlDotData(show: showDots && spots.length < 80),
-              belowBarData: BarAreaData(show: true, color: color.withValues(alpha: 0.1)),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    color.withValues(alpha: 0.35),
+                    color.withValues(alpha: 0.02),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

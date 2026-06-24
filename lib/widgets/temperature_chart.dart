@@ -74,13 +74,22 @@ class TemperatureChart extends StatelessWidget {
           lineBarsData: [
             LineChartBarData(
               spots: spots,
-              isCurved: false,
+              isCurved: true,
+              curveSmoothness: 0.2,
+              preventCurveOverShooting: true,
               color: HelioMetricColors.temperature,
-              barWidth: 2,
+              barWidth: 2.5,
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: HelioMetricColors.temperature.withValues(alpha: 0.12),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    HelioMetricColors.temperature.withValues(alpha: 0.32),
+                    HelioMetricColors.temperature.withValues(alpha: 0.02),
+                  ],
+                ),
               ),
             ),
           ],
