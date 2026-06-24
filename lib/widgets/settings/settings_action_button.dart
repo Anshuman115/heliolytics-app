@@ -27,30 +27,32 @@ class SettingsActionButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: HelioSpacing.sm),
+        padding: const EdgeInsets.symmetric(vertical: HelioSpacing.md),
         decoration: BoxDecoration(
-          color: enabled ? color.withValues(alpha: 0.12) : HelioColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(8),
+          color: enabled ? color.withValues(alpha: 0.14) : HelioColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: enabled ? color.withValues(alpha: 0.3) : HelioColors.border,
-            width: 0.5,
+            color: enabled ? color.withValues(alpha: 0.35) : HelioColors.border,
+            width: 1,
           ),
         ),
         child: Column(
           children: [
             if (loading)
               SizedBox(
-                width: 16,
-                height: 16,
+                width: 18,
+                height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2, color: color),
               )
             else if (icon != null)
-              Icon(icon, size: 18, color: enabled ? color : HelioColors.textMuted),
-            const SizedBox(height: 4),
+              Icon(icon, size: 22, color: enabled ? color : HelioColors.textMuted),
+            const SizedBox(height: 6),
             Text(
               label,
               style: HelioTypography.capsLabel.copyWith(
-                fontSize: 9,
+                fontSize: 11,
+                letterSpacing: 0.5,
+                fontWeight: FontWeight.w700,
                 color: enabled ? color : HelioColors.textMuted,
               ),
               textAlign: TextAlign.center,

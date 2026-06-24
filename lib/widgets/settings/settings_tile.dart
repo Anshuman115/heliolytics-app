@@ -11,8 +11,16 @@ class SettingsSectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 2),
-      child: Text(text, style: HelioTypography.sectionTitle),
+      padding: const EdgeInsets.only(left: 4, bottom: 2),
+      child: Text(
+        text,
+        style: HelioTypography.sectionTitle.copyWith(
+          fontSize: 12,
+          letterSpacing: 1.2,
+          fontWeight: FontWeight.w700,
+          color: HelioColors.textMuted,
+        ),
+      ),
     );
   }
 }
