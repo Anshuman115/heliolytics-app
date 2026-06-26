@@ -26,8 +26,8 @@ backend, and renders sleep, recovery, and activity insights in a Flutter app.
   on the server, so it survives app reinstalls, and **no health data is persisted on the device**.
 - **Science-backed recovery score** — a daily readiness score derived from HRV
   (`ln(RMSSD)`), resting heart rate, sleep, and respiratory rate compared to a personal
-  rolling baseline, following HRV-guided-training research (Plews et al.) and WHOOP/Oura
-  methodology, with documented weighting and cold-start handling.
+  rolling baseline, following established HRV-guided-training research (Plews et al.),
+  with documented weighting and cold-start handling.
 - **Production-minded engineering** — TimescaleDB hypertables for per-minute time series;
   idempotent ingest (overlapping re-syncs never double-count steps); lazy-loaded metrics
   API to cut mobile bandwidth; a layer-first architecture with a one-responsibility,
