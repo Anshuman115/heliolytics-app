@@ -9,6 +9,8 @@ import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/providers/helio_nav_provider.dart';
+import 'package:heliolytics/design_system/components/helio_surface_card.dart';
+import 'package:heliolytics/widgets/sleep_consistency_chart.dart';
 import 'package:heliolytics/widgets/sleep_hero.dart';
 import 'package:heliolytics/widgets/sleep_night_list.dart';
 import 'package:heliolytics/widgets/error_view.dart';
@@ -83,6 +85,13 @@ class SleepHubScreen extends ConsumerWidget {
       children: [
         SleepHero(snap: snap, dayKey: latest),
         const SizedBox(height: HelioSpacing.xl),
+        if (_consistencySpans(snap).length >= 2) ...[
+          HelioSurfaceCard(
+            padding: const EdgeInsets.all(HelioSpacing.lg),
+            child: SleepConsistencyChart(nights: _consistencySpans(snap)),
+          ),
+          const SizedBox(height: HelioSpacing.xl),
+        ],
         SleepNightList(
           snap: snap,
           dayKeys: nights,
@@ -91,6 +100,21 @@ class SleepHubScreen extends ConsumerWidget {
         const SizedBox(height: HelioSpacing.xxl),
       ],
     );
+  }
+
+  /// Recent overnight sleep spans (oldest → newest, max 7) for the
+  /// consistency chart.
+  List<SleepSpan> _consistencySpans(CloudMetricsSnapshot snap) {
+    final mains = snap.sleep.where((s) => !s.isNap).toList()
+      ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
+    final recent = mains.length > 7 ? mains.sublist(mains.length - 7) : mains;
+    return [
+      for (final s in recent)
+        SleepSpan(
+          bed: s.startedAt,
+          wake: s.startedAt.add(Duration(minutes: s.totalMins)),
+        ),
+    ];
   }
 
   List<String> _nightKeys(CloudMetricsSnapshot snap) {

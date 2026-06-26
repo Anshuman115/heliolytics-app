@@ -42,9 +42,9 @@ class SleepHero extends StatelessWidget {
           child: HelioScoreRing(
             size: HelioRingSize.hero,
             progress: progress,
-            label: 'Sleep',
-            value: score?.toString() ?? '—',
-            color: HelioColors.sleepBlue,
+            label: 'Sleep Performance',
+            value: score != null ? '$score%' : '—',
+            color: HelioColors.sleepRem,
           ),
         ),
         const SizedBox(height: HelioSpacing.lg),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/models/sleep_stage.dart';
@@ -97,35 +98,74 @@ class _HypnogramPainter extends CustomPainter {
     if (plotW <= 0 || plotH <= 0) return;
 
     final grid = Paint()
-      ..color = const Color(0x22FFFFFF)
+      ..color = const Color(0x16FFFFFF)
       ..strokeWidth = 1;
     final labelStyle = TextStyle(
       color: Colors.white.withValues(alpha: 0.5),
       fontSize: 10,
     );
 
+    final rowH = plotH / _labels.length;
     for (var i = 0; i < _labels.length; i++) {
-      final y = padT + plotH * (i + 0.5) / _labels.length;
+      final y = padT + rowH * (i + 0.5);
       canvas.drawLine(Offset(padL, y), Offset(size.width - padR, y), grid);
       _paintText(canvas, _labels[i], Offset(4, y - 6), labelStyle);
     }
 
+    double xFor(DateTime t) =>
+        padL + plotW * t.difference(t0).inMilliseconds / spanMs;
+    double yFor(int band) => padT + rowH * (band + 0.5);
+
+    // Build a stepped path that follows the stage timeline (awake top →
+    // deep bottom), plus a matching fill path down to the baseline.
+    final line = Path();
+    final fill = Path();
+    final baseline = padT + plotH;
+    var started = false;
+    var lastX = padL;
     for (final s in stages) {
-      final x0 = padL +
-          plotW * s.start.difference(t0).inMilliseconds / spanMs;
-      final x1 = padL +
-          plotW * s.end.difference(t0).inMilliseconds / spanMs;
-      final w = (x1 - x0).clamp(1.0, plotW);
-      final band = s.kind.bandIndex;
-      final rowH = plotH / _labels.length;
-      final y = padT + band * rowH + 2;
-      final h = rowH - 4;
-      final r = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x0, y, w, h),
-        const Radius.circular(2),
-      );
-      canvas.drawRRect(r, Paint()..color = s.kind.color);
+      final y = yFor(s.kind.bandIndex);
+      final x0 = xFor(s.start);
+      final x1 = xFor(s.end);
+      if (!started) {
+        line.moveTo(x0, y);
+        fill.moveTo(x0, baseline);
+        fill.lineTo(x0, y);
+        started = true;
+      } else {
+        line.lineTo(x0, y); // vertical step into the new stage
+        fill.lineTo(x0, y);
+      }
+      line.lineTo(x1, y);
+      fill.lineTo(x1, y);
+      lastX = x1;
     }
+    if (!started) return;
+    fill.lineTo(lastX, baseline);
+    fill.close();
+
+    final plotRect = Rect.fromLTWH(padL, padT, plotW, plotH);
+    canvas.drawPath(
+      fill,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            HelioColors.sleepRem.withValues(alpha: 0.35),
+            HelioColors.sleepRem.withValues(alpha: 0.02),
+          ],
+        ).createShader(plotRect),
+    );
+    canvas.drawPath(
+      line,
+      Paint()
+        ..color = HelioColors.sleepRem
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   void _paintText(Canvas canvas, String text, Offset at, TextStyle style) {

@@ -4,7 +4,7 @@ import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/utils/formatters.dart';
 
-/// WHOOP-style single sleep stage row:
+/// Single sleep stage row:
 /// ○  STAGE NAME  ···  X%  duration
 /// ████████████░░░░░░░ (progress bar)
 class SleepStageRow extends StatelessWidget {
