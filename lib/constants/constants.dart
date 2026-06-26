@@ -201,3 +201,8 @@ const int readinessRecordSize = 569;
 const int napRecordStride = 9;
 const int napMinDurationSec = 45 * 60;
 const int napMinStartHourIst = 11;
+
+/// HR-zone lower bounds as a fraction of max HR (rest + standard 5-zone model).
+/// Zone i spans [hrZoneLowerFractions[i], next) of max HR.
+const List<double> hrZoneLowerFractions = [0.0, 0.5, 0.6, 0.7, 0.8, 0.9];
+const int defaultMaxHrFallback = 190;

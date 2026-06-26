@@ -16,6 +16,8 @@ import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/utils/hr_zones.dart';
+import 'package:heliolytics/widgets/hr_zone_bars.dart';
 import 'package:heliolytics/widgets/metric_stats_row.dart';
 import 'package:heliolytics/widgets/minute_series_chart.dart';
 import 'package:heliolytics/widgets/sleep_metric_body.dart';
@@ -121,7 +123,7 @@ class MetricDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: HelioSpacing.xl),
       child: Center(
         child: HelioScoreRing(
-          size: HelioRingSize.whoopHero,
+          size: HelioRingSize.heroXl,
           progress: progress,
           label: def.title,
           value: value,
@@ -151,6 +153,7 @@ class MetricDetailScreen extends ConsumerWidget {
     }
     if (def.id == 'continuous_hr') return _continuousHrBody(detail, day);
     if (def.id == 'temperature') return _tempBody(detail);
+    if (def.id == 'pai') return _strainBody(def, detail, day);
     if (def.seriesKey == null) {
       return [
         HelioSurfaceCard(
@@ -174,6 +177,48 @@ class MetricDetailScreen extends ConsumerWidget {
           maxPoints: 480,
         ),
       ),
+      const SizedBox(height: HelioSpacing.md),
+      HelioSurfaceCard(
+        padding: const EdgeInsets.all(HelioSpacing.lg),
+        child: Text(def.detail, style: HelioTypography.bodyMuted),
+      ),
+    ];
+  }
+
+  List<Widget> _strainBody(MetricDef def, DetailMetrics detail, DayMetric day) {
+    final zones = computeHrZones(detail.heartRateFor(dayKey));
+    return [
+      HelioSurfaceCard(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HelioSpacing.lg,
+          vertical: HelioSpacing.md,
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.directions_walk_outlined,
+                size: 18, color: HelioColors.strainBlue),
+            const SizedBox(width: HelioSpacing.md),
+            Text('STEPS', style: HelioTypography.capsLabel),
+            const Spacer(),
+            Text(
+              day.steps > 0 ? formatStepCount(day.steps) : '—',
+              style: HelioTypography.scoreMedium.copyWith(
+                fontSize: 24,
+                color: day.steps > 0 ? HelioColors.strainBlue : HelioColors.textMuted,
+              ),
+            ),
+          ],
+        ),
+      ),
+      if (zones.hasData) ...[
+        const SizedBox(height: HelioSpacing.lg),
+        Text('HEART RATE ZONES', style: HelioTypography.sectionTitle),
+        const SizedBox(height: HelioSpacing.md),
+        HelioSurfaceCard(
+          padding: const EdgeInsets.all(HelioSpacing.lg),
+          child: HrZoneBars(breakdown: zones),
+        ),
+      ],
       const SizedBox(height: HelioSpacing.md),
       HelioSurfaceCard(
         padding: const EdgeInsets.all(HelioSpacing.lg),
