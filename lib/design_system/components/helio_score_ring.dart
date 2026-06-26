@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 
-enum HelioRingSize { whoopHero, hero, triple, standard }
+enum HelioRingSize { heroXl, hero, triple, standard }
 
 class HelioScoreRing extends StatelessWidget {
   final double? progress;
@@ -27,21 +27,21 @@ class HelioScoreRing extends StatelessWidget {
   });
 
   double get _diameter => switch (size) {
-        HelioRingSize.whoopHero => 200,
+        HelioRingSize.heroXl => 200,
         HelioRingSize.hero => 132,
-        HelioRingSize.triple => 108,
+        HelioRingSize.triple => 100,
         HelioRingSize.standard => 80,
       };
 
   double get _stroke => switch (size) {
-        HelioRingSize.whoopHero => 14,
+        HelioRingSize.heroXl => 14,
         HelioRingSize.hero => 10,
         HelioRingSize.triple => 9,
         HelioRingSize.standard => 7,
       };
 
   double get _valueSize => switch (size) {
-        HelioRingSize.whoopHero => 60,
+        HelioRingSize.heroXl => 60,
         HelioRingSize.hero => 36,
         HelioRingSize.triple => 28,
         HelioRingSize.standard => 22,
@@ -59,7 +59,7 @@ class HelioScoreRing extends StatelessWidget {
           stroke: _stroke,
         ),
         child: Center(
-          child: size == HelioRingSize.whoopHero
+          child: size == HelioRingSize.heroXl
               ? _heroCenter()
               : Text(
                   value,
@@ -84,7 +84,7 @@ class HelioScoreRing extends StatelessWidget {
             letterSpacing: 1.4,
           ),
         ),
-        if (showChevron && size != HelioRingSize.whoopHero) ...[
+        if (showChevron && size != HelioRingSize.heroXl) ...[
           const SizedBox(width: 2),
           const Icon(Icons.chevron_right, size: 14, color: HelioColors.textSecondary),
         ],
@@ -141,20 +141,29 @@ class _RingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
-    final arc = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, radius, track);
+
     if (progress > 0) {
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        -math.pi / 2,
-        2 * math.pi * progress,
-        false,
-        arc,
-      );
+      final rect = Rect.fromCircle(center: center, radius: radius);
+      const startAngle = -math.pi / 2;
+      final sweep = 2 * math.pi * progress;
+
+      // Soft outer glow — a soft arc bloom.
+      final glow = Paint()
+        ..color = color.withValues(alpha: 0.45)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, stroke * 0.7);
+      canvas.drawArc(rect, startAngle, sweep, false, glow);
+
+      // Crisp arc on top.
+      final arc = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round;
+      canvas.drawArc(rect, startAngle, sweep, false, arc);
     }
   }
 

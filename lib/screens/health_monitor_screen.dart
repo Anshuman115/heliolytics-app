@@ -40,7 +40,7 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
     final live = ref.watch(liveHrProvider);
 
     return Scaffold(
-      backgroundColor: HelioColors.canvas,
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
           HelioTopBar(
@@ -84,7 +84,7 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
         HeartRateDaySection(day: day, dayKey: dayKey),
         const SizedBox(height: HelioSpacing.xl),
 
-        // WHOOP-style metric grid
+        // Metric grid
         Text("LAST NIGHT'S READINGS", style: HelioTypography.sectionTitle),
         const SizedBox(height: HelioSpacing.sm),
         Text(

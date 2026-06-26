@@ -59,7 +59,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen>
         // Summary stats strip
         _SummaryStrip(workouts: totalWorkouts, sessions: totalSessions),
 
-        // WHOOP-style tab bar
+        // Segmented tab bar
         Container(
           color: HelioColors.surface,
           child: TabBar(

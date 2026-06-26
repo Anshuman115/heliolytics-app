@@ -25,9 +25,9 @@ class HelioDateNav extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.xs),
       decoration: BoxDecoration(
-        color: HelioColors.surfaceElevated,
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(HelioRadii.pill),
-        border: Border.all(color: HelioColors.border),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -38,9 +38,10 @@ class HelioDateNav extends StatelessWidget {
             child: Text(
               label,
               style: HelioTypography.capsLabel.copyWith(
-                fontSize: 12,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
                 color: HelioColors.textPrimary,
-                letterSpacing: 1.4,
+                letterSpacing: 1.6,
               ),
             ),
           ),

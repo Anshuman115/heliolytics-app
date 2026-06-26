@@ -14,7 +14,9 @@ ThemeData buildHelioTheme() {
   );
   return ThemeData(
     colorScheme: scheme,
-    scaffoldBackgroundColor: HelioColors.canvas,
+    // Transparent so the global HelioBackdrop gradient (see app.dart) shows
+    // through every scaffold instead of a flat fill.
+    scaffoldBackgroundColor: Colors.transparent,
     useMaterial3: true,
     textTheme: TextTheme(
       headlineSmall: HelioTypography.scoreMedium,

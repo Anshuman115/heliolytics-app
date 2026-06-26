@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 
 abstract final class HelioTypography {
-  // WHOOP hero — the giant ring center number
+  // Hero — the giant ring center number
   static TextStyle get heroValue => const TextStyle(
         fontSize: 60,
         fontWeight: FontWeight.w800,

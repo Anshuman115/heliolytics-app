@@ -48,10 +48,12 @@ class _HelioShellState extends ConsumerState<HelioShell> {
     });
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       // Consume the status-bar inset once here. The per-screen HelioTopBar also
       // wraps in SafeArea, but nested SafeArea is idempotent — so inside the
       // shell it adds nothing (no more empty gap above the date header), while
       // standalone screens that use HelioTopBar still get their own inset.
+      // The ambient gradient comes from the global HelioBackdrop in app.dart.
       body: SafeArea(
         top: true,
         bottom: false,

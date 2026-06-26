@@ -78,10 +78,18 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
     if (showProfile) {
-      return CircleAvatar(
-        radius: 16,
-        backgroundColor: HelioColors.surfaceElevated,
-        child: Icon(Icons.person, size: 18, color: HelioColors.textSecondary),
+      return Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: HelioColors.surfaceElevated,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: HelioColors.canvasGlow.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+        ),
+        child: const Icon(Icons.person, size: 18, color: HelioColors.textSecondary),
       );
     }
     return const SizedBox.shrink();
@@ -100,7 +108,12 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
     if (title != null && title!.isNotEmpty) {
       return Text(
         title!.toUpperCase(),
-        style: HelioTypography.sectionTitle.copyWith(color: HelioColors.textPrimary),
+        style: HelioTypography.sectionTitle.copyWith(
+          color: HelioColors.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 2,
+        ),
       );
     }
     // Default: HELIOLYTICS wordmark with logo
@@ -134,11 +147,11 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         ...actions,
-        // Strap status chip
+        // Strap status — minimal icon, no text (minimal)
         if (strapConnected || syncActive)
           Padding(
-            padding: const EdgeInsets.only(right: HelioSpacing.sm),
-            child: _StrapChip(connected: strapConnected, syncing: syncActive),
+            padding: const EdgeInsets.only(right: HelioSpacing.md),
+            child: _StrapIndicator(connected: strapConnected, syncing: syncActive),
           ),
         // Battery
         if (batteryPercent != null) ...[
@@ -158,46 +171,28 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-class _StrapChip extends StatelessWidget {
+class _StrapIndicator extends StatelessWidget {
   final bool connected;
   final bool syncing;
 
-  const _StrapChip({required this.connected, required this.syncing});
+  const _StrapIndicator({required this.connected, required this.syncing});
 
   @override
   Widget build(BuildContext context) {
-    final color = syncing
-        ? HelioColors.recoveryMid
-        : HelioColors.optimalGreen;
-    final label = syncing ? 'SYNCING' : 'STRAP';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 0.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 9,
-              color: color,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
-      ),
+    if (syncing) {
+      return const SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: HelioColors.recoveryMid,
+        ),
+      );
+    }
+    return const Icon(
+      Icons.bluetooth_connected,
+      size: 17,
+      color: HelioColors.optimalGreen,
     );
   }
 }
