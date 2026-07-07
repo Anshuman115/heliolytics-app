@@ -8,6 +8,7 @@ import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/services/session_store.dart';
 import 'package:heliolytics/models/sync_payload.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
+import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/providers/live_hr_provider.dart';
 
 Future<void> orchestratorConnect({
@@ -21,7 +22,9 @@ Future<void> orchestratorConnect({
   required void Function(SyncPayload?) setPayload,
   required Future<void> Function(String mac) runSync,
 }) async {
-  if (state.state != SessionState.idle && state.state != SessionState.error) {
+  if (state.state != SessionState.idle &&
+      state.state != SessionState.error &&
+      state.state != SessionState.connected) {
     return;
   }
   final live = ref.read(liveHrProvider);
@@ -110,8 +113,9 @@ Future<void> orchestratorRefetch({
     );
   } finally {
     state = readState();
+    final bandConnected = ref.read(bandSessionProvider).isConnected;
     emit(state.copyWith(
-      state: SessionState.idle,
+      state: bandConnected ? SessionState.connected : SessionState.idle,
       currentTypeCode: null,
       logs: sessionLog.logs,
     ));
@@ -154,7 +158,10 @@ Future<void> orchestratorAutoConnect({
   if (!await auth.hasKey()) return;
   if (!await hasSavedMac()) return;
   final snap = readState();
-  if (snap.state != SessionState.idle || isConnecting()) return;
+  if (snap.state != SessionState.idle &&
+      snap.state != SessionState.connected) {
+    return;
+  }
   if (!await ref.read(apiConfiguredProvider.future)) {
     sessionLog.log('Auto-sync skipped: configure Cloud API in Settings first');
     emit(snap.copyWith(logs: sessionLog.logs));

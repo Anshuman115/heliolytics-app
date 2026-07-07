@@ -37,21 +37,25 @@ class SyncFetcher {
     required SyncWindowPlan plan,
     String? singleTypeCode,
     SyncPayload? mergeBase,
+    BandLinkPort? client,
     bool disconnectAfter = true,
     void Function(String code)? onTypeStart,
     TypeProgressFn? onTypeProgress,
   }) async {
-    final client = linkFactory(log);
-    var authed = await client.connectAndAuth(mac: mac, authKey: authKey);
-    if (!authed) {
-      log('• connect/auth failed — retrying once');
-      await Future<void>.delayed(const Duration(seconds: 1));
-      authed = await client.connectAndAuth(mac: mac, authKey: authKey);
+    final owned = client == null;
+    final link = client ?? linkFactory(log);
+    if (owned) {
+      var authed = await link.connectAndAuth(mac: mac, authKey: authKey);
+      if (!authed) {
+        log('• connect/auth failed — retrying once');
+        await Future<void>.delayed(const Duration(seconds: 1));
+        authed = await link.connectAndAuth(mac: mac, authKey: authKey);
+      }
+      if (!authed) return null;
     }
-    if (!authed) return null;
     try {
       return await fetch(
-        client: client,
+        client: link,
         mac: mac,
         plan: plan,
         singleTypeCode: singleTypeCode,
@@ -60,7 +64,7 @@ class SyncFetcher {
         onTypeProgress: onTypeProgress,
       );
     } finally {
-      if (disconnectAfter) await client.disconnect();
+      if (owned && disconnectAfter) await link.disconnect();
     }
   }
 

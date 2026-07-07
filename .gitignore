@@ -60,3 +60,7 @@ log.txt
 # Local-only dump / export folders (raw strap data, never commit)
 DUMPP/
 ZEPP_EXPORT/
+CONTEXT.md
+ZEPP_EXPORT_6M
+*.zip
+*.png

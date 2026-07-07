@@ -195,6 +195,16 @@ const int liveHrKeepaliveIntervalSec = 1;
 const int liveHrNotifyFlagsByte = 0;
 const int liveHrSampleBufferMax = 60;
 
+/// ZeppOS find-device endpoint (0x001a) — motor proof / test vibration.
+const int findDeviceEndpoint = 0x001a;
+const int findDeviceCapabilitiesRequest = 0x01;
+const int findDeviceStart = 0x03;
+const int findDeviceStopFromPhone = 0x06;
+const int motorProofCapabilitiesDelayMs = 200;
+const int motorProofBuzzDurationSec = 3;
+const int motorProofWarmIdleSec = 120;
+const int helioSettingsTabIndex = 3;
+
 const int spo2HeaderByte = 0x02;
 const int spo2RecordSize = 65;
 const int readinessRecordSize = 569;

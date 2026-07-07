@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/constants/constants.dart';
+import 'package:heliolytics/models/band_session_state.dart';
 import 'package:heliolytics/models/session_state.dart';
+import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/providers/sync_orchestrator.dart';
-import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/band_link.dart';
-import 'package:heliolytics/services/ble/band_link_port.dart';
 import 'package:heliolytics/utils/app_logger.dart';
 
 class LiveHrSample {
@@ -53,7 +53,6 @@ final liveHrProvider = NotifierProvider<LiveHrNotifier, LiveHrState>(
 );
 
 class LiveHrNotifier extends Notifier<LiveHrState> {
-  BandLinkPort? _link;
   StreamSubscription<int>? _bpmSub;
 
   void _log(String message) =>
@@ -63,7 +62,7 @@ class LiveHrNotifier extends Notifier<LiveHrState> {
   LiveHrState build() => const LiveHrState();
 
   Future<void> startMonitoring() async {
-    if (state.isLive || state.isConnecting || _link != null) return;
+    if (state.isLive || state.isConnecting) return;
 
     final sync = ref.read(syncOrchestratorProvider);
     if (sync.state == SessionState.fetching ||
@@ -72,37 +71,42 @@ class LiveHrNotifier extends Notifier<LiveHrState> {
       return;
     }
 
-    final auth = AuthKeyStorage(store: ref.read(authKeyStoreProvider));
-    final mac = await auth.readMac();
-    final authKey = await auth.readBytes();
-    if (mac == null || mac.isEmpty || authKey == null) {
-      _log('skipped — no strap paired');
+    final band = ref.read(bandSessionProvider.notifier);
+    final blocked = band.tryAcquire(BandSessionOp.liveHr);
+    if (blocked != null) {
+      _log('skipped — $blocked');
       return;
     }
 
     state = state.copyWith(isConnecting: true);
-    final link = BandLink(_log);
-    _link = link;
 
-    final ok = await link.connectAndAuth(mac: mac, authKey: authKey);
-    if (!ok) {
-      _log('connect/auth failed');
-      await _tearDown();
-      state = const LiveHrState();
-      return;
+    try {
+      if (!await band.ensureConnected()) {
+        _log('connect failed');
+        return;
+      }
+
+      final link = band.session.link;
+      if (link is! BandLink) {
+        _log('invalid link type');
+        return;
+      }
+
+      await link.startLiveHeartRate();
+      final stream = link.liveBpmStream;
+      if (stream == null) return;
+
+      _bpmSub = stream.listen(_onBpm);
+      state = state.copyWith(isLive: true, isConnecting: false);
+      _log('monitoring started');
+    } catch (e) {
+      _log('start failed: $e');
+    } finally {
+      if (!state.isLive) {
+        state = const LiveHrState();
+        band.release(BandSessionOp.liveHr);
+      }
     }
-
-    await link.startLiveHeartRate();
-    final stream = link.liveBpmStream;
-    if (stream == null) {
-      await _tearDown();
-      state = const LiveHrState();
-      return;
-    }
-
-    _bpmSub = stream.listen(_onBpm);
-    state = state.copyWith(isLive: true, isConnecting: false);
-    _log('monitoring started');
   }
 
   void _onBpm(int bpm) {
@@ -123,14 +127,13 @@ class LiveHrNotifier extends Notifier<LiveHrState> {
   Future<void> _tearDown() async {
     await _bpmSub?.cancel();
     _bpmSub = null;
-    final link = _link;
-    _link = null;
-    if (link == null) return;
-    try {
-      await link.stopLiveHeartRate();
-    } catch (_) {}
-    try {
-      await link.disconnect();
-    } catch (_) {}
+    final band = ref.read(bandSessionProvider.notifier);
+    final link = band.session.link;
+    if (link is BandLink) {
+      try {
+        await link.stopLiveHeartRate();
+      } catch (_) {}
+    }
+    band.release(BandSessionOp.liveHr);
   }
 }

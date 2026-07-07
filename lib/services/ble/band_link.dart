@@ -45,6 +45,7 @@ class BandLink implements BandLinkPort {
   Future<bool> connectAndAuth({
     required String mac,
     required Uint8List authKey,
+    bool commsOnly = false,
   }) async {
     final done = Completer<bool>();
     _device = BluetoothDevice.fromId(mac);
@@ -135,11 +136,11 @@ class BandLink implements BandLinkPort {
       return false;
     }
 
-    await _postAuth();
+    await _postAuth(commsOnly: commsOnly);
     return true;
   }
 
-  Future<void> _postAuth() async {
+  Future<void> _postAuth({bool commsOnly = false}) async {
     comms = EncryptedEndpoint(
       sessionKey: auth!.sessionKey,
       sequence: auth!.sequence ?? 0,
@@ -149,6 +150,12 @@ class BandLink implements BandLinkPort {
       onPayload: _handlePayload,
     );
     _notifyHandler = (v) => comms!.onNotify(v);
+
+    if (commsOnly) {
+      log('✓ post-auth comms ready');
+      onUpdate?.call();
+      return;
+    }
 
     if (_control == null || _data == null) {
       log('✗ activity chars not found');
@@ -294,6 +301,24 @@ class BandLink implements BandLinkPort {
 
   @override
   bool get isLiveHeartRateActive => _liveHr?.isRunning ?? false;
+
+  /// True when post-auth encrypted comms are ready on an active GATT link.
+  bool get isCommsReady => comms != null && (_device?.isConnected ?? false);
+
+  /// Send a payload on a ZeppOS chunked endpoint (post-auth).
+  Future<bool> sendEndpointPayload(
+    int endpoint,
+    List<int> payload, {
+    bool encrypt = false,
+  }) async {
+    final c = comms;
+    if (c == null) {
+      log('✗ comms not ready');
+      return false;
+    }
+    await c.send(endpoint, Uint8List.fromList(payload), encrypt: encrypt);
+    return true;
+  }
 
   void _handlePayload(int endpoint, Uint8List payload) {
     _liveHr?.onEndpointPayload(endpoint, payload);

@@ -10,6 +10,7 @@ import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
+import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/widgets/home_activities_section.dart';
@@ -72,7 +73,9 @@ class HomeScreen extends ConsumerWidget {
     final idx = day == null ? -1 : keys.indexOf(day.dayKey);
     final snap = health.valueOrNull;
     final sync = ref.watch(syncOrchestratorProvider);
-    final isConnected = sync.state == SessionState.connected ||
+    final band = ref.watch(bandSessionProvider);
+    final isConnected = band.isConnected ||
+        sync.state == SessionState.connected ||
         sync.state == SessionState.fetching ||
         sync.state == SessionState.authenticating ||
         sync.state == SessionState.connecting;

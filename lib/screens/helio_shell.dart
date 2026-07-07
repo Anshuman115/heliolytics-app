@@ -4,6 +4,7 @@ import 'package:heliolytics/models/session_state.dart';
 import 'package:heliolytics/providers/sync_orchestrator.dart';
 import 'package:heliolytics/design_system/components/helio_bottom_nav.dart';
 import 'package:heliolytics/design_system/components/helio_sync_strip.dart';
+import 'package:heliolytics/widgets/app_lifecycle_scope.dart';
 import 'package:heliolytics/screens/activity_hub_screen.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/screens/home_screen.dart';
@@ -47,26 +48,23 @@ class _HelioShellState extends ConsumerState<HelioShell> {
       }
     });
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      // Consume the status-bar inset once here. The per-screen HelioTopBar also
-      // wraps in SafeArea, but nested SafeArea is idempotent — so inside the
-      // shell it adds nothing (no more empty gap above the date header), while
-      // standalone screens that use HelioTopBar still get their own inset.
-      // The ambient gradient comes from the global HelioBackdrop in app.dart.
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: Column(
-          children: [
-            const HelioSyncStrip(),
-            Expanded(child: IndexedStack(index: tab, children: _pages)),
-          ],
+    return AppLifecycleScope(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          top: true,
+          bottom: false,
+          child: Column(
+            children: [
+              const HelioSyncStrip(),
+              Expanded(child: IndexedStack(index: tab, children: _pages)),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: HelioBottomNav(
-        index: tab,
-        onChanged: (i) => ref.read(helioNavProvider.notifier).state = i,
+        bottomNavigationBar: HelioBottomNav(
+          index: tab,
+          onChanged: (i) => ref.read(helioNavProvider.notifier).state = i,
+        ),
       ),
     );
   }

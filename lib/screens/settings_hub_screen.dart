@@ -9,10 +9,12 @@ import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
+import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/widgets/settings/device_hero_card.dart';
 import 'package:heliolytics/widgets/settings/raw_dump_card.dart';
+import 'package:heliolytics/widgets/settings/test_vibration_card.dart';
 import 'package:heliolytics/widgets/settings/settings_about_section.dart';
 import 'package:heliolytics/widgets/settings/settings_tile.dart';
 
@@ -22,6 +24,7 @@ class SettingsHubScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snap = ref.watch(syncOrchestratorProvider);
+    final band = ref.watch(bandSessionProvider);
     final apiReady = ref.watch(apiConfiguredProvider);
     final health = ref.watch(liveHealthProvider);
     final busy = _isBusy(snap.state);
@@ -32,7 +35,8 @@ class SettingsHubScreen extends ConsumerWidget {
         HelioTopBar(
           title: 'Settings',
           batteryPercent: battery,
-          strapConnected: snap.state == SessionState.connected ||
+          strapConnected: band.isConnected ||
+              snap.state == SessionState.connected ||
               snap.state == SessionState.fetching,
           syncActive: busy,
         ),
@@ -75,6 +79,8 @@ class SettingsHubScreen extends ConsumerWidget {
               const SizedBox(height: HelioSpacing.xl),
               const SettingsSectionLabel('DIAGNOSTICS'),
               const SizedBox(height: HelioSpacing.sm),
+              const TestVibrationCard(),
+              const SizedBox(height: HelioSpacing.md),
               const RawDumpCard(),
               const SizedBox(height: HelioSpacing.xl),
               const SettingsSectionLabel('ABOUT'),

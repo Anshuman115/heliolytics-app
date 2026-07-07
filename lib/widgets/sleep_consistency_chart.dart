@@ -18,7 +18,7 @@ class SleepConsistencyChart extends StatelessWidget {
 
   const SleepConsistencyChart({super.key, required this.nights});
 
-  static const _height = 150.0;
+  static const _height = 172.0;
 
   @override
   Widget build(BuildContext context) {
@@ -47,45 +47,52 @@ class _ConsistencyPainter extends CustomPainter {
 
   final List<SleepSpan> nights;
 
+  static const _tick = 180.0; // gridline every 3 hours
+
   @override
   void paint(Canvas canvas, Size size) {
-    const padT = 8.0;
+    const padT = 10.0;
     const padB = 22.0; // room for day labels
-    const padL = 4.0;
-    const padR = 4.0;
+    const padL = 40.0; // room for clock-time axis labels
+    const padR = 8.0;
     final plotH = size.height - padT - padB;
     final plotW = size.width - padL - padR;
     if (plotH <= 0 || plotW <= 0) return;
 
-    // Shared clock axis: earliest bedtime → latest wake, as minutes-from-bed.
-    var minOffset = 0.0;
-    var maxOffset = 0.0;
-    final beds = <double>[];
-    final wakes = <double>[];
-    final ref = nights.first.bed;
-    for (final n in nights) {
-      final b = n.bed.difference(ref).inMinutes.toDouble();
-      final w = n.wake.difference(ref).inMinutes.toDouble();
-      beds.add(b);
-      wakes.add(w);
-    }
-    // Normalize each night to its own clock-of-day so bars align by time,
-    // not by absolute date: use minutes since 18:00 (6 PM) of the bed day.
-    final bedClock = <double>[];
-    final wakeClock = <double>[];
-    for (final n in nights) {
-      bedClock.add(_minsSince6pm(n.bed));
-      wakeClock.add(_minsSince6pm(n.wake));
-    }
-    minOffset = bedClock.reduce((a, b) => a < b ? a : b);
-    maxOffset = wakeClock.reduce((a, b) => a > b ? a : b);
-    final span = (maxOffset - minOffset).clamp(60.0, 24 * 60);
+    // Normalize each night to a clock-of-day axis so bars align by time,
+    // not by absolute date: minutes since 18:00 (6 PM), continuous past
+    // midnight (e.g. 02:00 → 8h).
+    final bedClock = [for (final n in nights) _minsSince6pm(n.bed)];
+    final wakeClock = [for (final n in nights) _minsSince6pm(n.wake)];
 
-    double yFor(double mins) => padT + plotH * (mins - minOffset) / span;
+    // Axis domain snapped to whole 3-hour ticks around the data range.
+    final dataMin = bedClock.reduce((a, b) => a < b ? a : b);
+    final dataMax = wakeClock.reduce((a, b) => a > b ? a : b);
+    final start = (dataMin / _tick).floorToDouble() * _tick;
+    final end = (dataMax / _tick).ceilToDouble() * _tick;
+    final span = (end - start).clamp(_tick, 24 * 60);
+
+    double yFor(double mins) => padT + plotH * (mins - start) / span;
+
+    final axisStyle = TextStyle(
+      color: Colors.white.withValues(alpha: 0.4),
+      fontSize: 9,
+    );
+    final gridPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..strokeWidth = 1;
+
+    // Gridlines + clock-time labels down the left edge.
+    for (var t = start; t <= end + 1; t += _tick) {
+      final y = yFor(t);
+      canvas.drawLine(Offset(padL, y), Offset(size.width - padR, y), gridPaint);
+      _paintText(canvas, _clockLabel(t), Offset(2, y - 6), axisStyle,
+          width: padL - 6, align: TextAlign.right);
+    }
 
     final slotW = plotW / nights.length;
-    final barW = (slotW * 0.4).clamp(6.0, 26.0);
-    final labelStyle = TextStyle(
+    final barW = (slotW * 0.45).clamp(8.0, 28.0);
+    final dayStyle = TextStyle(
       color: Colors.white.withValues(alpha: 0.5),
       fontSize: 10,
     );
@@ -102,29 +109,36 @@ class _ConsistencyPainter extends CustomPainter {
       );
       canvas.drawRRect(rect, Paint()..color = color);
 
-      _paintText(
-        canvas,
-        DateFormat.E().format(nights[i].bed).toUpperCase(),
-        Offset(cx - barW, size.height - 16),
-        labelStyle,
-      );
+      // Day label centered under the bar.
+      _paintText(canvas, DateFormat.E().format(nights[i].bed).toUpperCase(),
+          Offset(cx - slotW / 2, size.height - 14), dayStyle,
+          width: slotW, align: TextAlign.center);
     }
   }
 
   double _minsSince6pm(DateTime t) {
-    // 18:00 of the day the sleep-event belongs to maps to 0; values past
-    // midnight stay continuous (e.g. 02:00 → 8h).
     final anchor = DateTime(t.year, t.month, t.day, 18);
     var diff = t.difference(anchor).inMinutes.toDouble();
     if (diff < 0) diff += 24 * 60; // morning wake belongs to prior evening
     return diff;
   }
 
-  void _paintText(Canvas canvas, String text, Offset at, TextStyle style) {
+  /// Minutes-since-6PM → short clock label, e.g. 360 → "12AM".
+  String _clockLabel(double minsSince6pm) {
+    final total = (18 * 60 + minsSince6pm).round() % (24 * 60);
+    final h = total ~/ 60;
+    final period = h < 12 ? 'AM' : 'PM';
+    final h12 = h % 12 == 0 ? 12 : h % 12;
+    return '$h12$period';
+  }
+
+  void _paintText(Canvas canvas, String text, Offset at, TextStyle style,
+      {double? width, TextAlign align = TextAlign.left}) {
     final tp = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
-    )..layout();
+      textAlign: align,
+    )..layout(minWidth: width ?? 0, maxWidth: width ?? double.infinity);
     tp.paint(canvas, at);
   }
 

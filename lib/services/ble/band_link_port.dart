@@ -14,6 +14,7 @@ abstract class BandLinkPort {
   Future<bool> connectAndAuth({
     required String mac,
     required Uint8List authKey,
+    bool commsOnly = false,
   });
 
   Future<TypeFetchResult> fetchCode(int code, DateTime since);

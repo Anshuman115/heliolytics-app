@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:heliolytics/models/band_session_state.dart';
+import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/sync_fetcher.dart';
 import 'package:heliolytics/services/ble/sync_orchestrator_helpers.dart';
@@ -19,73 +21,94 @@ Future<void> runRefetch({
   required void Function(SyncPayload?) setPayload,
   required StateSink emit,
 }) async {
-  emit(syncSnap(
-    SessionState.connecting,
-    sessionLog,
-    const [],
-    currentTypeCode: codeStr,
-  ));
-  sessionLog.log('→ refetch $codeStr only (per-type coverage)');
-  emit(syncSnap(SessionState.fetching, sessionLog, const [], currentTypeCode: codeStr));
-
-  final mac = await auth.readMac();
-  final authKey = await auth.readBytes();
-  if (mac == null || mac.isEmpty || authKey == null) {
-    sessionLog.log('Refetch aborted: missing MAC or auth key');
-    emit(syncSnap(SessionState.error, sessionLog, const []));
+  final band = ref.read(bandSessionProvider.notifier);
+  final blocked = band.tryAcquire(BandSessionOp.sync);
+  if (blocked != null) {
+    sessionLog.log('✗ $blocked');
+    emit(syncSnap(SessionState.error, sessionLog, const [], lastErrorMessage: blocked));
     return;
   }
 
-  final plan = await resolveSyncWindow(ref);
-  final base = lastPayload ??
-      await payloadFromLastSession(store, await store.latestSessionId());
-  if (base == null) {
-    sessionLog.log('✗ refetch $codeStr failed: no base session');
-    emit(syncSnap(SessionState.error, sessionLog, const []));
-    return;
-  }
-
-  final results = <TypeCodeResult>[];
-  final outcome = await SyncFetcher(log: sessionLog.log, store: store, auth: auth).run(
-    mac: mac,
-    authKey: authKey,
-    plan: plan,
-    singleTypeCode: codeStr,
-    mergeBase: base,
-    disconnectAfter: true,
-    onTypeProgress: (_, r) => results.add(r),
-  );
-
-  if (outcome == null) {
-    sessionLog.log('Refetch aborted: connect/auth failed');
-    emit(syncSnap(SessionState.error, sessionLog, const []));
-    return;
-  }
-  if (outcome.payload.rawByCode.isEmpty) {
-    sessionLog.log('✗ refetch $codeStr failed');
+  try {
     emit(syncSnap(
-      SessionState.error,
+      SessionState.connecting,
       sessionLog,
       const [],
-      error: SessionError.scanFailed,
-      lastErrorMessage: 'Refetch $codeStr failed',
+      currentTypeCode: codeStr,
     ));
-    return;
-  }
+    sessionLog.log('→ refetch $codeStr only (per-type coverage)');
 
-  setPayload(outcome.payload);
-  sessionLog.log(
-    '✓ refetch $codeStr: ${outcome.typeResults.single.bytes} bytes',
-  );
-  final sid = await store.latestSessionId();
-  final lastSession = sid != null
-      ? await store.readSessionJson(sid)
-      : outcome.payload.session;
-  emit(syncSnap(
-    SessionState.idle,
-    sessionLog,
-    results,
-    lastSession: lastSession,
-  ));
-  await commitPayload(ref, sessionLog, outcome.payload, emit, results);
+    if (!await band.ensureConnected()) {
+      sessionLog.log('Refetch aborted: connect failed');
+      emit(syncSnap(SessionState.error, sessionLog, const []));
+      return;
+    }
+
+    final link = band.session.link;
+    if (link == null) {
+      emit(syncSnap(SessionState.error, sessionLog, const []));
+      return;
+    }
+
+    emit(syncSnap(SessionState.fetching, sessionLog, const [], currentTypeCode: codeStr));
+
+    final mac = await auth.readMac();
+    final authKey = await auth.readBytes();
+    if (mac == null || mac.isEmpty || authKey == null) {
+      sessionLog.log('Refetch aborted: missing MAC or auth key');
+      emit(syncSnap(SessionState.error, sessionLog, const []));
+      return;
+    }
+
+    final plan = await resolveSyncWindow(ref);
+    final base = lastPayload ??
+        await payloadFromLastSession(store, await store.latestSessionId());
+    if (base == null) {
+      sessionLog.log('✗ refetch $codeStr failed: no base session');
+      emit(syncSnap(SessionState.error, sessionLog, const []));
+      return;
+    }
+
+    final results = <TypeCodeResult>[];
+    final outcome = await SyncFetcher(log: sessionLog.log, store: store, auth: auth).run(
+      mac: mac,
+      authKey: authKey,
+      plan: plan,
+      singleTypeCode: codeStr,
+      mergeBase: base,
+      client: link,
+      disconnectAfter: false,
+      onTypeProgress: (_, r) => results.add(r),
+    );
+
+    if (outcome == null || outcome.payload.rawByCode.isEmpty) {
+      sessionLog.log('✗ refetch $codeStr failed');
+      emit(syncSnap(
+        SessionState.error,
+        sessionLog,
+        const [],
+        error: SessionError.scanFailed,
+        lastErrorMessage: 'Refetch $codeStr failed',
+      ));
+      return;
+    }
+
+    setPayload(outcome.payload);
+    sessionLog.log(
+      '✓ refetch $codeStr: ${outcome.typeResults.single.bytes} bytes',
+    );
+    final sid = await store.latestSessionId();
+    final lastSession = sid != null
+        ? await store.readSessionJson(sid)
+        : outcome.payload.session;
+    emit(syncSnap(
+      SessionState.connected,
+      sessionLog,
+      results,
+      lastSession: lastSession,
+    ));
+    await commitPayload(ref, sessionLog, outcome.payload, emit, results);
+  } finally {
+    band.release(BandSessionOp.sync);
+  }
 }
