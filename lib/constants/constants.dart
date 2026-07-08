@@ -202,8 +202,64 @@ const int findDeviceStart = 0x03;
 const int findDeviceStopFromPhone = 0x06;
 const int motorProofCapabilitiesDelayMs = 200;
 const int motorProofBuzzDurationSec = 3;
+const int bandAlertBuzzMsApp = 300;
 const int motorProofWarmIdleSec = 120;
 const int helioSettingsTabIndex = 3;
+
+/// Band alerts prefs (secure store keys).
+const String bandAlertsEnabledKey = 'band_alerts_enabled';
+const String bandAlertsForwardCallsKey = 'band_alerts_forward_calls';
+const String bandAlertsCallsOnlyKey = 'band_alerts_calls_only';
+const String bandAlertsAllowlistKey = 'band_alerts_allowlist';
+const String bandAlertsAppPatternsKey = 'band_alerts_app_patterns';
+const String bandAlertsCallPatternKey = 'band_alerts_call_pattern';
+const List<int> bandAlertsDefaultAppPatternMs = [300, 600];
+const List<int> bandAlertsDefaultCallPatternMs = [300, 200, 600, 2000];
+const int bandAlertsCallPatternRepeatGapMs = 200;
+
+/// Android package ids for suggested notification allowlist starters.
+const List<MapEntry<String, String>> bandAlertsSuggestedApps = [
+  MapEntry('com.whatsapp', 'WhatsApp'),
+  MapEntry('org.telegram.messenger', 'Telegram'),
+  MapEntry('com.snapchat.android', 'Snapchat'),
+  MapEntry('com.google.android.gm', 'Gmail'),
+  MapEntry('com.reddit.frontpage', 'Reddit'),
+  MapEntry('com.linkedin.android', 'LinkedIn'),
+  MapEntry('com.Slack', 'Slack'),
+  MapEntry('com.google.android.apps.messaging', 'Messages'),
+];
+
+const String bandAlertsMethodChannel = 'com.heliolytics/band_alerts';
+const String bandAlertsEventChannel = 'com.heliolytics/band_alerts_events';
+
+/// Notifications + calls (endpoint 0x001e, encrypted).
+const int notificationEndpoint = 0x001e;
+const int notificationCapsRequest = 0x01;
+const int notificationCmdSend = 0x03;
+const int notificationTypeCall = 0x03;
+const int notificationTypeApp = 0xfa;
+const int notificationSubcmdShow = 0x00;
+const int notificationCallStateStart = 0x00;
+const int notificationCallStateEnd = 0x02;
+const int bandAlertsMaxNotificationBodyLen = 240;
+const int zeppServicesEndpoint = 0x0000;
+const int zeppServicesGetListCmd = 0x03;
+
+/// Phone pairing (endpoint 0x000b, encrypted).
+const int phonePairEndpoint = 0x000b;
+const int phonePairCapsRequest = 0x01;
+const int phonePairStartCmd = 0x05;
+const int phonePairEnabledSetCmd = 0x08;
+
+/// Vibration patterns (endpoint 0x0018, encrypted).
+const int vibrationPatternEndpoint = 0x0018;
+const int vibrationPatternSetCmd = 0x03;
+const int vibrationPatternTestBuzz = 0x01;
+const int vibrationTypeAppAlerts = 0x00;
+const int vibrationTypeIncomingCall = 0x01;
+
+const int bandAlertsInitStepDelayMs = 250;
+const int bandAlertsForegroundNotificationId = 41001;
 
 const int spo2HeaderByte = 0x02;
 const int spo2RecordSize = 65;

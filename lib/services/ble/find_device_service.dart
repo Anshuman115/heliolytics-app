@@ -50,14 +50,30 @@ class FindDeviceService {
       );
     }
     onProgress?.call(MotorProofStep.buzzing);
+    await pulseBuzz(
+      link,
+      durationMs: motorProofBuzzDurationSec * 1000,
+    );
+    log('✓ motor proof complete');
+  }
+
+  Future<void> startBuzz(BandLink link) async {
     log('→ find device start');
     await _sendEncrypted(link, findDeviceStart);
-    await Future<void>.delayed(
-      const Duration(seconds: motorProofBuzzDurationSec),
-    );
+  }
+
+  Future<void> stopBuzz(BandLink link) async {
     log('→ find device stop');
     await _sendEncrypted(link, findDeviceStopFromPhone);
-    log('✓ motor proof complete');
+  }
+
+  Future<void> pulseBuzz(
+    BandLink link, {
+    required int durationMs,
+  }) async {
+    await startBuzz(link);
+    await Future<void>.delayed(Duration(milliseconds: durationMs));
+    await stopBuzz(link);
   }
 
   Future<void> _sendEncrypted(BandLink link, int cmd) async {

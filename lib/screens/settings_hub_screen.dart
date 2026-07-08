@@ -14,7 +14,9 @@ import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/widgets/settings/device_hero_card.dart';
 import 'package:heliolytics/widgets/settings/raw_dump_card.dart';
+import 'package:heliolytics/widgets/settings/band_alerts_card.dart';
 import 'package:heliolytics/widgets/settings/test_vibration_card.dart';
+import 'package:heliolytics/widgets/settings/test_vibration_pattern_card.dart';
 import 'package:heliolytics/widgets/settings/settings_about_section.dart';
 import 'package:heliolytics/widgets/settings/settings_tile.dart';
 
@@ -77,9 +79,15 @@ class SettingsHubScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: HelioSpacing.xl),
+              const SettingsSectionLabel('BAND ALERTS'),
+              const SizedBox(height: HelioSpacing.sm),
+              const BandAlertsCard(),
+              const SizedBox(height: HelioSpacing.xl),
               const SettingsSectionLabel('DIAGNOSTICS'),
               const SizedBox(height: HelioSpacing.sm),
               const TestVibrationCard(),
+              const SizedBox(height: HelioSpacing.md),
+              const TestVibrationPatternCard(),
               const SizedBox(height: HelioSpacing.md),
               const RawDumpCard(),
               const SizedBox(height: HelioSpacing.xl),

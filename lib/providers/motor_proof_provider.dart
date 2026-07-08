@@ -60,14 +60,18 @@ class MotorProofNotifier extends Notifier<MotorProofState> {
     }
 
     final band = ref.read(bandSessionProvider.notifier);
-    final blocked = band.tryAcquire(BandSessionOp.motorProof);
-    if (blocked != null) {
-      state = MotorProofState(
-        phase: MotorProofPhase.error,
-        errorMessage: blocked,
-        logs: List.of(_logs),
-      );
-      return;
+    final alertsOn =
+        ref.read(bandSessionProvider).activeOp == BandSessionOp.bandAlerts;
+    if (!alertsOn) {
+      final blocked = band.tryAcquire(BandSessionOp.motorProof);
+      if (blocked != null) {
+        state = MotorProofState(
+          phase: MotorProofPhase.error,
+          errorMessage: blocked,
+          logs: List.of(_logs),
+        );
+        return;
+      }
     }
 
     _logs.clear();
@@ -106,7 +110,7 @@ class MotorProofNotifier extends Notifier<MotorProofState> {
         logs: List.of(_logs),
       );
     } finally {
-      band.release(BandSessionOp.motorProof);
+      if (!alertsOn) band.release(BandSessionOp.motorProof);
     }
   }
 

@@ -5,6 +5,9 @@ import 'package:heliolytics/models/session_state.dart';
 import 'package:heliolytics/providers/sync_orchestrator.dart';
 import 'package:heliolytics/screens/auth_key_screen.dart';
 import 'package:heliolytics/screens/device_scan_screen.dart';
+import 'package:heliolytics/screens/band_alerts_app_pattern_screen.dart';
+import 'package:heliolytics/screens/band_alerts_apps_screen.dart';
+import 'package:heliolytics/screens/band_alerts_call_pattern_screen.dart';
 import 'package:heliolytics/screens/api_settings_screen.dart';
 import 'package:heliolytics/screens/activity_detail_screen.dart';
 import 'package:heliolytics/screens/health_monitor_screen.dart';
@@ -53,6 +56,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => ActivityDetailScreen(extra: s.extra),
       ),
       GoRoute(path: '/settings/api', builder: (_, __) => const ApiSettingsScreen()),
+      GoRoute(
+        path: '/settings/band-alerts/apps',
+        builder: (_, __) => const BandAlertsAppsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/band-alerts/call-pattern',
+        builder: (_, __) => const BandAlertsCallPatternScreen(),
+      ),
+      GoRoute(
+        path: '/settings/band-alerts/pattern',
+        builder: (_, s) {
+          final extra = s.extra;
+          if (extra is Map) {
+            final pkg = extra['packageId'];
+            final label = extra['label'];
+            if (pkg is String && label is String) {
+              return BandAlertsAppPatternScreen(
+                args: BandAlertsAppPatternArgs(packageId: pkg, label: label),
+              );
+            }
+          }
+          return const BandAlertsAppsScreen();
+        },
+      ),
       GoRoute(path: '/scan', builder: (_, __) => const DeviceScanScreen()),
     ],
   );

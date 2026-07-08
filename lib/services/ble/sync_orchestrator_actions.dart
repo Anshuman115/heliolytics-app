@@ -8,6 +8,7 @@ import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/services/session_store.dart';
 import 'package:heliolytics/models/sync_payload.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
+import 'package:heliolytics/models/band_session_state.dart';
 import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/providers/live_hr_provider.dart';
 
@@ -32,6 +33,15 @@ Future<void> orchestratorConnect({
     sessionLog.log('Connect skipped: stop live HR first');
     emit(state.copyWith(
       lastErrorMessage: 'Stop live HR before syncing',
+      logs: sessionLog.logs,
+    ));
+    return;
+  }
+  final bandOp = ref.read(bandSessionProvider).activeOp;
+  if (bandOp == BandSessionOp.bandAlerts) {
+    sessionLog.log('Connect skipped: turn off band alerts first');
+    emit(state.copyWith(
+      lastErrorMessage: 'Turn off band alerts before syncing',
       logs: sessionLog.logs,
     ));
     return;
@@ -86,6 +96,14 @@ Future<void> orchestratorRefetch({
     sessionLog.log('Refetch skipped: stop live HR first');
     emit(state.copyWith(
       lastErrorMessage: 'Stop live HR before syncing',
+      logs: sessionLog.logs,
+    ));
+    return;
+  }
+  if (ref.read(bandSessionProvider).activeOp == BandSessionOp.bandAlerts) {
+    sessionLog.log('Refetch skipped: turn off band alerts first');
+    emit(state.copyWith(
+      lastErrorMessage: 'Turn off band alerts before syncing',
       logs: sessionLog.logs,
     ));
     return;
@@ -157,6 +175,7 @@ Future<void> orchestratorAutoConnect({
 }) async {
   if (!await auth.hasKey()) return;
   if (!await hasSavedMac()) return;
+  if (ref.read(bandSessionProvider).activeOp == BandSessionOp.bandAlerts) return;
   final snap = readState();
   if (snap.state != SessionState.idle &&
       snap.state != SessionState.connected) {

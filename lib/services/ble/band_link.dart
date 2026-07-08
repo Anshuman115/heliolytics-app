@@ -32,6 +32,8 @@ class BandLink implements BandLinkPort {
   EncryptedEndpoint? comms;
   TypeSyncEngine? fetcher;
   LiveHrStream? _liveHr;
+  final _endpointWaiters = <int, Completer<Uint8List>>{};
+  void Function()? onLinkLost;
   @override
   int? batteryPercent;
 
@@ -59,6 +61,12 @@ class BandLink implements BandLinkPort {
           !done.isCompleted) {
         log('• disconnected before auth completed');
         done.complete(false);
+      }
+      if (s == BluetoothConnectionState.disconnected &&
+          physicallyConnected &&
+          comms != null) {
+        log('• link lost');
+        onLinkLost?.call();
       }
     });
 
@@ -306,6 +314,26 @@ class BandLink implements BandLinkPort {
   bool get isCommsReady => comms != null && (_device?.isConnected ?? false);
 
   /// Send a payload on a ZeppOS chunked endpoint (post-auth).
+  /// Wait for the next payload on [endpoint], or null on timeout.
+  Future<Uint8List?> awaitEndpointPayload(
+    int endpoint, {
+    Duration timeout = const Duration(seconds: 4),
+  }) async {
+    final prior = _endpointWaiters.remove(endpoint);
+    if (prior != null && !prior.isCompleted) prior.completeError(StateError('superseded'));
+    final waiter = Completer<Uint8List>();
+    _endpointWaiters[endpoint] = waiter;
+    try {
+      return await waiter.future.timeout(timeout);
+    } on TimeoutException {
+      return null;
+    } finally {
+      if (_endpointWaiters[endpoint] == waiter) {
+        _endpointWaiters.remove(endpoint);
+      }
+    }
+  }
+
   Future<bool> sendEndpointPayload(
     int endpoint,
     List<int> payload, {
@@ -321,6 +349,9 @@ class BandLink implements BandLinkPort {
   }
 
   void _handlePayload(int endpoint, Uint8List payload) {
+    final waiter = _endpointWaiters.remove(endpoint);
+    if (waiter != null && !waiter.isCompleted) waiter.complete(payload);
+
     _liveHr?.onEndpointPayload(endpoint, payload);
     final hex = payload.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     log('← endpoint 0x${endpoint.toRadixString(16).padLeft(4, '0')} '
@@ -391,6 +422,11 @@ class BandLink implements BandLinkPort {
     await _controlSub?.cancel();
     await _dataSub?.cancel();
     await _connSub?.cancel();
+    _connSub = null;
+    for (final w in _endpointWaiters.values) {
+      if (!w.isCompleted) w.completeError(StateError('disconnected'));
+    }
+    _endpointWaiters.clear();
     try { await _device?.disconnect(); } catch (_) {}
   }
 }
