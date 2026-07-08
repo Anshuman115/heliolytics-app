@@ -6,9 +6,27 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 
 class BandAlertsNotificationListener : NotificationListenerService() {
+    private val activeWhatsAppCalls = mutableSetOf<String>()
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
         if (sbn.packageName == packageName) return
+
+        if (WhatsAppCallDetector.isIncomingCall(sbn)) {
+            val key = sbn.key
+            if (activeWhatsAppCalls.add(key)) {
+                BandAlertsEventHub.emit(
+                    "call_ring",
+                    mapOf(
+                        "callerName" to WhatsAppCallDetector.callerName(sbn),
+                        "callerNumber" to "",
+                        "source" to sbn.packageName,
+                    ),
+                )
+            }
+            return
+        }
+
         val n = sbn.notification ?: return
         if (n.flags and Notification.FLAG_ONGOING_EVENT != 0) return
         if (n.flags and Notification.FLAG_FOREGROUND_SERVICE != 0) return
@@ -29,7 +47,15 @@ class BandAlertsNotificationListener : NotificationListenerService() {
         )
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) = Unit
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        if (sbn == null) return
+        val key = sbn.key
+        if (!activeWhatsAppCalls.remove(key)) return
+        BandAlertsEventHub.emit(
+            "call_end",
+            mapOf("source" to sbn.packageName),
+        )
+    }
 
     private fun readTitle(extras: Bundle): String {
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()

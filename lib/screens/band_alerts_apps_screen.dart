@@ -5,8 +5,9 @@ import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/providers/band_alerts_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:heliolytics/providers/band_alerts_provider.dart';
+import 'package:heliolytics/screens/band_alerts_app_pattern_screen.dart';
 
 class BandAlertsAppsScreen extends ConsumerWidget {
   const BandAlertsAppsScreen({super.key});
@@ -46,7 +47,10 @@ class BandAlertsAppsScreen extends ConsumerWidget {
                           .togglePackage(app.key, v),
                       onEditPattern: () => context.push(
                             '/settings/band-alerts/pattern',
-                            extra: {'packageId': app.key, 'label': app.value},
+                            extra: BandAlertsAppPatternArgs(
+                              packageId: app.key,
+                              label: app.value,
+                            ),
                           )),
               ],
             ),

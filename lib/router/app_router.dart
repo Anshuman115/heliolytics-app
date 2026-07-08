@@ -68,14 +68,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings/band-alerts/pattern',
         builder: (_, s) {
           final extra = s.extra;
-          if (extra is Map) {
-            final pkg = extra['packageId'];
-            final label = extra['label'];
-            if (pkg is String && label is String) {
-              return BandAlertsAppPatternScreen(
-                args: BandAlertsAppPatternArgs(packageId: pkg, label: label),
-              );
-            }
+          if (extra is BandAlertsAppPatternArgs) {
+            return BandAlertsAppPatternScreen(args: extra);
           }
           return const BandAlertsAppsScreen();
         },

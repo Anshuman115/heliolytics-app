@@ -81,7 +81,10 @@ class BandAlertsForwarder extends Notifier<void> {
       );
       _callBuzzing = true;
       unawaited(_repeatCallPattern(link));
-      _status('Call pattern buzzing');
+      final label = event.callerName?.isNotEmpty == true
+          ? event.callerName!
+          : 'Incoming call';
+      _status('Call pattern buzzing: $label');
       return;
     }
 
