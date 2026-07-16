@@ -143,8 +143,44 @@ HMAC tokens itself — no tokens are pasted by hand.
 
 ---
 
+## Documentation
+
+Engineering rules and layer boundaries live in [CLAUDE.md](CLAUDE.md). One guide per
+feature, written to be read before changing that area:
+
+| Guide | Covers |
+|-------|--------|
+| [BLE sync](docs/features/ble-sync.md) | Coverage-driven fetch windows, per-type paging, raw upload |
+| [Band alerts](docs/features/band-alerts.md) | Call/app forwarding, vibration patterns, session locking |
+| [Home & rings](docs/features/home-and-rings.md) | Shell, tabs, and the two-tier metrics split |
+| [Sleep](docs/features/sleep.md) | Hypnogram, stage bars, clock-axis consistency chart |
+| [Activity](docs/features/activity.md) | Workouts, auto-detected sessions, HR zones |
+| [Settings & device](docs/features/settings-and-device.md) | Auth key, pairing, cloud API, request signing |
+
+---
+
 ## Status
 
-Actively developed. Current line of work (`v5`): server-computed recovery score,
-lazy-loaded metrics for lower bandwidth, idempotent step ingestion, and a refactored
-settings + health-monitor UI. Deployed to the Play Store from this repo.
+Actively developed; deployed to the Play Store from this repo. Current line of work
+(`v6`): band alerts — forwarding incoming calls and allow-listed app notifications to
+the strap with user-editable vibration patterns — plus per-workout heart-rate zones
+and a rebuilt sleep view.
+
+Earlier lines brought the server-computed recovery score, lazy-loaded metrics for
+lower bandwidth, and idempotent step ingestion.
+
+---
+
+## Development notes
+
+This project is built intensively with [Claude Code](https://claude.com/claude-code)
+as an engineering assistant — architecture, protocol decoding, and validation are
+reviewed and directed by hand, and the AI-assisted commits are attributed as such in
+the history. The rules the assistant works under are the same ones in
+[CLAUDE.md](CLAUDE.md).
+
+---
+
+## License
+
+[Apache License 2.0](LICENSE).
