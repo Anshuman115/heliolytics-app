@@ -171,8 +171,52 @@ const int homeTrendDays = 7;
 /// API read window for auto-detected activity sessions.
 const int devActivitySessionFetchDays = 90;
 
+// ── Health monitor baselines ────────────────────────────────────────────────
+// A reading is judged against the user's own history, not a population norm:
+// a 35 ms HRV is unremarkable for one person and low for another.
+
+/// Prior days considered when building a personal baseline.
+const int healthBaselineWindowDays = 30;
+
+/// Below this many prior days there is no baseline — the card says so rather
+/// than inventing a "typical" from two readings.
+const int healthBaselineMinDays = 3;
+
+/// Minimum half-width of a typical band, per metric. Without a floor, a very
+/// steady metric yields a hair-thin band and every trivial wobble reads as
+/// abnormal.
+const double healthBandFloorRespRate = 1.0; // br/min
+const double healthBandFloorRestingHr = 3.0; // bpm
+const double healthBandFloorHrv = 5.0; // ms
+
+/// Skin temperature is shown as deviation from baseline; this is the band
+/// either side of it that counts as normal.
+const double healthSkinTempBandC = 0.2;
+
+/// Blood oxygen has a genuine clinical range, so it is not baseline-relative.
+const double healthSpo2MinPct = 95;
+const double healthSpo2MaxPct = 100;
+
 const int metricProgressSleepMax = 100;
 const int metricProgressStressMax = 100;
+
+// ── Stress bands ────────────────────────────────────────────────────────────
+// The strap reports stress 0–100 (type code 0x13, one reading per minute).
+// These thresholds follow the band's own relaxed/normal/medium/high grading,
+// collapsed to three bands for display.
+
+/// At or above this, stress reads as medium.
+const double stressMediumMin = 40;
+
+/// At or above this, stress reads as high.
+const double stressHighMin = 80;
+
+/// Full scale of the stress gauge.
+const double stressGaugeMax = 100;
+
+/// Longer than this between stress samples means the band was off the wrist.
+/// The trace breaks rather than drawing a straight line across the gap.
+const int stressTraceGapMins = 10;
 const int metricProgressHrvMax = 120;
 const int metricProgressPaiMax = 100;
 const int metricProgressRhrMin = 40;

@@ -127,7 +127,7 @@ class HomeScreen extends ConsumerWidget {
         HomeStatusRow(
           day: day,
           onHealthTap: () => context.push('/health/${day.dayKey}'),
-          onStressTap: () => open('stress'),
+          onStressTap: () => context.push('/stress/${day.dayKey}'),
         ),
         const SizedBox(height: HelioSpacing.lg),
         _stepsCard(day),

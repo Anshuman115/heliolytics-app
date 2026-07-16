@@ -43,6 +43,10 @@ abstract final class HelioColors {
   // Misc
   static const outlookGold = Color(0xFFC9A227);
   static const optimalGreen = Color(0xFF30D158);
+
+  // Health-monitor verdict chips: in-range vs worth-a-look.
+  static const tierOptimal = Color(0xFF16C784);
+  static const tierCaution = Color(0xFFFF9F0A);
   static const syncActive = Color(0xFF0A84FF);
   static const syncError = Color(0xFFFF453A);
 

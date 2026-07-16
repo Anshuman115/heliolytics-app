@@ -11,6 +11,7 @@ import 'package:heliolytics/screens/band_alerts_call_pattern_screen.dart';
 import 'package:heliolytics/screens/api_settings_screen.dart';
 import 'package:heliolytics/screens/activity_detail_screen.dart';
 import 'package:heliolytics/screens/health_monitor_screen.dart';
+import 'package:heliolytics/screens/stress_monitor_screen.dart';
 import 'package:heliolytics/screens/metric_detail_screen.dart';
 import 'package:heliolytics/screens/helio_shell.dart';
 
@@ -43,6 +44,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/health/:dayKey',
         builder: (_, s) => HealthMonitorScreen(dayKey: s.pathParameters['dayKey']!),
+      ),
+      GoRoute(
+        path: '/stress/:dayKey',
+        builder: (_, s) => StressMonitorScreen(dayKey: s.pathParameters['dayKey']!),
       ),
       GoRoute(
         path: '/metric/:dayKey/:metricId',
