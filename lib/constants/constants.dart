@@ -157,7 +157,7 @@ const String cloudApiSetupHintMessage =
 const int syncCoverageOverlapMinutes = 60;
 
 /// First strap sync backfills this many days when backend has no data.
-const int initialSyncBackfillDays = 10;
+const int initialSyncBackfillDays = 2;
 
 /// API read window for daily metrics UI (not BLE fetch depth).
 const int devFetchWindowDays = 10;
