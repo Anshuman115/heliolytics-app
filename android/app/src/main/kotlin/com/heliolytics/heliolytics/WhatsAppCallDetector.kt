@@ -13,7 +13,7 @@ object WhatsAppCallDetector {
         val notification = sbn.notification ?: return false
         val extras = notification.extras ?: return false
 
-        if (Notification.CATEGORY_CALL == extras.getString(Notification.EXTRA_CATEGORY)) {
+        if (Notification.CATEGORY_CALL == notification.category) {
             return true
         }
 
