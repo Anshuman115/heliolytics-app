@@ -45,7 +45,6 @@ app.*.map.json
 .env
 *.env.local
 build.env
-CLAUDE.md
 .tmp_phone_session/
 scripts/
 helio_dump/
@@ -53,7 +52,10 @@ helio_dump_v*/
 zepp-export/
 reference_parsed_v*/
 reports/
-docs/
+
+# Docs: feature docs are published; protocol/validation/decisions stay local.
+docs/*
+!docs/features/
 .github/
 log.txt
 
