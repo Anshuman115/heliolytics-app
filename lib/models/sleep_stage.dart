@@ -18,6 +18,12 @@ class SleepStagePoint {
         end: DateTime.parse(j['end'] as String).toLocal(),
         type: (j['type'] as num).toInt(),
       );
+
+  Map<String, dynamic> toJson() => {
+        'start': start.toUtc().toIso8601String(),
+        'end': end.toUtc().toIso8601String(),
+        'type': type,
+      };
 }
 
 /// Huami sleep stage codes from 0x48 hypnogram.

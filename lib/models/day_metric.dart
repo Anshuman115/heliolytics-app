@@ -66,6 +66,28 @@ class DayMetric {
             ? DateTime.parse(j['updatedAt'] as String).toLocal()
             : null,
       );
+
+  Map<String, dynamic> toJson() => {
+        'dayKey': dayKey,
+        'steps': steps,
+        'paiScore': paiScore,
+        'readiness': readiness,
+        'spo2Avg': spo2Avg,
+        'hrvRmssd': hrvRmssd,
+        'restingHr': restingHr,
+        'respRateAvg': respRateAvg,
+        'stressAvg': stressAvg,
+        'sleepScore': sleepScore,
+        'sleepMins': sleepMins,
+        'sleepDeepMins': sleepDeepMins,
+        'sleepRemMins': sleepRemMins,
+        'sleepLightMins': sleepLightMins,
+        'tempAvgC': tempAvgC,
+        'workoutCount': workoutCount,
+        'activitySessionCount': activitySessionCount,
+        'napCount': napCount,
+        'updatedAt': updatedAt?.toUtc().toIso8601String(),
+      };
 }
 
 class SleepMetric {
@@ -110,6 +132,19 @@ class SleepMetric {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'dayKey': dayKey,
+        'startedAt': startedAt.toUtc().toIso8601String(),
+        'score': score,
+        'totalMins': totalMins,
+        'deepMins': deepMins,
+        'remMins': remMins,
+        'lightMins': lightMins,
+        'wakeMins': wakeMins,
+        'isNap': isNap,
+        'stages': stages.map((s) => s.toJson()).toList(),
+      };
 }
 
 /// Auto-detected strap activity (0x3B) — same shape as manual workouts.
@@ -144,6 +179,17 @@ class ActivitySessionMetric {
         avgHr: (j['avgHr'] as num?)?.toInt(),
         maxHr: (j['maxHr'] as num?)?.toInt(),
       );
+
+  Map<String, dynamic> toJson() => {
+        'dayKey': dayKey,
+        'startedAt': startedAt.toUtc().toIso8601String(),
+        'sportType': sportType,
+        'sportName': sportName,
+        'durationSec': durationSec,
+        'calories': calories,
+        'avgHr': avgHr,
+        'maxHr': maxHr,
+      };
 }
 
 class WorkoutMetric {
@@ -177,4 +223,15 @@ class WorkoutMetric {
         avgHr: (j['avgHr'] as num?)?.toInt(),
         maxHr: (j['maxHr'] as num?)?.toInt(),
       );
+
+  Map<String, dynamic> toJson() => {
+        'dayKey': dayKey,
+        'startedAt': startedAt.toUtc().toIso8601String(),
+        'sportType': sportType,
+        'sportName': sportName,
+        'durationSec': durationSec,
+        'calories': calories,
+        'avgHr': avgHr,
+        'maxHr': maxHr,
+      };
 }
