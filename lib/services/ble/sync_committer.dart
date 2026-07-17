@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/utils/app_logger.dart';
 import 'package:heliolytics/models/sync_payload.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
+import 'package:heliolytics/providers/day_bundle_provider.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/utils/day_key.dart';
 
 typedef UploadFn = Future<void> Function(SyncPayload payload);
 typedef ConfiguredFn = Future<bool> Function();
@@ -29,6 +31,7 @@ class SyncCommitter {
       onHealthRefresh: () {
         ref.read(liveHealthProvider.notifier).reload();
         ref.invalidate(detailMetricsProvider); // refresh lazy series/HR/temp too
+        ref.invalidate(dayBundleProvider(todayDayKey())); // today's entry only — final days are immutable
       },
       log: log,
     );
