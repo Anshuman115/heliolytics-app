@@ -170,6 +170,7 @@ List<HealthReading> buildHomeHealthReadings({
       value: scores.vo2Max?.toString(),
       unit: '',
       assessment: MetricAssessment.noData,
+      metricId: 'vo2max',
     ),
     HealthReading(
       label: 'CALORIES',
@@ -177,6 +178,7 @@ List<HealthReading> buildHomeHealthReadings({
       value: scores.calories?.toString(),
       unit: 'kcal',
       assessment: MetricAssessment.noData,
+      metricId: 'calories',
     ),
     HealthReading(
       label: 'HOURS OF SLEEP',
@@ -194,6 +196,7 @@ List<HealthReading> buildHomeHealthReadings({
           : null,
       unit: 'h',
       assessment: MetricAssessment.noData,
+      metricId: 'sleep_needed',
     ),
     HealthReading(
       label: 'SLEEP EFFICIENCY',
@@ -201,6 +204,7 @@ List<HealthReading> buildHomeHealthReadings({
       value: scores.sleepEfficiencyPct?.toString(),
       unit: '%',
       assessment: MetricAssessment.noData,
+      metricId: 'sleep_efficiency',
     ),
     HealthReading(
       label: 'AVG HEART RATE',
@@ -208,6 +212,7 @@ List<HealthReading> buildHomeHealthReadings({
       value: scores.avgHeartRate?.toString(),
       unit: 'bpm',
       assessment: MetricAssessment.noData,
+      metricId: 'avg_hr',
     ),
     HealthReading(
       label: 'SLEEP DEBT',
@@ -217,6 +222,7 @@ List<HealthReading> buildHomeHealthReadings({
           : null,
       unit: 'h',
       assessment: MetricAssessment.noData,
+      metricId: 'sleep_debt',
     ),
     HealthReading(
       label: 'SLEEP CONSISTENCY',
@@ -224,6 +230,7 @@ List<HealthReading> buildHomeHealthReadings({
       value: scores.sleepConsistencyPct?.toString(),
       unit: '%',
       assessment: MetricAssessment.noData,
+      metricId: 'sleep_consistency',
     ),
     HealthReading(
       label: 'TIME IN BED',
