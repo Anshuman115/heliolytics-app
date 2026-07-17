@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:heliolytics/services/config/api_config_storage.dart';
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/services/network/heliolytics_token.dart';
+import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/health_sample.dart';
 import 'package:heliolytics/models/hr_sample.dart';
@@ -146,6 +147,55 @@ class MetricsApiClient {
       );
     }
     return res.data ?? {};
+  }
+
+  Future<Map<String, dynamic>> _getForDay(String path, String dayKey) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '${await _base()}$path',
+      queryParameters: {'from': dayKey, 'to': dayKey},
+      options: Options(headers: await _headers()),
+    );
+    if (res.statusCode == 401 || res.statusCode == 404) {
+      throw DioException.badResponse(
+        statusCode: res.statusCode!,
+        requestOptions: res.requestOptions,
+        response: res,
+      );
+    }
+    return res.data ?? {};
+  }
+
+  Future<DayBundle> fetchDayBundle(String dayKey) async {
+    final (daysData, sleepData, workoutsData, sessionsData) = await (
+      _getForDay('/api/v1/metrics/days', dayKey),
+      _getForDay('/api/v1/metrics/sleep', dayKey),
+      _getForDay('/api/v1/metrics/workouts', dayKey),
+      _getForDay('/api/v1/metrics/activity-sessions', dayKey),
+    ).wait;
+
+    final days = _dayList(daysData['days']);
+    final day = days.isNotEmpty
+        ? days.first
+        : DayMetric(dayKey: dayKey, steps: 0);
+
+    final sleepList = (sleepData['sleep'] as List<dynamic>? ?? [])
+        .map((e) => SleepMetric.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+
+    final workouts = (workoutsData['workouts'] as List<dynamic>? ?? [])
+        .map((e) => WorkoutMetric.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+
+    final sessions = (sessionsData['activitySessions'] as List<dynamic>? ?? [])
+        .map((e) => ActivitySessionMetric.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+
+    return DayBundle(
+      day: day,
+      sleep: sleepList,
+      workouts: workouts,
+      activitySessions: sessions,
+    );
   }
 
   Future<Map<String, dynamic>> _getPlain(String path) async {
