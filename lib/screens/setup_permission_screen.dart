@@ -41,7 +41,7 @@ class _SetupPermissionScreenState extends State<SetupPermissionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HelioTopBar(showBack: true),
+      appBar: HelioTopBar(showBack: true, onBack: () => context.pop()),
       body: Padding(
         padding: const EdgeInsets.all(HelioSpacing.xl),
         child: Column(

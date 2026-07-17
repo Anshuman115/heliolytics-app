@@ -34,7 +34,7 @@ class _SetupConnectScreenState extends ConsumerState<SetupConnectScreen> {
     });
 
     return Scaffold(
-      appBar: const HelioTopBar(showBack: true),
+      appBar: HelioTopBar(showBack: true, onBack: () => context.pop()),
       body: Padding(
         padding: const EdgeInsets.all(HelioSpacing.xl),
         child: Column(
