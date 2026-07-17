@@ -13,7 +13,7 @@ import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/widgets/activity_row.dart';
 import 'package:heliolytics/models/day_metric.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/activity_history_provider.dart';
 import 'package:heliolytics/models/activity_detail_payload.dart';
 import 'package:heliolytics/providers/helio_nav_provider.dart';
 import 'package:heliolytics/widgets/error_view.dart';
@@ -43,7 +43,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen>
 
   @override
   Widget build(BuildContext context) {
-    final health = ref.watch(liveHealthProvider);
+    final health = ref.watch(activityHistoryProvider);
     final workouts = ref.watch(workoutsByDayProvider);
     final sessions = ref.watch(activitySessionsByDayProvider);
 
@@ -83,7 +83,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen>
         // Tab content
         Expanded(
           child: RefreshIndicator(
-            onRefresh: () => ref.read(liveHealthProvider.notifier).reload(),
+            onRefresh: () async => ref.invalidate(activityHistoryProvider),
             child: health.when(
               loading: () => ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -97,7 +97,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen>
                 children: [
                   ErrorView(
                     error: e,
-                    onRetry: () => ref.invalidate(liveHealthProvider),
+                    onRetry: () => ref.invalidate(activityHistoryProvider),
                   ),
                 ],
               ),
