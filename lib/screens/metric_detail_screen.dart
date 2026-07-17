@@ -12,9 +12,10 @@ import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
+import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
+import 'package:heliolytics/providers/day_bundle_provider.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/utils/hr_zones.dart';
 import 'package:heliolytics/widgets/hr_zone_bars.dart';
@@ -41,9 +42,9 @@ class MetricDetailScreen extends ConsumerWidget {
       );
     }
 
-    final health = ref.watch(liveHealthProvider);
+    final bundleAsync = ref.watch(dayBundleProvider(dayKey));
     final detail = ref.watch(detailMetricsProvider).valueOrNull ?? const DetailMetrics();
-    return health.when(
+    return bundleAsync.when(
       loading: () => Scaffold(
         appBar: HelioTopBar(showBack: true, onBack: () => context.pop()),
         body: const HelioLoading(),
@@ -55,34 +56,15 @@ class MetricDetailScreen extends ConsumerWidget {
           title: 'Failed to load',
           message: e.toString(),
           actionLabel: 'Retry',
-          onAction: () => ref.invalidate(liveHealthProvider),
+          onAction: () => ref.invalidate(dayBundleProvider(dayKey)),
         ),
       ),
-      data: (snap) => _loaded(context, def, snap, detail),
+      data: (bundle) => _loaded(context, def, bundle, detail),
     );
   }
 
-  Widget _loaded(BuildContext context, MetricDef def, CloudMetricsSnapshot? snap,
-      DetailMetrics detail) {
-    DayMetric? day;
-    for (final d in snap?.days ?? const <DayMetric>[]) {
-      if (d.dayKey == dayKey) {
-        day = d;
-        break;
-      }
-    }
-
-    if (snap == null || day == null) {
-      return Scaffold(
-        appBar: HelioTopBar(showBack: true, onBack: () => context.pop()),
-        body: const HelioEmptyState(
-          icon: Icons.calendar_today_outlined,
-          title: 'Day not found',
-          message: 'No metrics for this date. Try syncing your strap.',
-        ),
-      );
-    }
-
+  Widget _loaded(BuildContext context, MetricDef def, DayBundle bundle, DetailMetrics detail) {
+    final day = bundle.day;
     return Scaffold(
       appBar: HelioTopBar(
         showBack: true,
@@ -95,23 +77,19 @@ class MetricDetailScreen extends ConsumerWidget {
           if (def.id != 'continuous_hr') _hero(def, day),
           if (def.id == 'readiness' && day.readiness == null) ...[
             const SizedBox(height: HelioSpacing.lg),
-            HelioInsightCard(
-              message: _readinessHint(snap),
+            const HelioInsightCard(
+              message: 'Your recovery score comes from your strap when available, '
+                  'otherwise it is calculated from overnight HRV, resting heart rate, '
+                  'sleep, and breathing rate vs your baseline. It appears after about '
+                  '3 nights and sharpens over your first two weeks of wear.',
               icon: Icons.info_outline,
             ),
           ],
           const SizedBox(height: HelioSpacing.lg),
-          ..._body(def, snap, day, detail),
+          ..._body(def, bundle, day, detail),
         ],
       ),
     );
-  }
-
-  String _readinessHint(CloudMetricsSnapshot snap) {
-    return 'Your recovery score comes from your strap when available, otherwise '
-        'it is calculated from overnight HRV, resting heart rate, sleep, and '
-        'breathing rate vs your baseline. It appears after about 3 nights and '
-        'sharpens over your first two weeks of wear.';
   }
 
   Widget _hero(MetricDef def, DayMetric day) {
@@ -146,10 +124,9 @@ class MetricDetailScreen extends ConsumerWidget {
     };
   }
 
-  List<Widget> _body(MetricDef def, CloudMetricsSnapshot snap, DayMetric day,
-      DetailMetrics detail) {
+  List<Widget> _body(MetricDef def, DayBundle bundle, DayMetric day, DetailMetrics detail) {
     if (def.id == 'sleep') {
-      return [HelioSurfaceCard(child: SleepMetricBody(snap: snap, day: day))];
+      return [HelioSurfaceCard(child: SleepMetricBody(bundle: bundle))];
     }
     if (def.id == 'continuous_hr') return _continuousHrBody(detail, day);
     if (def.id == 'temperature') return _tempBody(detail);
