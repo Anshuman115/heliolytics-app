@@ -3,6 +3,7 @@ import 'package:heliolytics/services/config/api_config_storage.dart';
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/services/network/heliolytics_token.dart';
 import 'package:heliolytics/models/day_bundle.dart';
+import 'package:heliolytics/models/daily_health_scores.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/health_sample.dart';
 import 'package:heliolytics/models/hr_sample.dart';
@@ -196,6 +197,12 @@ class MetricsApiClient {
       workouts: workouts,
       activitySessions: sessions,
     );
+  }
+
+  Future<DailyHealthScores> fetchDailyHealthScores(String dayKey) async {
+    final data = await _getForDay('/api/v1/daily-health-scores', dayKey);
+    if (data.isEmpty) return DailyHealthScores.empty(dayKey);
+    return DailyHealthScores.fromJson({...data, 'dayKey': dayKey});
   }
 
   Future<Map<String, dynamic>> _getPlain(String path) async {
