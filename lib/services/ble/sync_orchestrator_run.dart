@@ -22,6 +22,7 @@ Future<void> runFullSync({
   required List<TypeCodeResult> results,
   required void Function(SyncPayload?) setPayload,
   required StateSink emit,
+  int? userBackfillDays,
 }) async {
   final band = ref.read(bandSessionProvider.notifier);
   final blocked = band.tryAcquire(BandSessionOp.sync);
@@ -66,7 +67,7 @@ Future<void> runFullSync({
       return;
     }
 
-    final plan = await resolveSyncWindow(ref);
+    final plan = await resolveSyncWindow(ref, userBackfillDays: userBackfillDays);
     for (final line in plan.logLines) {
       sessionLog.log(line);
     }

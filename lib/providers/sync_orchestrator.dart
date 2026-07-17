@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/models/session_state.dart';
+import 'package:heliolytics/providers/backfill_days_provider.dart';
 import 'package:heliolytics/services/ble/sync_orchestrator_actions.dart';
 import 'package:heliolytics/services/ble/sync_orchestrator_run.dart';
 import 'package:heliolytics/services/ble/sync_session_log.dart';
@@ -129,6 +130,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       _emit(state.copyWith(logs: _sessionLog.logs));
       return;
     }
+    final userBackfillDays = ref.read(backfillDaysProvider);
     await runFullSync(
       ref: ref,
       auth: _authStorage,
@@ -139,7 +141,11 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       results: _results,
       setPayload: (p) => _lastPayload = p,
       emit: _emit,
+      userBackfillDays: userBackfillDays,
     );
+    if (userBackfillDays != null) {
+      ref.read(backfillDaysProvider.notifier).state = null;
+    }
   }
 }
 

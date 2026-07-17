@@ -9,6 +9,7 @@ class SyncWindow {
     SyncCoverage? coverage,
     bool coverageFailed = false,
     bool apiConfigured = true,
+    int? userBackfillDays,
     DateTime? now,
   }) {
     final clock = now ?? DateTime.now();
@@ -28,9 +29,11 @@ class SyncWindow {
       return _fromDataThrough(coverage.dataThrough!, clock);
     }
     if (!coverage.hasData) {
+      final days = userBackfillDays ?? initialSyncBackfillDays;
       return _backfillAll(
         clock,
-        'Fetch: backend empty — first sync last $initialSyncBackfillDays days',
+        'Fetch: backend empty — first sync last $days days',
+        days: days,
       );
     }
     return _backfillAll(
@@ -77,9 +80,9 @@ class SyncWindow {
     );
   }
 
-  static SyncWindowPlan _backfillAll(DateTime clock, String headline) {
+  static SyncWindowPlan _backfillAll(DateTime clock, String headline, {int? days}) {
     final since =
-        clock.subtract(const Duration(days: initialSyncBackfillDays));
+        clock.subtract(Duration(days: days ?? initialSyncBackfillDays));
     final perType = _uniformSince(since);
     return SyncWindowPlan(
       anchorSince: since,
