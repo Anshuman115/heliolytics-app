@@ -8,6 +8,7 @@ import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/providers/live_hr_provider.dart';
+import 'package:heliolytics/utils/health_monitor_readings.dart';
 import 'package:heliolytics/widgets/error_view.dart';
 import 'package:heliolytics/widgets/health/health_metric_grid.dart';
 import 'package:heliolytics/widgets/health/live_hr_button.dart';
@@ -77,8 +78,7 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
         HeartRateDaySection(day: day, dayKey: widget.dayKey),
         const SizedBox(height: HelioSpacing.xl),
         HealthMetricGrid(
-          day: day,
-          allDays: days,
+          readings: buildHealthReadings(day: day, allDays: days),
           dayKey: widget.dayKey,
         ),
         const SizedBox(height: HelioSpacing.lg),

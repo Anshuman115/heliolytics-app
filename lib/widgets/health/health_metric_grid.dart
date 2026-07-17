@@ -2,28 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
-import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/utils/health_monitor_readings.dart';
 import 'package:heliolytics/widgets/health/health_metric_card.dart';
 
-/// Two-column grid of the day's readings, each judged against the user's own
-/// baseline. A trailing odd card keeps its column rather than stretching.
+/// Two-column grid of readings, each judged against the user's own baseline
+/// where applicable. A trailing odd card keeps its column rather than stretching.
 class HealthMetricGrid extends ConsumerWidget {
-  final DayMetric day;
-  final List<DayMetric> allDays;
+  final List<HealthReading> readings;
   final String dayKey;
 
   const HealthMetricGrid({
     super.key,
-    required this.day,
-    required this.allDays,
+    required this.readings,
     required this.dayKey,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final readings = buildHealthReadings(day: day, allDays: allDays);
-
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
