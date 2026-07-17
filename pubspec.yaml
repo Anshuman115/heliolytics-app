@@ -43,8 +43,9 @@ dependencies:
   # Auth (secure storage)
   flutter_secure_storage: ^9.0.0
 
-  # Local storage (secure credentials only — no Hive boxes yet)
-  # removed hive_flutter — unused
+  # Local cache for parsed backend responses (non-sensitive display data —
+  # see CLAUDE.md "on-device persistence" note)
+  shared_preferences: ^2.3.0
 
   # Networking
   dio: ^5.7.0
