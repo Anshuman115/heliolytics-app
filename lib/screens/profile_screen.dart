@@ -60,6 +60,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (mounted) setState(() => _saving = false);
   }
 
+  List<Widget> _formFields() {
+    return [
+      HelioTextField(controller: _name, label: 'Name', hint: 'Jane Doe'),
+      const SizedBox(height: HelioSpacing.md),
+      HelioTextField(
+        controller: _age,
+        label: 'Age',
+        hint: '28',
+        keyboardType: TextInputType.number,
+      ),
+      const SizedBox(height: HelioSpacing.md),
+      HelioTextField(
+        controller: _height,
+        label: 'Height (cm)',
+        hint: '170',
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      ),
+      const SizedBox(height: HelioSpacing.md),
+      HelioTextField(
+        controller: _weight,
+        label: 'Weight (kg)',
+        hint: '65',
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     if (ref.watch(onboardingProvider).onboardingComplete && !_saving) {
@@ -76,28 +103,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Text(_error!, style: HelioTypography.bodyMuted),
               const SizedBox(height: HelioSpacing.md),
             ],
-            HelioTextField(controller: _name, label: 'Name', hint: 'Jane Doe'),
-            const SizedBox(height: HelioSpacing.md),
-            HelioTextField(
-              controller: _age,
-              label: 'Age',
-              hint: '28',
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: HelioSpacing.md),
-            HelioTextField(
-              controller: _height,
-              label: 'Height (cm)',
-              hint: '170',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const SizedBox(height: HelioSpacing.md),
-            HelioTextField(
-              controller: _weight,
-              label: 'Weight (kg)',
-              hint: '65',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            ),
+            ..._formFields(),
             const SizedBox(height: HelioSpacing.xl),
             HelioPrimaryButton(label: 'Continue', loading: _saving, onPressed: _save),
           ],
