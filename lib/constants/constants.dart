@@ -144,6 +144,8 @@ const String appDocsSubdir = 'heliolytics';
 const String authKeyStorageKey = 'heliolytics.auth_key';
 const String strapMacStorageKey = 'heliolytics.strap_mac';
 const String strapBatteryStorageKey = 'heliolytics.strap_battery';
+const String userProfileStorageKey = 'heliolytics.user_profile';
+const String onboardingCompleteStorageKey = 'heliolytics.onboarding_complete';
 
 /// Shown when strap sync is blocked until Cloud API is configured.
 const String cloudApiRequiredBeforeSyncMessage =
