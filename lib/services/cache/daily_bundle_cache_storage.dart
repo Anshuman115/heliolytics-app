@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/models/day_bundle.dart';
+import 'package:heliolytics/models/day_metric.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DailyBundleCacheStorage {
@@ -33,6 +34,23 @@ class DailyBundleCacheStorage {
     }
     map[dayKey] = bundle.toJson();
     await prefs.setString(dailyBundleCacheKey, jsonEncode(map));
+  }
+
+  /// All cached days' DayMetric only (no sleep/workouts) — used to seed
+  /// baseline assessments without a dedicated bulk fetch. Grows naturally
+  /// as the user visits more days; empty on a fresh install.
+  Future<List<DayMetric>> readAllCachedDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(dailyBundleCacheKey);
+    if (raw == null) return const [];
+    try {
+      final map = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      return map.values
+          .map((e) => DayBundle.fromJson(Map<String, dynamic>.from(e as Map)).day)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
   }
 }
 
