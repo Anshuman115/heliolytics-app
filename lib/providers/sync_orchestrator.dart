@@ -143,7 +143,7 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
       emit: _emit,
       userBackfillDays: userBackfillDays,
     );
-    if (userBackfillDays != null) {
+    if (userBackfillDays != null && state.state != SessionState.error) {
       ref.read(backfillDaysProvider.notifier).state = null;
     }
   }
