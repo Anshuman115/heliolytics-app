@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:heliolytics/models/band_session_state.dart';
 import 'package:heliolytics/models/session_state.dart';
+import 'package:heliolytics/providers/band_alerts_provider.dart';
 import 'package:heliolytics/providers/sync_orchestrator.dart';
 import 'package:heliolytics/utils/error_messages.dart';
 import 'package:heliolytics/design_system/components/helio_cloud_banner.dart';
@@ -13,11 +15,6 @@ import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/sync_status_provider.dart';
 import 'package:heliolytics/widgets/settings/device_hero_card.dart';
-import 'package:heliolytics/widgets/settings/raw_dump_card.dart';
-import 'package:heliolytics/widgets/settings/band_alerts_card.dart';
-import 'package:heliolytics/widgets/settings/test_vibration_card.dart';
-import 'package:heliolytics/widgets/settings/test_vibration_pattern_card.dart';
-import 'package:heliolytics/widgets/settings/settings_about_section.dart';
 import 'package:heliolytics/widgets/settings/settings_tile.dart';
 
 class SettingsHubScreen extends ConsumerWidget {
@@ -28,6 +25,7 @@ class SettingsHubScreen extends ConsumerWidget {
     final snap = ref.watch(syncOrchestratorProvider);
     final band = ref.watch(bandSessionProvider);
     final apiReady = ref.watch(apiConfiguredProvider);
+    final alerts = ref.watch(bandAlertsProvider);
     final status = ref.watch(syncStatusProvider).valueOrNull;
     final busy = _isBusy(snap.state);
     final battery = status?.batteryPercent;
@@ -62,43 +60,71 @@ class SettingsHubScreen extends ConsumerWidget {
                 onScan: () => context.push('/setup/bluetooth'),
               ),
               const SizedBox(height: HelioSpacing.xl),
-              const SettingsSectionLabel('CLOUD'),
-              const SizedBox(height: HelioSpacing.sm),
               HelioSurfaceCard(
                 padding: EdgeInsets.zero,
-                child: SettingsTile(
-                  icon: Icons.cloud_outlined,
-                  iconColor: HelioColors.strainBlue,
-                  title: 'API Configuration',
-                  subtitle: apiReady.maybeWhen(
-                    data: (ok) => ok ? 'Connected' : 'Required before first sync',
-                    orElse: () => 'Checking…',
-                  ),
-                  statusDot: apiReady.maybeWhen(data: (ok) => ok, orElse: () => null),
-                  onTap: () => context.push('/settings/api'),
+                child: Column(
+                  children: [
+                    SettingsTile(
+                      icon: Icons.cloud_outlined,
+                      iconColor: HelioColors.strainBlue,
+                      title: 'Cloud API',
+                      subtitle: apiReady.maybeWhen(
+                        data: (ok) => ok ? 'Connected' : 'Required before first sync',
+                        orElse: () => 'Checking…',
+                      ),
+                      statusDot: apiReady.maybeWhen(data: (ok) => ok, orElse: () => null),
+                      onTap: () => context.push('/settings/api'),
+                    ),
+                    const Divider(height: 1),
+                    SettingsTile(
+                      icon: Icons.watch_outlined,
+                      iconColor: HelioColors.sleepBlue,
+                      title: 'Band Alerts',
+                      subtitle: _bandAlertsSubtitle(alerts.config.enabled, alerts.isReady, band),
+                      statusDot: alerts.config.enabled,
+                      onTap: () => context.push('/settings/band-alerts'),
+                    ),
+                    const Divider(height: 1),
+                    SettingsTile(
+                      icon: Icons.build_outlined,
+                      iconColor: HelioColors.textMuted,
+                      title: 'Diagnostics',
+                      subtitle: 'Vibration test, raw strap dump',
+                      onTap: () => context.push('/settings/diagnostics'),
+                    ),
+                    const Divider(height: 1),
+                    SettingsTile(
+                      icon: Icons.article_outlined,
+                      iconColor: HelioColors.textMuted,
+                      title: 'App Logs',
+                      subtitle: 'View persisted app logs',
+                      onTap: () => context.push('/settings/logs'),
+                    ),
+                    const Divider(height: 1),
+                    SettingsTile(
+                      icon: Icons.info_outline,
+                      iconColor: HelioColors.textMuted,
+                      title: 'About',
+                      subtitle: 'Build info, version',
+                      onTap: () => context.push('/settings/about'),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: HelioSpacing.xl),
-              const SettingsSectionLabel('BAND ALERTS'),
-              const SizedBox(height: HelioSpacing.sm),
-              const BandAlertsCard(),
-              const SizedBox(height: HelioSpacing.xl),
-              const SettingsSectionLabel('DIAGNOSTICS'),
-              const SizedBox(height: HelioSpacing.sm),
-              const TestVibrationCard(),
-              const SizedBox(height: HelioSpacing.md),
-              const TestVibrationPatternCard(),
-              const SizedBox(height: HelioSpacing.md),
-              const RawDumpCard(),
-              const SizedBox(height: HelioSpacing.xl),
-              const SettingsSectionLabel('ABOUT'),
-              const SizedBox(height: HelioSpacing.sm),
-              SettingsAboutSection(syncLogs: snap.logs),
             ],
           ),
         ),
       ],
     );
+  }
+
+  String _bandAlertsSubtitle(bool enabled, bool ready, BandSessionSnapshot band) {
+    if (enabled) {
+      if (band.isConnected) return 'Forwarding active — strap connected.';
+      if (band.isConnecting) return 'Connecting to strap…';
+      return band.errorMessage ?? 'Strap disconnected';
+    }
+    return ready ? 'Off' : 'Setup required';
   }
 
   bool _isBusy(SessionState state) =>
