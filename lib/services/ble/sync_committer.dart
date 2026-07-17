@@ -5,6 +5,7 @@ import 'package:heliolytics/models/sync_payload.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/day_bundle_provider.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
+import 'package:heliolytics/providers/sync_status_provider.dart';
 import 'package:heliolytics/utils/day_key.dart';
 
 typedef UploadFn = Future<void> Function(SyncPayload payload);
@@ -31,6 +32,7 @@ class SyncCommitter {
       onHealthRefresh: () {
         ref.invalidate(detailMetricsProvider); // refresh lazy series/HR/temp too
         ref.invalidate(dayBundleProvider(todayDayKey())); // today's entry only — final days are immutable
+        ref.invalidate(syncStatusProvider); // "last synced" label reads this — keep it fresh after a commit
       },
       log: log,
     );
