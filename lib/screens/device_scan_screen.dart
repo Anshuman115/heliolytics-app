@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:heliolytics/providers/sync_orchestrator.dart';
 import 'package:heliolytics/utils/error_messages.dart';
 import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
+import 'package:heliolytics/design_system/components/helio_wizard_step_header.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
@@ -22,10 +24,8 @@ class DeviceScanScreen extends ConsumerStatefulWidget {
 class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
   final Map<String, _Device> _devices = {};
   bool _scanning = false;
-  bool _connecting = false;
   String? _error;
   StreamSubscription<List<ScanResult>>? _sub;
-  bool _autoTried = false;
 
   @override
   void initState() {
@@ -52,7 +52,6 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
       _devices.clear();
       _scanning = true;
       _error = null;
-      _autoTried = false;
     });
 
     try {
@@ -84,8 +83,6 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
           .where((s) => !s)
           .first
           .timeout(const Duration(seconds: 20));
-
-      if (mounted) await _tryAutoConnect();
     } catch (e) {
       setState(() => _error = friendlyError(e));
     } finally {
@@ -93,31 +90,12 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
     }
   }
 
-  Future<void> _tryAutoConnect() async {
-    if (_autoTried || _connecting) return;
-    final helio = _devices.values.where((d) => _isHelioDevice(d.name)).toList()
-      ..sort((a, b) => b.rssi.compareTo(a.rssi));
-    if (helio.isEmpty) return;
-    _autoTried = true;
-    await _pick(helio.first);
-  }
-
   Future<void> _pick(_Device device) async {
     await FlutterBluePlus.stopScan();
     await _sub?.cancel();
     if (!mounted) return;
-    setState(() {
-      _connecting = true;
-      _error = null;
-    });
-    try {
-      await ref.read(syncOrchestratorProvider.notifier).saveMacAndConnect(device.mac);
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      if (mounted) setState(() => _error = friendlyError(e));
-    } finally {
-      if (mounted) setState(() => _connecting = false);
-    }
+    await ref.read(syncOrchestratorProvider.notifier).saveMac(device.mac);
+    if (mounted) context.push('/setup/connect');
   }
 
   @override
@@ -134,6 +112,10 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
         children: [
           Column(
             children: [
+              const Padding(
+                padding: EdgeInsets.all(HelioSpacing.lg),
+                child: HelioWizardStepHeader(step: 3, totalSteps: 5, title: 'Find your strap'),
+              ),
               if (_scanning) const LinearProgressIndicator(color: HelioColors.sleepBlue),
               if (_error != null)
                 Padding(
@@ -164,11 +146,6 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
               ),
             ],
           ),
-          if (_connecting)
-            const ColoredBox(
-              color: Color(0x88000000),
-              child: Center(child: CircularProgressIndicator(color: HelioColors.sleepBlue)),
-            ),
         ],
       ),
     );
