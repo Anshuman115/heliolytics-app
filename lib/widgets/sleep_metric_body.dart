@@ -3,23 +3,22 @@ import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
-import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
 import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/widgets/sleep_hypnogram_chart.dart';
 import 'package:heliolytics/widgets/sleep_stage_row.dart';
 
 class SleepMetricBody extends StatelessWidget {
-  const SleepMetricBody({super.key, required this.snap, required this.day});
+  const SleepMetricBody({super.key, required this.bundle});
 
-  final CloudMetricsSnapshot snap;
-  final DayMetric day;
+  final DayBundle bundle;
 
   @override
   Widget build(BuildContext context) {
-    final sleep = snap.mainSleepFor(day.dayKey);
-    final naps = snap.napsFor(day.dayKey);
+    final day = bundle.day;
+    final sleep = bundle.mainSleep;
+    final naps = bundle.naps;
 
     final deep = day.sleepDeepMins ?? sleep?.deepMins ?? 0;
     final rem = day.sleepRemMins ?? sleep?.remMins ?? 0;

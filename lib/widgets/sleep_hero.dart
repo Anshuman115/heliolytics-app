@@ -6,31 +6,24 @@ import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/widgets/sleep_performance_bars.dart';
-import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
-import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/widgets/sleep_stage_bar.dart';
 
 class SleepHero extends StatelessWidget {
-  final CloudMetricsSnapshot snap;
+  final DayBundle bundle;
   final String dayKey;
 
-  const SleepHero({super.key, required this.snap, required this.dayKey});
+  const SleepHero({super.key, required this.bundle, required this.dayKey});
 
   @override
   Widget build(BuildContext context) {
-    DayMetric? day;
-    for (final d in snap.days) {
-      if (d.dayKey == dayKey) {
-        day = d;
-        break;
-      }
-    }
-    final sleep = snap.mainSleepFor(dayKey);
-    final score = day?.sleepScore ?? sleep?.score;
-    final mins = day?.sleepMins ?? sleep?.totalMins;
-    final deep = day?.sleepDeepMins ?? sleep?.deepMins ?? 0;
-    final rem = day?.sleepRemMins ?? sleep?.remMins ?? 0;
-    final light = day?.sleepLightMins ?? sleep?.lightMins ?? 0;
+    final day = bundle.day;
+    final sleep = bundle.mainSleep;
+    final score = day.sleepScore ?? sleep?.score;
+    final mins = day.sleepMins ?? sleep?.totalMins;
+    final deep = day.sleepDeepMins ?? sleep?.deepMins ?? 0;
+    final rem = day.sleepRemMins ?? sleep?.remMins ?? 0;
+    final light = day.sleepLightMins ?? sleep?.lightMins ?? 0;
     final progress = score != null ? score / 100.0 : null;
 
     return Column(
