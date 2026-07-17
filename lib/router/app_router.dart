@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heliolytics/models/session_state.dart';
+import 'package:heliolytics/providers/onboarding_provider.dart';
 import 'package:heliolytics/providers/sync_orchestrator.dart';
 import 'package:heliolytics/screens/auth_key_screen.dart';
 import 'package:heliolytics/screens/device_scan_screen.dart';
+import 'package:heliolytics/screens/intro_screen.dart';
+import 'package:heliolytics/screens/profile_screen.dart';
 import 'package:heliolytics/screens/band_alerts_app_pattern_screen.dart';
 import 'package:heliolytics/screens/band_alerts_apps_screen.dart';
 import 'package:heliolytics/screens/band_alerts_call_pattern_screen.dart';
@@ -25,14 +28,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         (prev?.state == SessionState.noAuthKey || next.state == SessionState.noAuthKey);
     if (authChanged) refresh.value++;
   });
+  ref.listen(onboardingProvider, (prev, next) {
+    if (prev?.onboardingComplete != next.onboardingComplete) refresh.value++;
+  });
 
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
-      final snap = ref.read(syncOrchestratorProvider);
       final loc = state.matchedLocation;
+      final onboarding = ref.read(onboardingProvider);
+      if (!onboarding.onboardingComplete) {
+        if (loc == '/intro' || loc == '/profile') return null;
+        return '/intro';
+      }
+      final snap = ref.read(syncOrchestratorProvider);
       final onAuth = loc == '/auth';
       if (snap.state == SessionState.noAuthKey && !onAuth) return '/auth';
       if (snap.state != SessionState.noAuthKey && onAuth) return '/';
@@ -40,6 +51,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/auth', builder: (_, __) => const AuthKeyScreen()),
+      GoRoute(path: '/intro', builder: (_, __) => const IntroScreen()),
+      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       GoRoute(path: '/', builder: (_, __) => const HelioShell()),
       GoRoute(
         path: '/health/:dayKey',
