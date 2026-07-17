@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:heliolytics/design_system/components/helio_loading.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
-import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
-import 'package:heliolytics/models/day_metric.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/models/day_bundle.dart';
+import 'package:heliolytics/providers/day_bundle_provider.dart';
 import 'package:heliolytics/providers/live_hr_provider.dart';
+import 'package:heliolytics/services/cache/daily_bundle_cache_storage.dart';
 import 'package:heliolytics/utils/health_monitor_readings.dart';
 import 'package:heliolytics/widgets/error_view.dart';
 import 'package:heliolytics/widgets/health/health_metric_grid.dart';
@@ -37,7 +37,7 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final health = ref.watch(liveHealthProvider);
+    final bundleAsync = ref.watch(dayBundleProvider(widget.dayKey));
     final live = ref.watch(liveHrProvider);
 
     return Scaffold(
@@ -51,13 +51,13 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
             actions: [LiveHrButton(live: live)],
           ),
           Expanded(
-            child: health.when(
+            child: bundleAsync.when(
               loading: () => const HelioLoading(),
               error: (e, _) => ErrorView(
                 error: e,
-                onRetry: () => ref.invalidate(liveHealthProvider),
+                onRetry: () => ref.invalidate(dayBundleProvider(widget.dayKey)),
               ),
-              data: (snap) => _body(snap),
+              data: (bundle) => _body(ref, bundle),
             ),
           ),
         ],
@@ -65,31 +65,24 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
     );
   }
 
-  Widget _body(CloudMetricsSnapshot? snap) {
-    final days = snap?.days ?? const <DayMetric>[];
-    final day = _dayFor(days, widget.dayKey);
-    if (day == null) {
-      return const Center(child: Text('No data for this day'));
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(HelioSpacing.lg),
-      children: [
-        HeartRateDaySection(day: day, dayKey: widget.dayKey),
-        const SizedBox(height: HelioSpacing.xl),
-        HealthMetricGrid(
-          readings: buildHealthReadings(day: day, allDays: days),
-          dayKey: widget.dayKey,
-        ),
-        const SizedBox(height: HelioSpacing.lg),
-      ],
+  Widget _body(WidgetRef ref, DayBundle bundle) {
+    return FutureBuilder(
+      future: ref.read(dailyBundleCacheStorageProvider).readAllCachedDays(),
+      builder: (context, snap) {
+        final allDays = snap.data ?? const [];
+        return ListView(
+          padding: const EdgeInsets.all(HelioSpacing.lg),
+          children: [
+            HeartRateDaySection(day: bundle.day, dayKey: widget.dayKey),
+            const SizedBox(height: HelioSpacing.xl),
+            HealthMetricGrid(
+              readings: buildHealthReadings(day: bundle.day, allDays: allDays),
+              dayKey: widget.dayKey,
+            ),
+            const SizedBox(height: HelioSpacing.lg),
+          ],
+        );
+      },
     );
-  }
-
-  DayMetric? _dayFor(List<DayMetric> days, String dayKey) {
-    for (final d in days) {
-      if (d.dayKey == dayKey) return d;
-    }
-    return null;
   }
 }
