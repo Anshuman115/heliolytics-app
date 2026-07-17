@@ -3,7 +3,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
+import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/health_sample.dart';
 import 'package:heliolytics/utils/stress_zones.dart';
 import 'package:heliolytics/widgets/stress/stress_day_chart.dart';
@@ -14,13 +14,13 @@ import 'package:heliolytics/widgets/stress/stress_zone_split.dart';
 /// the time-in-band breakdown.
 class StressDayBody extends StatelessWidget {
   final List<HealthSample> samples;
-  final CloudMetricsSnapshot snapshot;
+  final List<SleepMetric> sleepEntries;
   final String dayKey;
 
   const StressDayBody({
     super.key,
     required this.samples,
-    required this.snapshot,
+    required this.sleepEntries,
     required this.dayKey,
   });
 
@@ -57,12 +57,11 @@ class StressDayBody extends StatelessWidget {
   /// Sleep windows for this day, shaded behind the trace.
   List<StressSpan> _sleepSpans() {
     return [
-      for (final s in snapshot.sleep)
-        if (s.dayKey == dayKey)
-          StressSpan(
-            start: s.startedAt,
-            end: s.startedAt.add(Duration(minutes: s.totalMins)),
-          ),
+      for (final s in sleepEntries)
+        StressSpan(
+          start: s.startedAt,
+          end: s.startedAt.add(Duration(minutes: s.totalMins)),
+        ),
     ];
   }
 
