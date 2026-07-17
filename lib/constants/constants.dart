@@ -320,3 +320,11 @@ const int napMinStartHourIst = 11;
 /// Zone i spans [hrZoneLowerFractions[i], next) of max HR.
 const List<double> hrZoneLowerFractions = [0.0, 0.5, 0.6, 0.7, 0.8, 0.9];
 const int defaultMaxHrFallback = 190;
+
+/// Log file rotation: max size per file before rolling to the next slot.
+const int logFileMaxBytes = 1024 * 1024; // 1 MB
+/// Number of rotated log files kept on disk (app-0.jsonl .. app-{N-1}.jsonl).
+const int logFileCount = 5;
+const String logFileDirName = 'logs';
+const String logFilePrefix = 'app-';
+const String logFileExtension = '.jsonl';
