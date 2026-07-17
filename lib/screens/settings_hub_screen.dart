@@ -11,7 +11,7 @@ import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/sync_status_provider.dart';
 import 'package:heliolytics/widgets/settings/device_hero_card.dart';
 import 'package:heliolytics/widgets/settings/raw_dump_card.dart';
 import 'package:heliolytics/widgets/settings/band_alerts_card.dart';
@@ -28,9 +28,9 @@ class SettingsHubScreen extends ConsumerWidget {
     final snap = ref.watch(syncOrchestratorProvider);
     final band = ref.watch(bandSessionProvider);
     final apiReady = ref.watch(apiConfiguredProvider);
-    final health = ref.watch(liveHealthProvider);
+    final status = ref.watch(syncStatusProvider).valueOrNull;
     final busy = _isBusy(snap.state);
-    final battery = health.valueOrNull?.batteryPercent;
+    final battery = status?.batteryPercent;
 
     return Column(
       children: [
@@ -55,7 +55,7 @@ class SettingsHubScreen extends ConsumerWidget {
               DeviceHeroCard(
                 state: snap.state,
                 battery: battery,
-                lastSynced: health.valueOrNull?.lastSyncedAt,
+                lastSynced: status?.lastSyncedAt,
                 busy: busy,
                 onSync: () => _sync(context, ref),
                 onUpload: () => _upload(ref, context),

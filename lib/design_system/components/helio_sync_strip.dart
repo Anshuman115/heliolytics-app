@@ -6,7 +6,7 @@ import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/sync_status_provider.dart';
 
 class HelioSyncStrip extends ConsumerWidget {
   const HelioSyncStrip({super.key});
@@ -14,7 +14,7 @@ class HelioSyncStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snap = ref.watch(syncOrchestratorProvider);
-    final health = ref.watch(liveHealthProvider).valueOrNull;
+    final status = ref.watch(syncStatusProvider).valueOrNull;
     final busy = snap.state == SessionState.fetching ||
         snap.state == SessionState.connecting ||
         snap.state == SessionState.authenticating ||
@@ -31,8 +31,8 @@ class HelioSyncStrip extends ConsumerWidget {
       _ => HelioColors.textSecondary,
     };
 
-    final batt = health?.batteryPercent ?? snap.lastSession?.batteryPercent;
-    final suffix = busy ? null : _idleSuffix(health?.lastSyncedAt, batt);
+    final batt = status?.batteryPercent ?? snap.lastSession?.batteryPercent;
+    final suffix = busy ? null : _idleSuffix(status?.lastSyncedAt, batt);
 
     return Material(
       color: color.withValues(alpha: 0.08),
