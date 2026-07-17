@@ -147,6 +147,7 @@ const String strapBatteryStorageKey = 'heliolytics.strap_battery';
 const String userProfileStorageKey = 'heliolytics.user_profile';
 const String onboardingCompleteStorageKey = 'heliolytics.onboarding_complete';
 const String dailyBundleCacheKey = 'heliolytics.daily_bundle_cache';
+const String dailyHealthScoresCacheKey = 'heliolytics.daily_health_scores_cache';
 
 /// Shown when strap sync is blocked until Cloud API is configured.
 const String cloudApiRequiredBeforeSyncMessage =
