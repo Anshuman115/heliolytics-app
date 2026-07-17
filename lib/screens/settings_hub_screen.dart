@@ -59,7 +59,7 @@ class SettingsHubScreen extends ConsumerWidget {
                 busy: busy,
                 onSync: () => _sync(context, ref),
                 onUpload: () => _upload(ref, context),
-                onScan: () => context.push('/scan'),
+                onScan: () => context.push('/setup/bluetooth'),
               ),
               const SizedBox(height: HelioSpacing.xl),
               const SettingsSectionLabel('CLOUD'),
@@ -109,7 +109,7 @@ class SettingsHubScreen extends ConsumerWidget {
   Future<void> _sync(BuildContext context, WidgetRef ref) async {
     if (!await ref.read(syncOrchestratorProvider.notifier).hasSavedMac()) {
       if (!context.mounted) return;
-      await context.push('/scan');
+      await context.push('/setup/bluetooth');
       return;
     }
     await ref.read(syncOrchestratorProvider.notifier).connect();

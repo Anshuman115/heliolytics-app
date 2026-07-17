@@ -8,6 +8,10 @@ import 'package:heliolytics/screens/auth_key_screen.dart';
 import 'package:heliolytics/screens/device_scan_screen.dart';
 import 'package:heliolytics/screens/intro_screen.dart';
 import 'package:heliolytics/screens/profile_screen.dart';
+import 'package:heliolytics/screens/setup_bluetooth_screen.dart';
+import 'package:heliolytics/screens/setup_permission_screen.dart';
+import 'package:heliolytics/screens/setup_connect_screen.dart';
+import 'package:heliolytics/screens/setup_backfill_days_screen.dart';
 import 'package:heliolytics/screens/band_alerts_app_pattern_screen.dart';
 import 'package:heliolytics/screens/band_alerts_apps_screen.dart';
 import 'package:heliolytics/screens/band_alerts_call_pattern_screen.dart';
@@ -92,7 +96,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return const BandAlertsAppsScreen();
         },
       ),
-      GoRoute(path: '/scan', builder: (_, __) => const DeviceScanScreen()),
+      GoRoute(path: '/setup/bluetooth', builder: (_, __) => const SetupBluetoothScreen()),
+      GoRoute(path: '/setup/permission', builder: (_, __) => const SetupPermissionScreen()),
+      GoRoute(path: '/setup/scan', builder: (_, __) => const DeviceScanScreen()),
+      GoRoute(path: '/setup/connect', builder: (_, __) => const SetupConnectScreen()),
+      GoRoute(path: '/setup/backfill-days', builder: (_, __) => const SetupBackfillDaysScreen()),
     ],
   );
 });
