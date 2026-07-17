@@ -2,28 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:heliolytics/app.dart';
+import 'package:heliolytics/router/app_router.dart';
+import 'package:heliolytics/design_system/components/helio_backdrop.dart';
+import 'package:heliolytics/design_system/theme/helio_theme.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
-import 'package:heliolytics/services/ble/auth/auth_key_store.dart';
+import 'package:heliolytics/services/ble/auth/secure_key_store.dart';
 import 'package:heliolytics/services/config/api_config_storage.dart';
 import 'package:heliolytics/constants/constants.dart';
-
-class _SecureStore implements AuthKeyStore {
-  final _s = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
-
-  @override
-  Future<String?> read(String key) => _s.read(key: key);
-
-  @override
-  Future<void> write(String key, String value) => _s.write(key: key, value: value);
-
-  @override
-  Future<void> delete(String key) => _s.delete(key: key);
-}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +19,7 @@ Future<void> main() async {
       systemNavigationBarColor: Color(0xFF070A10),
     ),
   );
-  final store = _SecureStore();
+  final store = SecureKeyStore();
 
   //To get signing key and api url from env vars
   final seedApiConfig = kDebugMode ||
@@ -64,5 +50,24 @@ Future<void> main() async {
       child: const HeliolyticsApp(),
     ),
   );
+}
+
+class HeliolyticsApp extends ConsumerWidget {
+  const HeliolyticsApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
+    return MaterialApp.router(
+      title: 'Heliolytics',
+      theme: buildHelioTheme(),
+      themeMode: ThemeMode.dark,
+      routerConfig: router,
+      // One ambient gradient behind every route; scaffolds are
+      // transparent so it shows through consistently.
+      builder: (context, child) =>
+          HelioBackdrop(child: child ?? const SizedBox.shrink()),
+    );
+  }
 }
 
