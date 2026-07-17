@@ -16,6 +16,7 @@ import 'package:heliolytics/screens/band_alerts_app_pattern_screen.dart';
 import 'package:heliolytics/screens/band_alerts_apps_screen.dart';
 import 'package:heliolytics/screens/band_alerts_call_pattern_screen.dart';
 import 'package:heliolytics/screens/api_settings_screen.dart';
+import 'package:heliolytics/screens/app_logs_screen.dart';
 import 'package:heliolytics/screens/activity_detail_screen.dart';
 import 'package:heliolytics/screens/health_monitor_screen.dart';
 import 'package:heliolytics/screens/stress_monitor_screen.dart';
@@ -78,6 +79,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => ActivityDetailScreen(extra: s.extra),
       ),
       GoRoute(path: '/settings/api', builder: (_, __) => const ApiSettingsScreen()),
+      GoRoute(path: '/settings/logs', builder: (_, __) => const AppLogsScreen()),
       GoRoute(
         path: '/settings/band-alerts/apps',
         builder: (_, __) => const BandAlertsAppsScreen(),

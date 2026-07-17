@@ -67,6 +67,7 @@ dependencies:
   intl: ^0.19.0
   talker: ^5.1.17
   talker_dio_logger: ^5.1.17
+  talker_flutter: ^5.0.0-dev.7
 
 dev_dependencies:
   flutter_test:
