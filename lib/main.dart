@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/router/app_router.dart';
 import 'package:heliolytics/design_system/components/helio_backdrop.dart';
 import 'package:heliolytics/design_system/theme/helio_theme.dart';
+import 'package:heliolytics/providers/bluetooth_prompt_provider.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/auth/secure_key_store.dart';
 import 'package:heliolytics/services/config/api_config_storage.dart';
@@ -58,6 +59,24 @@ class HeliolyticsApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    ref.listen<bool>(bluetoothPromptProvider, (prev, next) {
+      if (next != true) return;
+      final ctx = router.routerDelegate.navigatorKey.currentContext;
+      ref.read(bluetoothPromptProvider.notifier).state = false;
+      if (ctx == null) return;
+      showDialog(
+        context: ctx,
+        builder: (_) => AlertDialog(
+          title: const Text('Bluetooth is off'),
+          content: const Text('Turn on Bluetooth to sync with your strap.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK')),
+          ],
+        ),
+      );
+    });
     return MaterialApp.router(
       title: 'Heliolytics',
       theme: buildHelioTheme(),
