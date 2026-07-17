@@ -16,7 +16,7 @@ class AppLogger {
   AppLogger._() {
     _talker = Talker(
       settings: TalkerSettings(enabled: true, useConsoleLogs: !kReleaseMode),
-      observer: _PersistingObserver(_store),
+      observer: _PersistingObserver(_store, () => _replaying),
     );
     _replayPersistedLogs();
     FlutterError.onError = (details) {
@@ -40,19 +40,29 @@ class AppLogger {
   final LogFileStore _store = LogFileStore();
   late final Talker _talker;
 
+  /// Set while replaying persisted logs at startup so [_PersistingObserver]
+  /// doesn't write them straight back to disk — otherwise every launch
+  /// would re-persist its entire history, multiplying on-disk log volume.
+  bool _replaying = false;
+
   /// Exposed for the App Logs settings screen (TalkerScreen needs it).
   Talker get talker => _talker;
 
   Future<void> _replayPersistedLogs() async {
     final lines = await _store.readAllLines();
-    for (final line in lines) {
-      try {
-        final j = jsonDecode(line) as Map<String, dynamic>;
-        final ts = DateTime.tryParse(j['ts'] as String? ?? '');
-        _talker.logCustom(TalkerLog(j['message'] as String? ?? '', time: ts));
-      } catch (_) {
-        // Skip malformed lines — best-effort replay.
+    _replaying = true;
+    try {
+      for (final line in lines) {
+        try {
+          final j = jsonDecode(line) as Map<String, dynamic>;
+          final ts = DateTime.tryParse(j['ts'] as String? ?? '');
+          _talker.logCustom(TalkerLog(j['message'] as String? ?? '', time: ts));
+        } catch (_) {
+          // Skip malformed lines — best-effort replay.
+        }
       }
+    } finally {
+      _replaying = false;
     }
   }
 
@@ -93,12 +103,16 @@ class AppLogger {
 }
 
 /// Writes every Talker event to disk as one JSON-line, best-effort.
+/// Skips writes while [isReplaying] is true, so replaying persisted
+/// history at startup doesn't re-persist that same history right back.
 class _PersistingObserver extends TalkerObserver {
   final LogFileStore store;
-  _PersistingObserver(this.store);
+  final bool Function() isReplaying;
+  _PersistingObserver(this.store, this.isReplaying);
 
   @override
   void onLog(TalkerData log) {
+    if (isReplaying()) return;
     store.append(jsonEncode({
       'ts': log.time.toIso8601String(),
       'level': log.logLevel?.name ?? 'info',
