@@ -139,7 +139,7 @@ class _DeviceScanScreenState extends ConsumerState<DeviceScanScreen> {
               Padding(
                 padding: const EdgeInsets.all(HelioSpacing.lg),
                 child: Text(
-                  'Helio, Amazfit, or Mi Band devices auto-connect after scan.',
+                  'Only Amazfit Helio strap devices are supported here.',
                   textAlign: TextAlign.center,
                   style: HelioTypography.bodyMuted,
                 ),
