@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:heliolytics/constants/constants.dart';
+import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/daily_health_scores.dart';
 import 'package:heliolytics/utils/metric_assessment.dart';
 import 'package:heliolytics/utils/metric_baseline.dart';
 
@@ -120,6 +122,116 @@ List<HealthReading> buildHealthReadings({
       unit: '°C',
       assessment: assessDeviation(tempDev, band: healthSkinTempBandC),
       metricId: 'temperature',
+    ),
+  ];
+}
+
+/// Builds the 11-tile home-screen health reading list for [bundle], judged
+/// against the user's own history in [allDays] where a baseline exists, and
+/// otherwise sourced from the server-computed [scores].
+List<HealthReading> buildHomeHealthReadings({
+  required DayBundle bundle,
+  required DailyHealthScores scores,
+  required List<DayMetric> allDays,
+}) {
+  final day = bundle.day;
+  final prior = _priorDays(allDays, day.dayKey);
+  final rhrBase = _baselineOf(prior, (d) => d.restingHr?.toDouble(),
+      bandFloor: healthBandFloorRestingHr);
+  final hrvBase = _baselineOf(prior, (d) => d.hrvRmssd?.toDouble(),
+      bandFloor: healthBandFloorHrv);
+
+  final mainSleep = bundle.mainSleep;
+  final sleepMins = mainSleep?.totalMins;
+  final timeInBedMins = mainSleep != null
+      ? mainSleep.totalMins + mainSleep.wakeMins
+      : null;
+
+  return [
+    HealthReading(
+      label: 'HRV',
+      icon: Icons.monitor_heart_outlined,
+      value: day.hrvRmssd?.toString(),
+      unit: 'ms',
+      assessment: assessAgainstBaseline(day.hrvRmssd?.toDouble(), hrvBase),
+      metricId: 'hrv',
+    ),
+    HealthReading(
+      label: 'RHR',
+      icon: Icons.favorite_outline,
+      value: day.restingHr?.toString(),
+      unit: 'bpm',
+      assessment: assessAgainstBaseline(day.restingHr?.toDouble(), rhrBase),
+      metricId: 'rhr',
+    ),
+    HealthReading(
+      label: 'VO2 MAX',
+      icon: Icons.speed_outlined,
+      value: scores.vo2Max?.toString(),
+      unit: '',
+      assessment: MetricAssessment.noData,
+    ),
+    HealthReading(
+      label: 'CALORIES',
+      icon: Icons.local_fire_department_outlined,
+      value: scores.calories?.toString(),
+      unit: 'kcal',
+      assessment: MetricAssessment.noData,
+    ),
+    HealthReading(
+      label: 'HOURS OF SLEEP',
+      icon: Icons.bedtime_outlined,
+      value: sleepMins != null ? (sleepMins / 60).toStringAsFixed(1) : null,
+      unit: 'h',
+      assessment: MetricAssessment.noData,
+      metricId: 'sleep',
+    ),
+    HealthReading(
+      label: 'SLEEP NEEDED',
+      icon: Icons.hotel_outlined,
+      value: scores.sleepNeededMins != null
+          ? (scores.sleepNeededMins! / 60).toStringAsFixed(1)
+          : null,
+      unit: 'h',
+      assessment: MetricAssessment.noData,
+    ),
+    HealthReading(
+      label: 'SLEEP EFFICIENCY',
+      icon: Icons.percent_outlined,
+      value: scores.sleepEfficiencyPct?.toString(),
+      unit: '%',
+      assessment: MetricAssessment.noData,
+    ),
+    HealthReading(
+      label: 'AVG HEART RATE',
+      icon: Icons.favorite_border,
+      value: scores.avgHeartRate?.toString(),
+      unit: 'bpm',
+      assessment: MetricAssessment.noData,
+    ),
+    HealthReading(
+      label: 'SLEEP DEBT',
+      icon: Icons.trending_down,
+      value: scores.sleepDebtMins != null
+          ? (scores.sleepDebtMins! / 60).toStringAsFixed(1)
+          : null,
+      unit: 'h',
+      assessment: MetricAssessment.noData,
+    ),
+    HealthReading(
+      label: 'SLEEP CONSISTENCY',
+      icon: Icons.repeat,
+      value: scores.sleepConsistencyPct?.toString(),
+      unit: '%',
+      assessment: MetricAssessment.noData,
+    ),
+    HealthReading(
+      label: 'TIME IN BED',
+      icon: Icons.king_bed_outlined,
+      value: timeInBedMins != null ? (timeInBedMins / 60).toStringAsFixed(1) : null,
+      unit: 'h',
+      assessment: MetricAssessment.noData,
+      metricId: 'sleep',
     ),
   ];
 }
