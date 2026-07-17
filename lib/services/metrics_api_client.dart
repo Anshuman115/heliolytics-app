@@ -200,7 +200,13 @@ class MetricsApiClient {
   }
 
   Future<DailyHealthScores> fetchDailyHealthScores(String dayKey) async {
-    final data = await _getForDay('/api/v1/daily-health-scores', dayKey);
+    Map<String, dynamic> data;
+    try {
+      data = await _getForDay('/api/v1/daily-health-scores', dayKey);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return DailyHealthScores.empty(dayKey);
+      rethrow;
+    }
     if (data.isEmpty) return DailyHealthScores.empty(dayKey);
     return DailyHealthScores.fromJson({...data, 'dayKey': dayKey});
   }
