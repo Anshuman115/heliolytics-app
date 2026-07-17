@@ -14,6 +14,7 @@ import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/live_health_provider.dart';
 import 'package:heliolytics/widgets/home_activities_section.dart';
+import 'package:heliolytics/widgets/home_health_scores_section.dart';
 import 'package:heliolytics/widgets/home_my_day_section.dart';
 import 'package:heliolytics/widgets/home_primary_rings.dart';
 import 'package:heliolytics/widgets/home_status_row.dart';
@@ -135,6 +136,8 @@ class HomeScreen extends ConsumerWidget {
         HomeMyDaySection(onTap: () => open('readiness')),
         const SizedBox(height: HelioSpacing.xl),
         HomeActivitiesSection(snap: snap, day: day),
+        const SizedBox(height: HelioSpacing.xl),
+        HomeHealthScoresSection(dayKey: day.dayKey),
       ],
     );
   }
