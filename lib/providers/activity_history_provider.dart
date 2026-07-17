@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/detail_metrics_provider.dart';
 
 class ActivityHistory {
   final List<WorkoutMetric> workouts;

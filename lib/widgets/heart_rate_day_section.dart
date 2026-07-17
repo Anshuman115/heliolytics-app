@@ -9,7 +9,7 @@ import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/health_sample.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/providers/live_hr_provider.dart';
 import 'package:heliolytics/utils/hr_chart_samples.dart';
 import 'package:heliolytics/widgets/heart_rate_bpm_hero.dart';

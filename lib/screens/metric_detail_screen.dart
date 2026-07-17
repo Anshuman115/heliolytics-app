@@ -16,7 +16,7 @@ import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
 import 'package:heliolytics/providers/day_bundle_provider.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/utils/hr_zones.dart';
 import 'package:heliolytics/widgets/hr_zone_bars.dart';
 import 'package:heliolytics/widgets/metric_stats_row.dart';

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:heliolytics/design_system/components/helio_loading.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/providers/day_bundle_provider.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/widgets/error_view.dart';
 import 'package:heliolytics/widgets/stress/stress_day_body.dart';
 

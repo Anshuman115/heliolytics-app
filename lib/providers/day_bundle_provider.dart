@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/services/cache/daily_bundle_cache_storage.dart';
 import 'package:heliolytics/utils/day_key.dart';
 

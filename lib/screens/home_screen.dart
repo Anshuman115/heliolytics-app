@@ -10,9 +10,10 @@ import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
+import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/providers/band_session_provider.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/day_bundle_provider.dart';
 import 'package:heliolytics/widgets/home_activities_section.dart';
 import 'package:heliolytics/widgets/home_health_scores_section.dart';
 import 'package:heliolytics/widgets/home_my_day_section.dart';
@@ -20,6 +21,7 @@ import 'package:heliolytics/widgets/home_primary_rings.dart';
 import 'package:heliolytics/widgets/home_status_row.dart';
 import 'package:heliolytics/providers/selected_day_provider.dart';
 import 'package:heliolytics/providers/helio_nav_provider.dart';
+import 'package:heliolytics/utils/day_key.dart';
 import 'package:heliolytics/widgets/error_view.dart';
 import 'package:heliolytics/models/session_state.dart';
 import 'package:heliolytics/providers/sync_orchestrator.dart';
@@ -29,32 +31,28 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final health = ref.watch(liveHealthProvider);
+    final dayKey = ref.watch(selectedDayKeyProvider) ?? todayDayKey();
+    final bundleAsync = ref.watch(dayBundleProvider(dayKey));
     final apiReady = ref.watch(apiConfiguredProvider);
     final sync = ref.watch(syncOrchestratorProvider);
     final syncBusy = _syncBusy(sync.state);
 
     return Column(
       children: [
-        _topBar(ref, health, syncBusy),
+        _topBar(ref, dayKey, syncBusy),
         Expanded(
           child: RefreshIndicator(
-            onRefresh: () => ref.read(liveHealthProvider.notifier).reload(),
-            child: health.when(
+            onRefresh: () async => ref.invalidate(dayBundleProvider(dayKey)),
+            child: bundleAsync.when(
               loading: () => ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 200),
-                  HelioLoading(message: 'Loading metrics…'),
-                ],
+                children: const [SizedBox(height: 200), HelioLoading(message: 'Loading metrics…')],
               ),
               error: (e, _) => ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  ErrorView(error: e, onRetry: () => ref.invalidate(liveHealthProvider)),
-                ],
+                children: [ErrorView(error: e, onRetry: () => ref.invalidate(dayBundleProvider(dayKey)))],
               ),
-              data: (snap) => _body(context, ref, snap, apiReady),
+              data: (bundle) => _body(context, ref, bundle, apiReady, dayKey),
             ),
           ),
         ),
@@ -68,11 +66,7 @@ class HomeScreen extends ConsumerWidget {
       state == SessionState.authenticating ||
       state == SessionState.scanning;
 
-  Widget _topBar(WidgetRef ref, AsyncValue health, bool syncBusy) {
-    final day = ref.watch(selectedDayProvider);
-    final keys = ref.watch(availableDayKeysProvider);
-    final idx = day == null ? -1 : keys.indexOf(day.dayKey);
-    final snap = health.valueOrNull;
+  Widget _topBar(WidgetRef ref, String dayKey, bool syncBusy) {
     final sync = ref.watch(syncOrchestratorProvider);
     final band = ref.watch(bandSessionProvider);
     final isConnected = band.isConnected ||
@@ -83,22 +77,20 @@ class HomeScreen extends ConsumerWidget {
 
     return HelioTopBar(
       showProfile: true,
-      dayLabel: day != null ? formatNavDayLabel(day.dayKey) : '—',
+      dayLabel: formatNavDayLabel(dayKey),
       onPrevDay: () => shiftSelectedDay(ref, -1),
       onNextDay: () => shiftSelectedDay(ref, 1),
-      // days are DESC (keys[0] = today); older days live at higher indices,
-      // so "previous" is enabled when a higher index exists, "next" when a
-      // lower (newer) one does.
-      canGoPrev: idx >= 0 && idx < keys.length - 1,
-      canGoNext: idx > 0,
-      batteryPercent: snap?.batteryPercent,
+      canGoPrev: true,
+      canGoNext: dayKey != todayDayKey(),
       syncActive: syncBusy,
       strapConnected: isConnected,
     );
   }
 
-  Widget _body(BuildContext context, WidgetRef ref, snap, AsyncValue<bool> apiReady) {
-    if (snap == null || snap.days.isEmpty) {
+  Widget _body(BuildContext context, WidgetRef ref, DayBundle bundle,
+      AsyncValue<bool> apiReady, String dayKey) {
+    final day = bundle.day;
+    if (day.steps == 0 && day.readiness == null && day.sleepScore == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(HelioSpacing.lg),
@@ -115,8 +107,7 @@ class HomeScreen extends ConsumerWidget {
       );
     }
 
-    final day = ref.watch(selectedDayProvider) ?? snap.days.first;
-    void open(String id) => context.push('/metric/${day.dayKey}/$id');
+    void open(String id) => context.push('/metric/$dayKey/$id');
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -127,17 +118,17 @@ class HomeScreen extends ConsumerWidget {
         const SizedBox(height: HelioSpacing.lg),
         HomeStatusRow(
           day: day,
-          onHealthTap: () => context.push('/health/${day.dayKey}'),
-          onStressTap: () => context.push('/stress/${day.dayKey}'),
+          onHealthTap: () => context.push('/health/$dayKey'),
+          onStressTap: () => context.push('/stress/$dayKey'),
         ),
         const SizedBox(height: HelioSpacing.lg),
         _stepsCard(day),
         const SizedBox(height: HelioSpacing.xl),
         HomeMyDaySection(onTap: () => open('readiness')),
         const SizedBox(height: HelioSpacing.xl),
-        HomeActivitiesSection(snap: snap, day: day),
+        HomeActivitiesSection(bundle: bundle),
         const SizedBox(height: HelioSpacing.xl),
-        HomeHealthScoresSection(dayKey: day.dayKey),
+        HomeHealthScoresSection(dayKey: dayKey),
       ],
     );
   }
@@ -146,10 +137,7 @@ class HomeScreen extends ConsumerWidget {
     final steps = day.steps as int;
     final stepsStr = steps > 0 ? formatStepCount(steps) : '—';
     return HelioSurfaceCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: HelioSpacing.lg,
-        vertical: HelioSpacing.md,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.lg, vertical: HelioSpacing.md),
       child: Row(
         children: [
           Container(
@@ -159,17 +147,10 @@ class HomeScreen extends ConsumerWidget {
               color: HelioColors.strainBlue.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
-              Icons.directions_walk_outlined,
-              size: 18,
-              color: HelioColors.strainBlue,
-            ),
+            child: const Icon(Icons.directions_walk_outlined, size: 18, color: HelioColors.strainBlue),
           ),
           const SizedBox(width: HelioSpacing.md),
-          Text(
-            'STEPS',
-            style: HelioTypography.capsLabel,
-          ),
+          Text('STEPS', style: HelioTypography.capsLabel),
           const Spacer(),
           Text(
             stepsStr,

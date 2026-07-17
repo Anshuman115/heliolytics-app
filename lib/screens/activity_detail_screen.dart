@@ -15,7 +15,7 @@ import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/hr_sample.dart';
 import 'package:heliolytics/models/activity_detail_payload.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/widgets/hr_zone_bars.dart';
 import 'package:heliolytics/widgets/minute_series_chart.dart';
 

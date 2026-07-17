@@ -4,7 +4,7 @@ import 'package:heliolytics/services/ble/sync_window.dart';
 import 'package:heliolytics/services/ble/sync_window_plan.dart';
 import 'package:heliolytics/utils/app_logger.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/detail_metrics_provider.dart';
 
 Future<SyncWindowPlan> resolveSyncWindow(Ref ref, {int? userBackfillDays}) async {
   final configured = await ref.read(apiConfiguredProvider.future);

@@ -8,21 +8,19 @@ import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/models/cloud_metrics_snapshot.dart';
-import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/activity_detail_payload.dart';
 import 'package:intl/intl.dart';
 
 class HomeActivitiesSection extends StatelessWidget {
-  final CloudMetricsSnapshot snap;
-  final DayMetric day;
+  final DayBundle bundle;
 
-  const HomeActivitiesSection({super.key, required this.snap, required this.day});
+  const HomeActivitiesSection({super.key, required this.bundle});
 
   @override
   Widget build(BuildContext context) {
-    final sleep = snap.mainSleepFor(day.dayKey);
-    final workouts = snap.workoutsFor(day.dayKey).take(2).toList();
+    final sleep = bundle.mainSleep;
+    final workouts = bundle.workouts.take(2).toList();
     if (sleep == null && workouts.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -80,7 +78,7 @@ class HomeActivitiesSection extends StatelessWidget {
       start: startedAt,
       end: end,
       color: HelioColors.sleepBlue,
-      onTap: () => context.push('/metric/${day.dayKey}/sleep'),
+      onTap: () => context.push('/metric/${bundle.day.dayKey}/sleep'),
     );
   }
 

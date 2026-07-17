@@ -10,7 +10,7 @@ import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/providers/api_config_form_provider.dart';
-import 'package:heliolytics/providers/live_health_provider.dart';
+import 'package:heliolytics/providers/detail_metrics_provider.dart';
 
 class ApiSettingsScreen extends ConsumerStatefulWidget {
   const ApiSettingsScreen({super.key});
