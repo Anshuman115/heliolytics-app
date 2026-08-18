@@ -10,6 +10,7 @@ class ActivityRow extends StatelessWidget {
   final String title;
   final String duration;
   final String timeRange;
+  final String? kind;
   final VoidCallback? onTap;
 
   const ActivityRow({
@@ -18,6 +19,7 @@ class ActivityRow extends StatelessWidget {
     required this.title,
     required this.duration,
     required this.timeRange,
+    this.kind,
     this.onTap,
   });
 
@@ -65,11 +67,18 @@ class ActivityRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(timeRange, style: HelioTypography.bodyMuted),
+                  Text(
+                    kind == null ? timeRange : '$kind · $timeRange',
+                    style: HelioTypography.bodyMuted,
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: HelioColors.textMuted, size: 20),
+            const Icon(
+              Icons.chevron_right,
+              color: HelioColors.textMuted,
+              size: 20,
+            ),
           ],
         ),
       ),

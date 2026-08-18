@@ -1,6 +1,21 @@
 import 'package:dio/dio.dart';
+import 'package:heliolytics/services/network/metrics_api_transport.dart';
 
 String friendlyError(Object error) {
+  if (error is MetricsApiException) {
+    return switch (error.type) {
+      MetricsApiFailureType.unauthorized =>
+        'Unauthorized. Check the API key in Settings.',
+      MetricsApiFailureType.notFound =>
+        'API endpoint not found. Check the server URL in Settings.',
+      MetricsApiFailureType.malformedResponse =>
+        'The server returned invalid data. Try again.',
+      MetricsApiFailureType.clientError ||
+      MetricsApiFailureType.serverError ||
+      MetricsApiFailureType.unexpectedStatus =>
+        'Server error (${error.statusCode ?? 'unknown'}).',
+    };
+  }
   if (error is DioException) {
     return switch (error.type) {
       DioExceptionType.connectionTimeout ||
@@ -8,7 +23,8 @@ String friendlyError(Object error) {
       DioExceptionType.sendTimeout =>
         'Request timed out. Check your connection.',
       DioExceptionType.connectionError => _connectionHint(error),
-      DioExceptionType.badCertificate => 'SSL certificate error. Use https:// with a valid cert.',
+      DioExceptionType.badCertificate =>
+        'SSL certificate error. Use https:// with a valid cert.',
       DioExceptionType.badResponse when error.response?.statusCode == 401 =>
         'Unauthorized. Check the API key in Settings.',
       DioExceptionType.badResponse when error.response?.statusCode == 404 =>
@@ -34,8 +50,7 @@ String _connectionHint(DioException? error) {
   if (extra.contains('failed host lookup') || extra.contains('no address')) {
     return "Can't resolve API host. Check the URL in Settings → Cloud API.";
   }
-  return "Can't reach the server. Phone must be on the same Wi‑Fi as your Mac, "
-      'and the URL must be your Mac\'s LAN IP (not localhost).';
+  return "Can't reach the server. Check your internet connection and Cloud API settings.";
 }
 
 String _unknownDio(DioException error) {

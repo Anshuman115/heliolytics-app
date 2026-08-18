@@ -22,12 +22,6 @@ class SyncWindow {
         'Fetch: coverage unavailable — backfill $initialSyncBackfillDays days',
       );
     }
-    if (coverage.types.isNotEmpty) {
-      return _fromPerType(coverage, clock);
-    }
-    if (coverage.dataThrough != null) {
-      return _fromDataThrough(coverage.dataThrough!, clock);
-    }
     if (!coverage.hasData) {
       final days = userBackfillDays ?? initialSyncBackfillDays;
       return _backfillAll(
@@ -35,6 +29,12 @@ class SyncWindow {
         'Fetch: backend empty — first sync last $days days',
         days: days,
       );
+    }
+    if (coverage.types.isNotEmpty) {
+      return _fromPerType(coverage, clock);
+    }
+    if (coverage.dataThrough != null) {
+      return _fromDataThrough(coverage.dataThrough!, clock);
     }
     return _backfillAll(
       clock,
@@ -65,8 +65,9 @@ class SyncWindow {
   }
 
   static SyncWindowPlan _fromDataThrough(DateTime through, DateTime clock) {
-    final since =
-        through.subtract(const Duration(minutes: syncCoverageOverlapMinutes));
+    final since = through.subtract(
+      const Duration(minutes: syncCoverageOverlapMinutes),
+    );
     final perType = _uniformSince(since);
     return SyncWindowPlan(
       anchorSince: since,
@@ -74,15 +75,20 @@ class SyncWindow {
       backendDataThrough: through,
       logLines: [
         'Fetch: backend data through ${through.toIso8601String()} → '
-        'strap from ${since.toIso8601String()}',
+            'strap from ${since.toIso8601String()}',
         ..._perTypeLogLines(perType),
       ],
     );
   }
 
-  static SyncWindowPlan _backfillAll(DateTime clock, String headline, {int? days}) {
-    final since =
-        clock.subtract(Duration(days: days ?? initialSyncBackfillDays));
+  static SyncWindowPlan _backfillAll(
+    DateTime clock,
+    String headline, {
+    int? days,
+  }) {
+    final since = clock.subtract(
+      Duration(days: days ?? initialSyncBackfillDays),
+    );
     final perType = _uniformSince(since);
     return SyncWindowPlan(
       anchorSince: since,
@@ -103,7 +109,9 @@ class SyncWindow {
     if (through == null) {
       return clock.subtract(const Duration(days: initialSyncBackfillDays));
     }
-    return through.subtract(const Duration(minutes: syncCoverageOverlapMinutes));
+    return through.subtract(
+      const Duration(minutes: syncCoverageOverlapMinutes),
+    );
   }
 
   static Map<String, DateTime> _uniformSince(DateTime since) {

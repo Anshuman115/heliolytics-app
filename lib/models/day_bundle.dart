@@ -21,7 +21,7 @@ class DayBundle {
     SleepMetric? best;
     for (final s in sleep) {
       if (s.isNap) continue;
-      if (best == null || s.totalMins > best.totalMins) best = s;
+      if (best == null || s.score > best.score) best = s;
     }
     return best;
   }
@@ -29,22 +29,26 @@ class DayBundle {
   List<SleepMetric> get naps => sleep.where((s) => s.isNap).toList();
 
   Map<String, dynamic> toJson() => {
-        'day': day.toJson(),
-        'sleep': sleep.map((s) => s.toJson()).toList(),
-        'workouts': workouts.map((w) => w.toJson()).toList(),
-        'activitySessions': activitySessions.map((a) => a.toJson()).toList(),
-      };
+    'day': day.toJson(),
+    'sleep': sleep.map((s) => s.toJson()).toList(),
+    'workouts': workouts.map((w) => w.toJson()).toList(),
+    'activitySessions': activitySessions.map((a) => a.toJson()).toList(),
+  };
 
   factory DayBundle.fromJson(Map<String, dynamic> j) => DayBundle(
-        day: DayMetric.fromJson(Map<String, dynamic>.from(j['day'] as Map)),
-        sleep: (j['sleep'] as List<dynamic>? ?? [])
-            .map((e) => SleepMetric.fromJson(Map<String, dynamic>.from(e as Map)))
-            .toList(),
-        workouts: (j['workouts'] as List<dynamic>? ?? [])
-            .map((e) => WorkoutMetric.fromJson(Map<String, dynamic>.from(e as Map)))
-            .toList(),
-        activitySessions: (j['activitySessions'] as List<dynamic>? ?? [])
-            .map((e) => ActivitySessionMetric.fromJson(Map<String, dynamic>.from(e as Map)))
-            .toList(),
-      );
+    day: DayMetric.fromJson(Map<String, dynamic>.from(j['day'] as Map)),
+    sleep: (j['sleep'] as List<dynamic>? ?? [])
+        .map((e) => SleepMetric.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList(),
+    workouts: (j['workouts'] as List<dynamic>? ?? [])
+        .map((e) => WorkoutMetric.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList(),
+    activitySessions: (j['activitySessions'] as List<dynamic>? ?? [])
+        .map(
+          (e) => ActivitySessionMetric.fromJson(
+            Map<String, dynamic>.from(e as Map),
+          ),
+        )
+        .toList(),
+  );
 }

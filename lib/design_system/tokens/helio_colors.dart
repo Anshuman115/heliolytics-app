@@ -1,48 +1,43 @@
 import 'package:flutter/material.dart';
 
 abstract final class HelioColors {
-  // Backgrounds — charcoal, not pure black
-  static const canvas = Color(0xFF1A1A1E);
-  static const surface = Color(0xFF252529);
-  static const surfaceElevated = Color(0xFF2C2C30);
-  static const ringTrack = Color(0xFF3A3A3E);
-  static const border = Color(0x1FFFFFFF);
+  static const canvas = Color(0xFF10171B);
+  static const surface = Color(0xFF282E32);
+  static const surfaceElevated = Color(0xFF343A3E);
+  static const ringTrack = Color(0xFF374047);
+  static const border = Color(0x0FFFFFFF);
 
-  // Canvas gradient — subtle teal-charcoal at top fading to near-black,
-  // a lit ambient backdrop (never a flat fill).
-  static const canvasTop = Color(0xFF233039);
-  static const canvasMid = Color(0xFF181A1F);
-  static const canvasBottom = Color(0xFF101013);
-  // Soft accent bloom painted near the top of every screen so the header
-  // floats on lit glass rather than flat black.
-  static const canvasGlow = Color(0xFF3DA9C9);
+  static const canvasTop = Color(0xFF293740);
+  static const canvasMid = Color(0xFF172126);
+  static const canvasBottom = Color(0xFF0C1216);
+  static const canvasGlow = Color(0xFF5B8298);
 
   // Text
   static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFF8E8E93);
-  static const textMuted = Color(0xFF636366);
+  static const textSecondary = Color(0xFFA4A9AD);
+  static const textMuted = Color(0xFF70777C);
 
   // Recovery / readiness
-  static const recoveryLow = Color(0xFFFF453A);
-  static const recoveryMid = Color(0xFFFFD60A);
-  static const recoveryHigh = Color(0xFF30D158);
+  static const recoveryLow = Color(0xFFFF003C);
+  static const recoveryMid = Color(0xFFFFD400);
+  static const recoveryHigh = Color(0xFF00F000);
 
   // Sleep
-  static const sleepBlue = Color(0xFF0A84FF);
-  static const sleepDeep = Color(0xFF5E5CE6);
-  static const sleepRem = Color(0xFF64D2FF);
-  static const sleepLight = Color(0xFF30D158);
-  static const sleepAwake = Color(0xFF636366);
+  static const sleepBlue = Color(0xFF7FA8C2);
+  static const sleepDeep = Color(0xFFE65BEA);
+  static const sleepRem = Color(0xFFA94CE6);
+  static const sleepLight = Color(0xFF9593E8);
+  static const sleepAwake = Color(0xFFB6B7B9);
 
   // Strain / activity
-  static const strainBlue = Color(0xFF64D2FF);
+  static const strainBlue = Color(0xFF009DE5);
 
   // Stress
-  static const stressLow = Color(0xFF64D2FF);
+  static const stressLow = Color(0xFF68B1E3);
 
   // Misc
   static const outlookGold = Color(0xFFC9A227);
-  static const optimalGreen = Color(0xFF30D158);
+  static const optimalGreen = Color(0xFF00E6A3);
 
   // Health-monitor verdict chips: in-range vs worth-a-look.
   static const tierOptimal = Color(0xFF16C784);
@@ -75,10 +70,10 @@ Color recoveryColorFor(int? score) {
 }
 
 Color hrZoneColor(int zone) => switch (zone) {
-      0 => HelioColors.hrZone0,
-      1 => HelioColors.hrZone1,
-      2 => HelioColors.hrZone2,
-      3 => HelioColors.hrZone3,
-      4 => HelioColors.hrZone4,
-      _ => HelioColors.hrZone5,
-    };
+  0 => HelioColors.hrZone0,
+  1 => HelioColors.hrZone1,
+  2 => HelioColors.hrZone2,
+  3 => HelioColors.hrZone3,
+  4 => HelioColors.hrZone4,
+  _ => HelioColors.hrZone5,
+};

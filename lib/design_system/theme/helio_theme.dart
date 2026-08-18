@@ -32,7 +32,6 @@ ThemeData buildHelioTheme() {
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(HelioRadii.card),
-        side: const BorderSide(color: HelioColors.border),
       ),
     ),
     appBarTheme: const AppBarTheme(

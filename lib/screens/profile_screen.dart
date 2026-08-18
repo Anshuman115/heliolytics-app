@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:heliolytics/design_system/components/helio_primary_button.dart';
 import 'package:heliolytics/design_system/components/helio_text_field.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
@@ -54,10 +55,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _error = null;
       _saving = true;
     });
-    final profile = UserProfile(name: name, age: age, heightCm: height, weightKg: weight);
+    final profile = UserProfile(
+      name: name,
+      age: age,
+      heightCm: height,
+      weightKg: weight,
+    );
     await ref.read(onboardingProvider.notifier).completeOnboarding(profile);
     unawaited(ref.read(profileApiClientProvider).submitProfile(profile));
-    if (mounted) setState(() => _saving = false);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    context.go('/');
   }
 
   List<Widget> _formFields() {
@@ -89,9 +97,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (ref.watch(onboardingProvider).onboardingComplete && !_saving) {
-      return const SizedBox.shrink();
-    }
     return Scaffold(
       appBar: const HelioTopBar(title: 'About you'),
       body: SingleChildScrollView(
@@ -105,7 +110,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
             ..._formFields(),
             const SizedBox(height: HelioSpacing.xl),
-            HelioPrimaryButton(label: 'Continue', loading: _saving, onPressed: _save),
+            HelioPrimaryButton(
+              label: 'Continue',
+              loading: _saving,
+              onPressed: _save,
+            ),
           ],
         ),
       ),

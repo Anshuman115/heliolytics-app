@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
+import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 
@@ -16,7 +17,7 @@ class SettingsSectionLabel extends StatelessWidget {
         text,
         style: HelioTypography.sectionTitle.copyWith(
           fontSize: 12,
-          letterSpacing: 1.2,
+          letterSpacing: 0,
           fontWeight: FontWeight.w700,
           color: HelioColors.textMuted,
         ),
@@ -48,7 +49,7 @@ class SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(HelioRadii.card),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: HelioSpacing.lg,
@@ -56,23 +57,30 @@ class SettingsTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+            SizedBox(
+              width: 28,
+              child: Icon(
+                icon,
+                size: 21,
+                color: iconColor.withValues(alpha: 0.88),
               ),
-              child: Icon(icon, size: 17, color: iconColor),
             ),
             const SizedBox(width: HelioSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: HelioTypography.body.copyWith(fontWeight: FontWeight.w500)),
+                  Text(
+                    title,
+                    style: HelioTypography.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: HelioTypography.bodyMuted.copyWith(fontSize: 12)),
+                  Text(
+                    subtitle,
+                    style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -82,11 +90,17 @@ class SettingsTile extends StatelessWidget {
                 height: 8,
                 margin: const EdgeInsets.only(right: HelioSpacing.sm),
                 decoration: BoxDecoration(
-                  color: statusDot! ? HelioColors.optimalGreen : HelioColors.recoveryLow,
+                  color: statusDot!
+                      ? HelioColors.optimalGreen
+                      : HelioColors.recoveryLow,
                   shape: BoxShape.circle,
                 ),
               ),
-            const Icon(Icons.chevron_right, size: 18, color: HelioColors.textMuted),
+            const Icon(
+              Icons.chevron_right,
+              size: 17,
+              color: HelioColors.textMuted,
+            ),
           ],
         ),
       ),

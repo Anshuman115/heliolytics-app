@@ -12,7 +12,11 @@ String formatStepCount(int steps) => _stepsFmt.format(steps);
 String formatDayLabel(String dayKey) {
   final parts = dayKey.split('-');
   if (parts.length != 3) return dayKey;
-  final d = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+  final d = DateTime(
+    int.parse(parts[0]),
+    int.parse(parts[1]),
+    int.parse(parts[2]),
+  );
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final target = DateTime(d.year, d.month, d.day);
@@ -22,18 +26,33 @@ String formatDayLabel(String dayKey) {
   return _dayFmt.format(d);
 }
 
-/// Compact label for top-bar date pill — no weekday names.
+/// Compact label for top-bar date navigation.
 String formatNavDayLabel(String dayKey) {
   final parts = dayKey.split('-');
   if (parts.length != 3) return dayKey.toUpperCase();
-  final d = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+  final d = DateTime(
+    int.parse(parts[0]),
+    int.parse(parts[1]),
+    int.parse(parts[2]),
+  );
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final target = DateTime(d.year, d.month, d.day);
   final diff = today.difference(target).inDays;
   if (diff == 0) return 'TODAY';
   if (diff == 1) return 'YESTERDAY';
-  return DateFormat('MMM d').format(d).toUpperCase();
+  return DateFormat('EEE, MMM d').format(d).toUpperCase();
+}
+
+String formatSleepComparisonDay(String dayKey) {
+  final parts = dayKey.split('-');
+  if (parts.length != 3) return dayKey;
+  final date = DateTime(
+    int.parse(parts[0]),
+    int.parse(parts[1]),
+    int.parse(parts[2]),
+  );
+  return DateFormat('EEE, MMM d').format(date);
 }
 
 String formatWorkoutTime(DateTime dt) => _timeFmt.format(dt.toLocal());

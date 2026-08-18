@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
+import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 
@@ -29,12 +30,10 @@ class SettingsActionButton extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: HelioSpacing.md),
         decoration: BoxDecoration(
-          color: enabled ? color.withValues(alpha: 0.14) : HelioColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: enabled ? color.withValues(alpha: 0.35) : HelioColors.border,
-            width: 1,
-          ),
+          color: enabled
+              ? color.withValues(alpha: 0.14)
+              : HelioColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(HelioRadii.card),
         ),
         child: Column(
           children: [
@@ -45,13 +44,17 @@ class SettingsActionButton extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2, color: color),
               )
             else if (icon != null)
-              Icon(icon, size: 22, color: enabled ? color : HelioColors.textMuted),
+              Icon(
+                icon,
+                size: 22,
+                color: enabled ? color : HelioColors.textMuted,
+              ),
             const SizedBox(height: 6),
             Text(
               label,
               style: HelioTypography.capsLabel.copyWith(
                 fontSize: 11,
-                letterSpacing: 0.5,
+                letterSpacing: 0,
                 fontWeight: FontWeight.w700,
                 color: enabled ? color : HelioColors.textMuted,
               ),

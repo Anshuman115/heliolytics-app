@@ -29,26 +29,26 @@ class HomeStatusRow extends StatelessWidget {
       children: [
         Expanded(
           child: _card(
-            title: 'Health Monitor',
+            title: 'Health',
             onTap: onHealthTap,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: total > 0 && inRange == total
-                            ? HelioColors.optimalGreen
-                            : HelioColors.recoveryMid,
-                        shape: BoxShape.circle,
-                      ),
+                    _statusBadge(
+                      total > 0 && inRange == total
+                          ? Icons.check
+                          : Icons.priority_high,
+                      total > 0 && inRange == total
+                          ? HelioColors.optimalGreen
+                          : HelioColors.recoveryMid,
                     ),
-                    const SizedBox(width: HelioSpacing.sm),
+                    const SizedBox(width: HelioSpacing.md),
                     Text(
-                      total > 0 && inRange == total ? 'ALL CLEAR' : 'CHECK METRICS',
+                      total > 0 && inRange == total
+                          ? 'ALL CLEAR'
+                          : 'CHECK METRICS',
                       style: HelioTypography.capsLabel.copyWith(
                         fontSize: 10,
                         color: total > 0 && inRange == total
@@ -70,22 +70,15 @@ class HomeStatusRow extends StatelessWidget {
         const SizedBox(width: HelioSpacing.sm),
         Expanded(
           child: _card(
-            title: 'Stress Monitor',
+            title: 'Stress',
             onTap: onStressTap,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: stressColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: HelioSpacing.sm),
+                    _statusBadge(Icons.show_chart, stressColor),
+                    const SizedBox(width: HelioSpacing.md),
                     Text(
                       stressLabel,
                       style: HelioTypography.capsLabel.copyWith(
@@ -129,7 +122,11 @@ class HomeStatusRow extends StatelessWidget {
                   style: HelioTypography.capsLabel.copyWith(fontSize: 10),
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 14, color: HelioColors.textMuted),
+              const Icon(
+                Icons.chevron_right,
+                size: 14,
+                color: HelioColors.textMuted,
+              ),
             ],
           ),
           const SizedBox(height: HelioSpacing.md),
@@ -138,6 +135,16 @@ class HomeStatusRow extends StatelessWidget {
       ),
     );
   }
+
+  Widget _statusBadge(IconData icon, Color color) => Container(
+    width: 28,
+    height: 28,
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.16),
+      borderRadius: BorderRadius.circular(7),
+    ),
+    child: Icon(icon, size: 17, color: color),
+  );
 
   Color _stressColor(int? stress) {
     if (stress == null) return HelioColors.textMuted;

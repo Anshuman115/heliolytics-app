@@ -61,7 +61,10 @@ class HelioVitalTile extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              Text(value, style: HelioTypography.scoreMedium.copyWith(fontSize: 20)),
+              Text(
+                value,
+                style: HelioTypography.scoreMedium.copyWith(fontSize: 20),
+              ),
               const SizedBox(height: HelioSpacing.xs),
               Text(label.toUpperCase(), style: HelioTypography.capsLabel),
             ],

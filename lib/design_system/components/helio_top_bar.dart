@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:heliolytics/design_system/components/helio_date_nav.dart';
+import 'package:heliolytics/design_system/components/helio_profile_badge.dart';
+import 'package:heliolytics/design_system/components/helio_top_bar_status.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
@@ -13,10 +15,16 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onNextDay;
   final bool canGoPrev;
   final bool canGoNext;
+  final bool emphasizeDate;
+  final VoidCallback? onDateTap;
+  final bool safeTop;
   final int? batteryPercent;
   final bool syncActive;
   final bool strapConnected;
   final bool showProfile;
+  final String? profileLabel;
+  final String? profileMetricLabel;
+  final VoidCallback? onProfile;
   final List<Widget> actions;
 
   const HelioTopBar({
@@ -29,67 +37,89 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onNextDay,
     this.canGoPrev = true,
     this.canGoNext = true,
+    this.emphasizeDate = false,
+    this.onDateTap,
+    this.safeTop = true,
     this.batteryPercent,
     this.syncActive = false,
     this.strapConnected = false,
     this.showProfile = false,
+    this.profileLabel,
+    this.profileMetricLabel,
+    this.onProfile,
     this.actions = const [],
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(60);
+  Size get preferredSize => Size.fromHeight(safeTop ? 84 : 60);
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: SizedBox(
-        height: 60,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.md),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Truly centered center content
-              Center(child: _center()),
-              // Leading (left)
-              Positioned(
-                left: 0,
-                child: SizedBox(width: 40, child: _leading()),
-              ),
-              // Trailing (right)
-              Positioned(
-                right: 0,
-                child: _trailing(),
-              ),
-            ],
-          ),
+    final bar = SizedBox(
+      height: 60,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.lg),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Center(child: _center()),
+            Positioned(
+              left: showBack ? -10 : 0,
+              child: SizedBox(width: 160, child: _leading()),
+            ),
+            Positioned(right: showBack ? -5 : 0, child: _trailing()),
+          ],
         ),
       ),
     );
+    return safeTop ? SafeArea(bottom: false, child: bar) : bar;
   }
 
   Widget _leading() {
     if (showBack) {
-      return IconButton(
-        padding: EdgeInsets.zero,
-        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-        onPressed: onBack,
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: IconButton(
+          padding: EdgeInsets.zero,
+          icon: const Icon(Icons.chevron_left, size: 48),
+          onPressed: onBack,
+        ),
       );
     }
     if (showProfile) {
-      return Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: HelioColors.surfaceElevated,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: HelioColors.canvasGlow.withValues(alpha: 0.5),
-            width: 1.5,
-          ),
-        ),
-        child: const Icon(Icons.person, size: 18, color: HelioColors.textSecondary),
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          HelioProfileBadge(label: profileLabel, onTap: onProfile),
+          if (profileMetricLabel case final value?) ...[
+            const SizedBox(width: 8),
+            Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: HelioColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.local_fire_department,
+                    size: 18,
+                    color: Color(0xFFFF642E),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    value,
+                    style: HelioTypography.body.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       );
     }
     return const SizedBox.shrink();
@@ -103,6 +133,9 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
         onNext: onNextDay,
         canGoPrev: canGoPrev,
         canGoNext: canGoNext,
+        showArrows: !showBack,
+        emphasize: emphasizeDate,
+        onDateTap: onDateTap,
       );
     }
     if (title != null && title!.isNotEmpty) {
@@ -110,9 +143,9 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
         title!.toUpperCase(),
         style: HelioTypography.sectionTitle.copyWith(
           color: HelioColors.textPrimary,
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 2,
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0,
         ),
       );
     }
@@ -122,20 +155,16 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
-          child: Image.asset(
-            'assets/images/logo.png',
-            height: 18,
-            width: 18,
-          ),
+          child: Image.asset('assets/images/logo.png', height: 22, width: 22),
         ),
         const SizedBox(width: HelioSpacing.xs),
         Text(
           'HELIOLYTICS',
           style: HelioTypography.sectionTitle.copyWith(
             color: HelioColors.textPrimary,
-            letterSpacing: 3,
+            letterSpacing: 0,
             fontWeight: FontWeight.w800,
-            fontSize: 13,
+            fontSize: 15,
           ),
         ),
       ],
@@ -143,81 +172,11 @@ class HelioTopBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   Widget _trailing() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ...actions,
-        // Strap status — minimal icon, no text (minimal)
-        if (strapConnected || syncActive)
-          Padding(
-            padding: const EdgeInsets.only(right: HelioSpacing.md),
-            child: _StrapIndicator(connected: strapConnected, syncing: syncActive),
-          ),
-        // Battery
-        if (batteryPercent != null) ...[
-          _BatteryIcon(percent: batteryPercent!),
-          const SizedBox(width: 4),
-          Text(
-            '$batteryPercent%',
-            style: const TextStyle(
-              fontSize: 12,
-              color: HelioColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _StrapIndicator extends StatelessWidget {
-  final bool connected;
-  final bool syncing;
-
-  const _StrapIndicator({required this.connected, required this.syncing});
-
-  @override
-  Widget build(BuildContext context) {
-    if (syncing) {
-      return const SizedBox(
-        width: 16,
-        height: 16,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: HelioColors.recoveryMid,
-        ),
-      );
-    }
-    return const Icon(
-      Icons.bluetooth_connected,
-      size: 17,
-      color: HelioColors.optimalGreen,
-    );
-  }
-}
-
-class _BatteryIcon extends StatelessWidget {
-  final int percent;
-
-  const _BatteryIcon({required this.percent});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = percent <= 20
-        ? HelioColors.recoveryLow
-        : percent <= 50
-            ? HelioColors.recoveryMid
-            : HelioColors.optimalGreen;
-
-    return Icon(
-      percent <= 20
-          ? Icons.battery_1_bar
-          : percent <= 50
-              ? Icons.battery_4_bar
-              : Icons.battery_full,
-      size: 18,
-      color: color,
+    return HelioTopBarStatus(
+      actions: actions,
+      strapConnected: strapConnected,
+      syncActive: syncActive,
+      batteryPercent: batteryPercent,
     );
   }
 }

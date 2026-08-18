@@ -5,6 +5,13 @@ vibrates. The strap has no display: an alert is **felt, not read**.
 
 Shipped in v6. One-way only — phone → strap. Inbound dismiss/mute/reject is ignored.
 
+Its own dedicated Settings screen (`BandAlertsSettingsScreen`, Settings →
+Band Alerts) — previously an inline card on the Settings hub itself, now a
+full screen reached via `/settings/band-alerts` (see
+[settings-and-device.md](settings-and-device.md) for the current Settings
+structure). All the state/logic below is unchanged, only the container
+moved.
+
 ## Vocabulary
 
 | Term | Meaning |

@@ -23,7 +23,9 @@ class SleepStageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pct = totalMinutes > 0 ? (minutes / totalMinutes).clamp(0.0, 1.0) : 0.0;
+    final pct = totalMinutes > 0
+        ? (minutes / totalMinutes).clamp(0.0, 1.0)
+        : 0.0;
     final pctStr = totalMinutes > 0 ? '${(pct * 100).round()}%' : '—';
 
     return Padding(
@@ -43,14 +45,21 @@ class SleepStageRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: HelioSpacing.md),
-              Text(
-                label.toUpperCase(),
-                style: HelioTypography.capsLabel.copyWith(fontSize: 11),
+              Expanded(
+                child: Text(
+                  label.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: HelioTypography.capsLabel.copyWith(fontSize: 11),
+                ),
               ),
-              const Spacer(),
-              Text(
-                pctStr,
-                style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
+              SizedBox(
+                width: 36,
+                child: Text(
+                  pctStr,
+                  textAlign: TextAlign.end,
+                  style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
+                ),
               ),
               const SizedBox(width: HelioSpacing.sm),
               Text(
@@ -64,18 +73,55 @@ class SleepStageRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: HelioSpacing.xs + 2),
-          // Progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: pct,
-              backgroundColor: HelioColors.ringTrack,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 5,
+          SizedBox(
+            height: 18,
+            child: CustomPaint(
+              painter: _StageTrackPainter(progress: pct, color: color),
+              child: const SizedBox.expand(),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _StageTrackPainter extends CustomPainter {
+  const _StageTrackPainter({required this.progress, required this.color});
+
+  final double progress;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const height = 14.0;
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, (size.height - height) / 2, size.width, height),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(rect, Paint()..color = HelioColors.canvasBottom);
+
+    canvas.save();
+    canvas.clipRRect(rect);
+    final hatch = Paint()
+      ..color = HelioColors.textMuted.withValues(alpha: 0.18)
+      ..strokeWidth = 2;
+    for (double x = -size.height; x < size.width + size.height; x += 8) {
+      canvas.drawLine(
+        Offset(x, size.height),
+        Offset(x + size.height, 0),
+        hatch,
+      );
+    }
+    final fillWidth = size.width * progress;
+    canvas.drawRect(
+      Rect.fromLTWH(0, (size.height - height) / 2, fillWidth, height),
+      Paint()..color = color,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _StageTrackPainter old) =>
+      old.progress != progress || old.color != color;
 }

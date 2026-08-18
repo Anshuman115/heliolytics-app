@@ -7,7 +7,8 @@ import 'package:heliolytics/constants/constants.dart';
 
 final authKeyStoreProvider = Provider<AuthKeyStore>(
   (ref) => throw UnimplementedError(
-      'Override authKeyStoreProvider in ProviderScope'),
+    'Override authKeyStoreProvider in ProviderScope',
+  ),
 );
 
 class AuthKeyStorage {
@@ -41,6 +42,14 @@ class AuthKeyStorage {
   Future<String?> readMac() => _store.read(strapMacStorageKey);
 
   Future<bool> hasMac() async => (await readMac()) != null;
+
+  Future<void> markSetupPending() =>
+      _store.write(strapSetupPendingStorageKey, '1');
+
+  Future<bool> isSetupPending() async =>
+      (await _store.read(strapSetupPendingStorageKey)) == '1';
+
+  Future<void> completeSetup() => _store.delete(strapSetupPendingStorageKey);
 
   /// Strap battery — persisted after each successful BLE sync so the UI
   /// can display it even when not currently connected.

@@ -29,6 +29,7 @@ class _SetupPermissionScreenState extends State<SetupPermissionScreen> {
     final granted = results.values.every((s) => s.isGranted);
     if (!mounted) return;
     if (granted) {
+      setState(() => _requesting = false);
       context.push('/setup/scan');
     } else {
       setState(() {

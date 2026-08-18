@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:heliolytics/design_system/components/helio_metric_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
@@ -8,13 +7,15 @@ import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 /// with a Poor / Sufficient / Optimal legend underneath.
 class SleepPerformanceBars extends StatelessWidget {
   final int? sleepMins;
-  final int? sleepScore;
+  final int? sleepEfficiency;
+  final int? highSleepStress;
   final int neededMins;
 
   const SleepPerformanceBars({
     super.key,
     this.sleepMins,
-    this.sleepScore,
+    this.sleepEfficiency,
+    this.highSleepStress,
     this.neededMins = 480,
   });
 
@@ -23,24 +24,72 @@ class SleepPerformanceBars extends StatelessWidget {
     final hoursPct = sleepMins != null
         ? ((sleepMins! / neededMins) * 100).round().clamp(0, 100)
         : 0;
-    final effPct = sleepScore?.clamp(0, 100) ?? 0;
+    final effPct = sleepEfficiency?.clamp(0, 100) ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        HelioMetricBar(
-          label: 'Hours vs needed',
-          percent: hoursPct,
-          color: qualityTierColor(hoursPct),
-        ),
-        const SizedBox(height: HelioSpacing.md),
-        HelioMetricBar(
-          label: 'Sleep efficiency',
-          percent: effPct,
-          color: qualityTierColor(effPct),
-        ),
+        _factor(Icons.nights_stay_outlined, 'Hours vs. needed', hoursPct),
+        const Divider(height: HelioSpacing.xl, color: HelioColors.border),
+        _factor(Icons.bedtime_outlined, 'Sleep efficiency', effPct),
+        if (highSleepStress case final stress?) ...[
+          const Divider(height: HelioSpacing.xl, color: HelioColors.border),
+          _factor(
+            Icons.speed_outlined,
+            'High sleep stress',
+            stress,
+            lowerIsBetter: true,
+          ),
+        ],
         const SizedBox(height: HelioSpacing.lg),
         const _TierLegend(),
+      ],
+    );
+  }
+
+  Widget _factor(
+    IconData icon,
+    String label,
+    int percent, {
+    bool lowerIsBetter = false,
+  }) => Row(
+    children: [
+      Icon(icon, size: 23, color: HelioColors.textSecondary),
+      const SizedBox(width: HelioSpacing.md),
+      Expanded(
+        child: Text(label.toUpperCase(), style: HelioTypography.capsLabel),
+      ),
+      _marks(percent, lowerIsBetter: lowerIsBetter),
+      const SizedBox(width: HelioSpacing.md),
+      Text(
+        '$percent%',
+        style: HelioTypography.scoreMedium.copyWith(fontSize: 24),
+      ),
+    ],
+  );
+
+  Widget _marks(int percent, {bool lowerIsBetter = false}) {
+    final adjusted = lowerIsBetter ? 100 - percent : percent;
+    final color = qualityTierColor(adjusted);
+    final active = adjusted >= 67
+        ? 2
+        : adjusted >= 34
+        ? 1
+        : 0;
+    return Row(
+      children: [
+        for (var index = 0; index < 3; index++)
+          Container(
+            width: 24,
+            height: 6,
+            margin: EdgeInsets.only(left: index == 0 ? 0 : 4),
+            decoration: BoxDecoration(
+              color: index == active
+                  ? color
+                  : HelioColors.textMuted.withValues(alpha: 0.24),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
       ],
     );
   }

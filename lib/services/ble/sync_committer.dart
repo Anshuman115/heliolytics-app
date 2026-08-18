@@ -3,14 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/utils/app_logger.dart';
 import 'package:heliolytics/models/sync_payload.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
-import 'package:heliolytics/providers/day_bundle_provider.dart';
-import 'package:heliolytics/providers/detail_metrics_provider.dart';
-import 'package:heliolytics/providers/sync_status_provider.dart';
-import 'package:heliolytics/utils/day_key.dart';
+import 'package:heliolytics/providers/health_data_refresh_coordinator.dart';
 
 typedef UploadFn = Future<void> Function(SyncPayload payload);
 typedef ConfiguredFn = Future<bool> Function();
-typedef RefreshFn = void Function();
+typedef RefreshFn = Future<void> Function();
 
 class SyncCommitter {
   final UploadFn upload;
@@ -29,11 +26,8 @@ class SyncCommitter {
     return SyncCommitter(
       upload: (p) => ref.read(cloudSyncRepositoryProvider).uploadPayload(p),
       isConfigured: () => ref.read(apiConfiguredProvider.future),
-      onHealthRefresh: () {
-        ref.invalidate(detailMetricsProvider); // refresh lazy series/HR/temp too
-        ref.invalidate(dayBundleProvider(todayDayKey())); // today's entry only — final days are immutable
-        ref.invalidate(syncStatusProvider); // "last synced" label reads this — keep it fresh after a commit
-      },
+      onHealthRefresh: () =>
+          ref.read(healthDataRefreshCoordinatorProvider).afterSync(),
       log: log,
     );
   }
@@ -46,7 +40,7 @@ class SyncCommitter {
     try {
       await upload(payload);
       log('✓ cloud upload done (${payload.rawByCode.length} types)');
-      onHealthRefresh();
+      await onHealthRefresh();
     } catch (e) {
       log('✗ cloud upload failed: $e');
       AppLogger.instance.log('cloud upload failed', tag: 'sync', error: e);

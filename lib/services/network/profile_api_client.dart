@@ -21,9 +21,17 @@ class ProfileApiClient {
       if (base == null || base.isEmpty || secret == null || secret.isEmpty) {
         return;
       }
-      await _dio.post(
+      // Backend expects PUT with snake_case keys (store.Profile's json tags)
+      // — deliberately not UserProfile.toJson(), which stays camelCase for
+      // local-storage round-tripping and is unrelated to this wire format.
+      await _dio.put(
         '${base.replaceAll(RegExp(r'/+$'), '')}/api/v1/profile',
-        data: profile.toJson(),
+        data: {
+          'name': profile.name,
+          'age': profile.age,
+          'height_cm': profile.heightCm,
+          'weight_kg': profile.weightKg,
+        },
         options: Options(headers: {'X-Heliolytics-Token': mintHeliolyticsToken(secret)}),
       );
     } catch (e) {

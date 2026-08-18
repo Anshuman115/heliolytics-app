@@ -7,12 +7,16 @@ class HelioSurfaceCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
+  final Color? color;
+  final bool showBorder;
 
   const HelioSurfaceCard({
     super.key,
     required this.child,
     this.padding,
     this.onTap,
+    this.color,
+    this.showBorder = true,
   });
 
   @override
@@ -21,9 +25,9 @@ class HelioSurfaceCard extends StatelessWidget {
       width: double.infinity,
       padding: padding ?? const EdgeInsets.all(HelioSpacing.lg),
       decoration: BoxDecoration(
-        color: HelioColors.surface,
+        color: color ?? HelioColors.surface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(HelioRadii.card),
-        border: Border.all(color: HelioColors.border),
+        border: showBorder ? Border.all(color: HelioColors.border) : null,
       ),
       child: child,
     );

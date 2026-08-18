@@ -10,21 +10,33 @@ import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/providers/backfill_days_provider.dart';
+import 'package:heliolytics/providers/sync_orchestrator.dart';
 
-const _presetDays = [7, 14, 30, 60];
+const _presetDays = [7, 14, 20, 30, 60];
 
 class SetupBackfillDaysScreen extends ConsumerStatefulWidget {
   const SetupBackfillDaysScreen({super.key});
 
   @override
-  ConsumerState<SetupBackfillDaysScreen> createState() => _SetupBackfillDaysScreenState();
+  ConsumerState<SetupBackfillDaysScreen> createState() =>
+      _SetupBackfillDaysScreenState();
 }
 
-class _SetupBackfillDaysScreenState extends ConsumerState<SetupBackfillDaysScreen> {
+class _SetupBackfillDaysScreenState
+    extends ConsumerState<SetupBackfillDaysScreen> {
   int? _selected;
   bool _custom = false;
   final _customCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _customCtrl.addListener(_onCustomDaysChanged);
+  }
+
+  void _onCustomDaysChanged() {
+    if (mounted && _custom) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -32,13 +44,14 @@ class _SetupBackfillDaysScreenState extends ConsumerState<SetupBackfillDaysScree
     super.dispose();
   }
 
-  int? get _chosen => _custom ? int.tryParse(_customCtrl.text.trim()) : _selected;
+  int? get _chosen =>
+      _custom ? int.tryParse(_customCtrl.text.trim()) : _selected;
 
-  void _finish() {
+  Future<void> _finish() async {
     final days = _chosen;
     if (days == null || days <= 0) return;
-    ref.read(backfillDaysProvider.notifier).state = days;
     context.go('/');
+    await ref.read(syncOrchestratorProvider.notifier).startSetupSync(days);
   }
 
   @override
@@ -50,7 +63,11 @@ class _SetupBackfillDaysScreenState extends ConsumerState<SetupBackfillDaysScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const HelioWizardStepHeader(step: 5, totalSteps: 5, title: 'First sync range'),
+            const HelioWizardStepHeader(
+              step: 5,
+              totalSteps: 5,
+              title: 'First sync range',
+            ),
             const SizedBox(height: HelioSpacing.lg),
             Text(
               'How many days of past data should we pull from your strap?',
@@ -61,13 +78,22 @@ class _SetupBackfillDaysScreenState extends ConsumerState<SetupBackfillDaysScree
               spacing: HelioSpacing.sm,
               runSpacing: HelioSpacing.sm,
               children: [
-                for (final d in _presetDays) _chip('$d days', selected: !_custom && _selected == d, onTap: () {
-                  setState(() {
-                    _custom = false;
-                    _selected = d;
-                  });
-                }),
-                _chip('Custom', selected: _custom, onTap: () => setState(() => _custom = true)),
+                for (final d in _presetDays)
+                  _chip(
+                    '$d days',
+                    selected: !_custom && _selected == d,
+                    onTap: () {
+                      setState(() {
+                        _custom = false;
+                        _selected = d;
+                      });
+                    },
+                  ),
+                _chip(
+                  'Custom',
+                  selected: _custom,
+                  onTap: () => setState(() => _custom = true),
+                ),
               ],
             ),
             if (_custom) ...[
@@ -89,15 +115,26 @@ class _SetupBackfillDaysScreenState extends ConsumerState<SetupBackfillDaysScree
     );
   }
 
-  Widget _chip(String label, {required bool selected, required VoidCallback onTap}) {
+  Widget _chip(
+    String label, {
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.md, vertical: HelioSpacing.sm),
+        padding: const EdgeInsets.symmetric(
+          horizontal: HelioSpacing.md,
+          vertical: HelioSpacing.sm,
+        ),
         decoration: BoxDecoration(
-          color: selected ? HelioColors.sleepBlue.withValues(alpha: 0.2) : HelioColors.surfaceElevated,
+          color: selected
+              ? HelioColors.sleepBlue.withValues(alpha: 0.2)
+              : HelioColors.surfaceElevated,
           borderRadius: BorderRadius.circular(HelioRadii.pill),
-          border: Border.all(color: selected ? HelioColors.sleepBlue : HelioColors.border),
+          border: Border.all(
+            color: selected ? HelioColors.sleepBlue : HelioColors.border,
+          ),
         ),
         child: Text(label, style: HelioTypography.body),
       ),

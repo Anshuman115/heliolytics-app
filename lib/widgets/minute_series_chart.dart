@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:heliolytics/utils/chart_bounds.dart';
 import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/models/health_sample.dart';
+import 'package:heliolytics/widgets/metric_chart_tooltip.dart';
 
 class MinuteSeriesChart extends StatelessWidget {
   final List<HealthSample> samples;
@@ -25,13 +26,22 @@ class MinuteSeriesChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (samples.isEmpty) {
-      return Text('No readings for this day.', style: Theme.of(context).textTheme.bodySmall);
+      return Text(
+        'No readings for this day.',
+        style: Theme.of(context).textTheme.bodySmall,
+      );
     }
-    final sorted = [...samples]..sort((a, b) => a.sampledAt.compareTo(b.sampledAt));
+    final sorted = [...samples]
+      ..sort((a, b) => a.sampledAt.compareTo(b.sampledAt));
     final points = _downsample(sorted, maxPoints);
     final start = points.first.sampledAt.millisecondsSinceEpoch / 60000.0;
     final spots = <FlSpot>[];
-    for (final s in points) {
+    for (var i = 0; i < points.length; i++) {
+      final s = points[i];
+      if (i > 0 &&
+          s.sampledAt.difference(points[i - 1].sampledAt).inMinutes > 30) {
+        spots.add(FlSpot.nullSpot);
+      }
       final x = s.sampledAt.millisecondsSinceEpoch / 60000.0 - start;
       spots.add(FlSpot(x, s.value));
     }
@@ -49,7 +59,8 @@ class MinuteSeriesChart extends StatelessWidget {
             show: true,
             drawVerticalLine: false,
             horizontalInterval: ySpan / 4,
-            getDrawingHorizontalLine: (_) => FlLine(color: Colors.white10, strokeWidth: 1),
+            getDrawingHorizontalLine: (_) =>
+                FlLine(color: Colors.white10, strokeWidth: 1),
           ),
           titlesData: FlTitlesData(
             leftTitles: AxisTitles(
@@ -57,7 +68,9 @@ class MinuteSeriesChart extends StatelessWidget {
                 showTitles: true,
                 reservedSize: 40,
                 getTitlesWidget: (v, _) => Text(
-                  unit == '%' ? '${v.round()}%' : v.toStringAsFixed(unit == '°C' ? 1 : 0),
+                  unit == '%'
+                      ? '${v.round()}%'
+                      : v.toStringAsFixed(unit == '°C' ? 1 : 0),
                   style: const TextStyle(fontSize: 10),
                 ),
               ),
@@ -68,44 +81,41 @@ class MinuteSeriesChart extends StatelessWidget {
                 reservedSize: 22,
                 interval: chartXInterval(spots.last.x),
                 getTitlesWidget: (v, _) {
-                  final idx = spots.indexWhere((s) => (s.x - v).abs() < 0.5);
+                  final idx = points.indexWhere((s) {
+                    final x =
+                        s.sampledAt.millisecondsSinceEpoch / 60000.0 - start;
+                    return (x - v).abs() < 0.5;
+                  });
                   if (idx < 0) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(formatChartTime(points[idx].sampledAt), style: const TextStyle(fontSize: 9)),
+                    child: Text(
+                      formatChartTime(points[idx].sampledAt),
+                      style: const TextStyle(fontSize: 9),
+                    ),
                   );
                 },
               ),
             ),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
           ),
           borderData: FlBorderData(show: false),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
-              getTooltipItems: (touched) => touched.map((t) {
-                final i = t.spotIndex.clamp(0, points.length - 1);
-                final val = points[i].value;
-                final txt = unit == '%'
-                    ? '${val.round()}%'
-                    : unit == 'ms'
-                        ? '${val.round()} ms'
-                        : unit == 'bpm'
-                            ? '${val.round()} bpm'
-                            : val.toStringAsFixed(1);
-                return LineTooltipItem(
-                  '${formatChartTime(points[i].sampledAt)}\n$txt',
-                  const TextStyle(color: Colors.white, fontSize: 11),
-                );
-              }).toList(),
+              getTooltipItems: (touched) => touched
+                  .map((spot) => metricChartTooltip(points, start, spot, unit))
+                  .toList(),
             ),
           ),
           lineBarsData: [
             LineChartBarData(
               spots: spots,
-              isCurved: true,
-              curveSmoothness: 0.2,
-              preventCurveOverShooting: true,
+              isCurved: false,
               color: color,
               barWidth: 2.5,
               dotData: FlDotData(show: showDots && spots.length < 80),

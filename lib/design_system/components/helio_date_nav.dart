@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
-import 'package:heliolytics/design_system/tokens/helio_radii.dart';
-import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 
 class HelioDateNav extends StatelessWidget {
@@ -10,6 +8,9 @@ class HelioDateNav extends StatelessWidget {
   final VoidCallback? onNext;
   final bool canGoPrev;
   final bool canGoNext;
+  final bool emphasize;
+  final bool showArrows;
+  final VoidCallback? onDateTap;
 
   const HelioDateNav({
     super.key,
@@ -18,30 +19,78 @@ class HelioDateNav extends StatelessWidget {
     this.onNext,
     this.canGoPrev = true,
     this.canGoNext = true,
+    this.emphasize = false,
+    this.showArrows = true,
+    this.onDateTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (emphasize) return _emphasized();
+
+    final controls = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (showArrows) _arrow(Icons.chevron_left, canGoPrev ? onPrev : null),
+        GestureDetector(
+          onTap: onDateTap,
+          child: SizedBox(
+            width: 132,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                style: HelioTypography.capsLabel.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: HelioColors.textPrimary,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (showArrows) _arrow(Icons.chevron_right, canGoNext ? onNext : null),
+      ],
+    );
+    return controls;
+  }
+
+  Widget _emphasized() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.xs),
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(HelioRadii.pill),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        color: HelioColors.surfaceElevated.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _arrow(Icons.chevron_left, canGoPrev ? onPrev : null),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.sm),
-            child: Text(
-              label,
-              style: HelioTypography.capsLabel.copyWith(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: HelioColors.textPrimary,
-                letterSpacing: 1.6,
+          GestureDetector(
+            onTap: onDateTap,
+            child: Container(
+              width: 112,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: HelioColors.surface.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  style: HelioTypography.capsLabel.copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: HelioColors.textPrimary,
+                  ),
+                ),
               ),
             ),
           ),
@@ -54,12 +103,17 @@ class HelioDateNav extends StatelessWidget {
   Widget _arrow(IconData icon, VoidCallback? onTap) {
     return SizedBox(
       width: 32,
-      height: 32,
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        icon: Icon(icon, size: 20),
-        onPressed: onTap,
-        color: onTap == null ? HelioColors.textMuted : HelioColors.textPrimary,
+      height: 48,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Icon(
+          icon,
+          size: 28,
+          color: onTap == null
+              ? HelioColors.textMuted
+              : HelioColors.textPrimary,
+        ),
       ),
     );
   }

@@ -44,7 +44,10 @@ dependencies:
   flutter_secure_storage: ^9.0.0
 
   # Local cache for parsed backend responses (non-sensitive display data —
-  # see CLAUDE.md "on-device persistence" note)
+  # see CLAUDE.md "on-device persistence" note). shared_preferences for
+  # small single-blob caches (daily health scores); hive for the day-bundle
+  # cache, which needs real per-key read/write instead of decoding one
+  # ever-growing JSON blob on every access.
   shared_preferences: ^2.3.0
 
   # Networking
@@ -68,6 +71,8 @@ dependencies:
   talker: ^5.1.19
   talker_dio_logger: ^5.1.19
   talker_flutter: ^5.1.16
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -91,6 +96,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/logo.png
+    - assets/images/helio_strap.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -122,4 +128,3 @@ flutter_launcher_icons:
   android: "ic_launcher"
   ios: false
   image_path: "assets/images/logo.png"
-

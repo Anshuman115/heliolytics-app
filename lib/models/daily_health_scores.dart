@@ -1,45 +1,37 @@
 class DailyHealthScores {
   final String dayKey;
-  final int? vo2Max;
   final int? calories;
   final int? avgHeartRate;
   final int? sleepEfficiencyPct;
-  final int? sleepDebtMins;
-  final int? sleepConsistencyPct;
-  final int? sleepNeededMins;
 
   const DailyHealthScores({
     required this.dayKey,
-    this.vo2Max,
     this.calories,
     this.avgHeartRate,
     this.sleepEfficiencyPct,
-    this.sleepDebtMins,
-    this.sleepConsistencyPct,
-    this.sleepNeededMins,
   });
 
-  factory DailyHealthScores.empty(String dayKey) => DailyHealthScores(dayKey: dayKey);
+  factory DailyHealthScores.empty(String dayKey) =>
+      DailyHealthScores(dayKey: dayKey);
 
+  /// Cache round-trip format (used by DailyHealthScoresCacheStorage) — same
+  /// key names [fromJson] reads, so caching and backend parsing share one
+  /// source of truth.
   Map<String, dynamic> toJson() => {
-        'dayKey': dayKey,
-        'vo2Max': vo2Max,
-        'calories': calories,
-        'avgHeartRate': avgHeartRate,
-        'sleepEfficiencyPct': sleepEfficiencyPct,
-        'sleepDebtMins': sleepDebtMins,
-        'sleepConsistencyPct': sleepConsistencyPct,
-        'sleepNeededMins': sleepNeededMins,
-      };
+    'dayKey': dayKey,
+    'caloriesTotal': calories,
+    'avgHr': avgHeartRate,
+    'sleepEfficiencyPct': sleepEfficiencyPct,
+  };
 
-  factory DailyHealthScores.fromJson(Map<String, dynamic> j) => DailyHealthScores(
+  /// Parses both one entry from the backend's `/api/v1/daily-health-scores`
+  /// `{"days": [tile, ...]}` response (each tile already carries its own
+  /// `dayKey`) and our own cached [toJson] output — same key names either way.
+  factory DailyHealthScores.fromJson(Map<String, dynamic> j) =>
+      DailyHealthScores(
         dayKey: j['dayKey'] as String,
-        vo2Max: (j['vo2Max'] as num?)?.toInt(),
-        calories: (j['calories'] as num?)?.toInt(),
-        avgHeartRate: (j['avgHeartRate'] as num?)?.toInt(),
+        calories: ((j['caloriesTotal'] ?? j['calories']) as num?)?.toInt(),
+        avgHeartRate: (j['avgHr'] as num?)?.toInt(),
         sleepEfficiencyPct: (j['sleepEfficiencyPct'] as num?)?.toInt(),
-        sleepDebtMins: (j['sleepDebtMins'] as num?)?.toInt(),
-        sleepConsistencyPct: (j['sleepConsistencyPct'] as num?)?.toInt(),
-        sleepNeededMins: (j['sleepNeededMins'] as num?)?.toInt(),
       );
 }

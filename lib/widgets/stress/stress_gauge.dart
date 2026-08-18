@@ -30,7 +30,10 @@ class StressGauge extends StatelessWidget {
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
-          CustomPaint(size: _size, painter: _GaugePainter(value: v)),
+          CustomPaint(
+            size: _size,
+            painter: _GaugePainter(value: v),
+          ),
           Positioned(top: 52, child: _readout(v, zone)),
           Positioned(left: 0, bottom: 6, child: _bound('0')),
           Positioned(
@@ -71,12 +74,12 @@ class StressGauge extends StatelessWidget {
   }
 
   Widget _bound(String text) => Text(
-        text,
-        style: HelioTypography.bodyMuted.copyWith(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-        ),
-      );
+    text,
+    style: HelioTypography.bodyMuted.copyWith(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+    ),
+  );
 }
 
 class _GaugePainter extends CustomPainter {
@@ -111,7 +114,6 @@ class _GaugePainter extends CustomPainter {
           endAngle: _start + _sweep,
           colors: stressGaugeColors,
           stops: [0.0, 0.55, 1.0],
-          transform: GradientRotation(_start),
         ).createShader(rect),
     );
 
@@ -124,8 +126,10 @@ class _GaugePainter extends CustomPainter {
     final centre = Offset(rect.center.dx, rect.top + rect.height / 2);
     final radius = rect.width / 2;
 
-    final inner = centre + Offset(math.cos(angle), math.sin(angle)) * (radius - _stroke);
-    final outer = centre + Offset(math.cos(angle), math.sin(angle)) * (radius + 2);
+    final inner =
+        centre + Offset(math.cos(angle), math.sin(angle)) * (radius - _stroke);
+    final outer =
+        centre + Offset(math.cos(angle), math.sin(angle)) * (radius + 2);
 
     canvas.drawLine(
       inner,

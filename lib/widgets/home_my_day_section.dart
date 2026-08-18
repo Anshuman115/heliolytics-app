@@ -3,90 +3,119 @@ import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
+import 'package:heliolytics/models/day_metric.dart';
 
 class HomeMyDaySection extends StatelessWidget {
+  final DayMetric day;
   final VoidCallback? onTap;
+  final VoidCallback? onAddTap;
 
-  const HomeMyDaySection({super.key, this.onTap});
+  const HomeMyDaySection({
+    super.key,
+    required this.day,
+    this.onTap,
+    this.onAddTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Section header with + button
         Row(
           children: [
             Text(
-              'MY DAY',
-              style: HelioTypography.sectionTitle,
+              'My Day',
+              style: HelioTypography.scoreMedium.copyWith(fontSize: 18),
             ),
             const Spacer(),
             GestureDetector(
-              onTap: onTap,
+              onTap: onAddTap ?? onTap,
               child: Container(
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: HelioColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: HelioColors.border),
+                  color: HelioColors.textPrimary,
+                  borderRadius: BorderRadius.circular(HelioRadii.sm),
                 ),
-                child: const Icon(Icons.add, size: 16, color: HelioColors.textSecondary),
+                child: const Icon(
+                  Icons.add,
+                  size: 20,
+                  color: HelioColors.canvasBottom,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: HelioSpacing.md),
-        // Daily Outlook row
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: HelioSpacing.lg,
-              vertical: HelioSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(HelioRadii.card),
-              gradient: LinearGradient(
-                colors: [
-                  HelioColors.outlookGold.withValues(alpha: 0.25),
-                  HelioColors.surface,
-                ],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              border: Border.all(color: HelioColors.border),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.wb_sunny_outlined, color: HelioColors.outlookGold, size: 18),
-                const SizedBox(width: HelioSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'YOUR DAILY OUTLOOK',
-                        style: HelioTypography.capsLabel.copyWith(
-                          fontSize: 10,
-                          color: HelioColors.outlookGold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'View readiness & recovery tips',
-                        style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
-                      ),
-                    ],
-                  ),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(HelioRadii.card),
+            child: Ink(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF29224F), Color(0xFF193E4B)],
                 ),
-                const Icon(Icons.chevron_right, color: HelioColors.textMuted, size: 18),
-              ],
+                borderRadius: BorderRadius.circular(HelioRadii.card),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: HelioSpacing.lg,
+                vertical: HelioSpacing.md,
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.nightlight_outlined,
+                    color: HelioColors.textSecondary,
+                    size: 22,
+                  ),
+                  const SizedBox(width: HelioSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your Day In Review',
+                          style: HelioTypography.body.copyWith(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: HelioSpacing.xs),
+                        Text(
+                          _summary,
+                          style: HelioTypography.bodyMuted.copyWith(
+                            color: HelioColors.textPrimary.withValues(
+                              alpha: 0.72,
+                            ),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: HelioColors.textPrimary,
+                    size: 24,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ],
     );
+  }
+
+  String get _summary {
+    final sleep = day.sleepScore == null ? '--' : '${day.sleepScore}%';
+    final recovery = day.readiness == null ? '--' : '${day.readiness}%';
+    final strain = day.paiScore == null
+        ? '--'
+        : (day.paiScore! / 10).toStringAsFixed(1);
+    return 'Sleep $sleep  |  Recovery $recovery  |  Strain $strain';
   }
 }

@@ -12,10 +12,16 @@ class HelioLoading extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: HelioColors.sleepBlue, strokeWidth: 2),
+          const CircularProgressIndicator(
+            color: HelioColors.sleepBlue,
+            strokeWidth: 2,
+          ),
           if (message != null) ...[
             const SizedBox(height: 16),
-            Text(message!, style: const TextStyle(color: HelioColors.textSecondary)),
+            Text(
+              message!,
+              style: const TextStyle(color: HelioColors.textSecondary),
+            ),
           ],
         ],
       ),

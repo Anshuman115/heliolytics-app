@@ -13,38 +13,62 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: HelioTopBar(showBack: true, onBack: () => context.pop(), title: 'About'),
+      appBar: HelioTopBar(
+        showBack: true,
+        onBack: () => context.pop(),
+        title: 'About',
+      ),
       body: ListView(
         padding: const EdgeInsets.all(HelioSpacing.lg),
         children: [
           HelioSurfaceCard(
-            padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.lg, vertical: HelioSpacing.md),
-            child: Row(children: [
-              const Icon(Icons.info_outline, size: 18, color: HelioColors.textMuted),
-              const SizedBox(width: HelioSpacing.md),
-              Text('Build', style: HelioTypography.capsLabel),
-              const Spacer(),
-              Text(appBuildMarker, style: HelioTypography.bodyMuted),
-            ]),
+            padding: const EdgeInsets.symmetric(
+              horizontal: HelioSpacing.lg,
+              vertical: HelioSpacing.md,
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: HelioColors.textMuted,
+                ),
+                const SizedBox(width: HelioSpacing.md),
+                Text('Build', style: HelioTypography.capsLabel),
+                const Spacer(),
+                Text(appBuildMarker, style: HelioTypography.bodyMuted),
+              ],
+            ),
           ),
           const SizedBox(height: HelioSpacing.xxl),
           Center(
-            child: Column(children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset('assets/images/logo.png', height: 64, width: 64),
-              ),
-              const SizedBox(height: HelioSpacing.md),
-              Text('HELIOLYTICS',
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    height: 64,
+                    width: 64,
+                  ),
+                ),
+                const SizedBox(height: HelioSpacing.md),
+                Text(
+                  'HELIOLYTICS',
                   style: HelioTypography.sectionTitle.copyWith(
                     color: HelioColors.textMuted,
-                    letterSpacing: 4,
+                    letterSpacing: 0,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
-                  )),
-              const SizedBox(height: HelioSpacing.xs),
-              Text('Version $appBuildMarker', style: HelioTypography.bodyMuted.copyWith(fontSize: 9)),
-            ]),
+                  ),
+                ),
+                const SizedBox(height: HelioSpacing.xs),
+                Text(
+                  'Version $appBuildMarker',
+                  style: HelioTypography.bodyMuted.copyWith(fontSize: 9),
+                ),
+              ],
+            ),
           ),
         ],
       ),

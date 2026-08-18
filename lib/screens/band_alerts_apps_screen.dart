@@ -39,19 +39,20 @@ class BandAlertsAppsScreen extends ConsumerWidget {
               children: [
                 for (final app in bandAlertsSuggestedApps)
                   _AppRow(
-                      label: app.value,
-                      packageId: app.key,
-                      selected: selected.contains(app.key),
-                      onChanged: (v) => ref
-                          .read(bandAlertsProvider.notifier)
-                          .togglePackage(app.key, v),
-                      onEditPattern: () => context.push(
-                            '/settings/band-alerts/pattern',
-                            extra: BandAlertsAppPatternArgs(
-                              packageId: app.key,
-                              label: app.value,
-                            ),
-                          )),
+                    label: app.value,
+                    packageId: app.key,
+                    selected: selected.contains(app.key),
+                    onChanged: (v) => ref
+                        .read(bandAlertsProvider.notifier)
+                        .togglePackage(app.key, v),
+                    onEditPattern: () => context.push(
+                      '/settings/band-alerts/pattern',
+                      extra: BandAlertsAppPatternArgs(
+                        packageId: app.key,
+                        label: app.value,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -62,7 +63,7 @@ class BandAlertsAppsScreen extends ConsumerWidget {
 
   static final _sectionStyle = HelioTypography.sectionTitle.copyWith(
     fontSize: 12,
-    letterSpacing: 1.2,
+    letterSpacing: 0,
     color: HelioColors.textMuted,
   );
 }

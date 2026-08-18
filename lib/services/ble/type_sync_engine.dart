@@ -41,14 +41,19 @@ class TypeSyncEngine {
       ..maxRounds = maxRounds;
     _job = job;
     _startRound();
-    return job.completer.future.timeout(timeout, onTimeout: () {
-      if (!probeOnly) log?.call('  fetch 0x${code.toRadixString(16)} timed out');
-      lastRaw = job.allRaw.toBytes();
-      _job = null;
-      // Tell the strap we're done so it's ready for the next code.
-      writeControl([_cmdAck, _ackKeep]);
-      return lastRaw;
-    });
+    return job.completer.future.timeout(
+      timeout,
+      onTimeout: () {
+        if (!probeOnly) {
+          log?.call('  fetch 0x${code.toRadixString(16)} timed out');
+        }
+        lastRaw = job.allRaw.toBytes();
+        _job = null;
+        // Tell the strap we're done so it's ready for the next code.
+        writeControl([_cmdAck, _ackKeep]);
+        return lastRaw;
+      },
+    );
   }
 
   void _startRound() {
@@ -57,7 +62,17 @@ class TypeSyncEngine {
     job.data.clear();
     job.lastCounter = -1;
     job.rounds++;
-    final cmd = <int>[_cmdStartDate, job.code, ...HuamiTime.fromDateTime(job.since)];
+    if (!job.probeOnly) {
+      log?.call(
+        '  request round ${job.rounds}: 0x${job.code.toRadixString(16)} '
+        'from ${job.since.toIso8601String()}',
+      );
+    }
+    final cmd = <int>[
+      _cmdStartDate,
+      job.code,
+      ...HuamiTime.fromDateTime(job.since),
+    ];
     writeControl(cmd);
   }
 
@@ -80,14 +95,28 @@ class TypeSyncEngine {
         _finish('bad start reply');
         return;
       }
-      job.roundStart = parsed.start;
-      firstRoundStart ??= parsed.start;
       lastExpected = parsed.expected;
-      if (!job.probeOnly) {
-        log?.call('  round ${job.rounds}: expect ${parsed.expected} pkts '
-            'since ${parsed.start.toIso8601String()}');
+      if (parsed.expected == 0) {
+        if (!job.probeOnly) {
+          log?.call('  round ${job.rounds}: expect 0 pkts');
+        }
+        _ackThenFinish();
+        return;
       }
-      if (parsed.expected == 0 || job.probeOnly) {
+      final roundStart = parsed.start;
+      if (roundStart == null) {
+        _finish('missing start timestamp');
+        return;
+      }
+      job.roundStart = roundStart;
+      firstRoundStart ??= roundStart;
+      if (!job.probeOnly) {
+        log?.call(
+          '  round ${job.rounds}: expect ${parsed.expected} pkts '
+          'since ${roundStart.toIso8601String()}',
+        );
+      }
+      if (job.probeOnly) {
         _ackThenFinish();
         return;
       }
@@ -106,7 +135,9 @@ class TypeSyncEngine {
     if (job == null || value.isEmpty) return;
     final counter = value[0];
     if (job.lastCounter >= 0 && counter != ((job.lastCounter + 1) & 0xFF)) {
-      log?.call('  counter gap got=$counter exp=${(job.lastCounter + 1) & 0xFF}');
+      log?.call(
+        '  counter gap got=$counter exp=${(job.lastCounter + 1) & 0xFF}',
+      );
     }
     job.lastCounter = counter;
     job.data.add(value.sublist(1));
@@ -118,10 +149,12 @@ class TypeSyncEngine {
     writeControl([_cmdAck, _ackKeep]);
     final raw = job.data.toBytes();
     if (raw.isNotEmpty) {
-      roundSegments.add(SyncPageAnchor(
-        byteOffset: job.allRaw.length,
-        roundStart: job.roundStart,
-      ));
+      roundSegments.add(
+        SyncPageAnchor(
+          byteOffset: job.allRaw.length,
+          roundStart: job.roundStart,
+        ),
+      );
     }
     job.allRaw.add(raw);
     log?.call('  round ${job.rounds}: ${raw.length}B raw');
@@ -137,7 +170,7 @@ class TypeSyncEngine {
         final now = DateTime.now();
         if (nextSince.isBefore(now.subtract(const Duration(seconds: 30))) &&
             nextSince.isAfter(job.since)) {
-          if (job.code == 0x05) {
+          if (job.code == 0x05 || job.code == 0x06) {
             log?.call('  workouts paging from ${nextSince.toIso8601String()}');
           }
           job.since = nextSince;
@@ -165,7 +198,9 @@ class TypeSyncEngine {
   void _finish(String reason) {
     final job = _job;
     if (job == null) return;
-    if (!job.probeOnly) log?.call('  finish 0x${job.code.toRadixString(16)}: $reason');
+    if (!job.probeOnly) {
+      log?.call('  finish 0x${job.code.toRadixString(16)}: $reason');
+    }
     lastRaw = job.allRaw.toBytes();
     _job = null;
     if (!job.completer.isCompleted) job.completer.complete(lastRaw);

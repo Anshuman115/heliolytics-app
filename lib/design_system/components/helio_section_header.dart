@@ -16,7 +16,8 @@ class HelioSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tail = trailing ??
+    final tail =
+        trailing ??
         (trailingText != null
             ? Text(trailingText!, style: HelioTypography.capsLabel)
             : null);
@@ -24,7 +25,12 @@ class HelioSectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: HelioSpacing.sm),
       child: Row(
         children: [
-          Expanded(child: Text(title.toUpperCase(), style: HelioTypography.sectionTitle)),
+          Expanded(
+            child: Text(
+              title.toUpperCase(),
+              style: HelioTypography.sectionTitle,
+            ),
+          ),
           if (tail != null) tail,
         ],
       ),

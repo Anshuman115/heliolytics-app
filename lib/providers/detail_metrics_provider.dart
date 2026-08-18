@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/services/config/api_config_storage.dart';
 import 'package:heliolytics/services/network/api_dio.dart';
-import 'package:heliolytics/utils/error_messages.dart';
-import 'package:heliolytics/utils/app_logger.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/services/metrics_api_client.dart';
 import 'package:heliolytics/models/health_sample.dart';
@@ -40,28 +38,22 @@ class DetailMetrics {
       temperature.where((t) => t.dayKey == dayKey).toList();
 }
 
-final detailMetricsProvider = FutureProvider<DetailMetrics>((ref) async {
+final detailMetricsProvider = FutureProvider.family<DetailMetrics, String>((
+  ref,
+  dayKey,
+) async {
   ref.keepAlive();
   final configured = await ref.read(apiConfiguredProvider.future);
   if (!configured) return const DetailMetrics();
   final client = ref.read(metricsApiClientProvider);
-  final (series, heartRate, temperature) = await (
-    _orEmpty(client.fetchSeries(), 'series'),
-    _orEmpty(client.fetchHeartRate(), 'heartRate'),
-    _orEmpty(client.fetchTemperature(), 'temperature'),
-  ).wait;
+  final results = await Future.wait<Object>([
+    client.fetchSeriesForDay(dayKey),
+    client.fetchHeartRateForDay(dayKey),
+    client.fetchTemperatureForDay(dayKey),
+  ], eagerError: true);
   return DetailMetrics(
-    series: series,
-    heartRate: heartRate,
-    temperature: temperature,
+    series: results[0] as List<HealthSample>,
+    heartRate: results[1] as List<HeartRateSample>,
+    temperature: results[2] as List<TempSample>,
   );
 });
-
-Future<List<T>> _orEmpty<T>(Future<List<T>> future, String label) async {
-  try {
-    return await future;
-  } catch (e) {
-    AppLogger.instance.log('$label: ${friendlyError(e)}', tag: 'metrics');
-    return <T>[];
-  }
-}

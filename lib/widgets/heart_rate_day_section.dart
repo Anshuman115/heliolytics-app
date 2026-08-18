@@ -1,58 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_metric_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/health_sample.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/providers/live_hr_provider.dart';
 import 'package:heliolytics/utils/hr_chart_samples.dart';
-import 'package:heliolytics/widgets/heart_rate_bpm_hero.dart';
 import 'package:heliolytics/widgets/metric_stats_row.dart';
 import 'package:heliolytics/widgets/minute_series_chart.dart';
 
 class HeartRateDaySection extends ConsumerWidget {
-  final DayMetric day;
   final String dayKey;
 
-  const HeartRateDaySection({
-    super.key,
-    required this.day,
-    required this.dayKey,
-  });
+  const HeartRateDaySection({super.key, required this.dayKey});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final live = ref.watch(liveHrProvider);
-    final detail = ref.watch(detailMetricsProvider).valueOrNull;
+    final detail = ref.watch(detailMetricsProvider(dayKey)).valueOrNull;
     final hr = detail?.heartRateFor(dayKey) ?? const [];
-    final latest = hr.isEmpty ? null : hr.last;
-    final syncedBpm = latest?.bpm ?? day.restingHr;
-    final syncedLabel = latest != null ? 'LATEST BPM' : 'RESTING BPM';
-
     final isLive = live.isLive && live.bpm != null;
-    final heroBpm = isLive ? live.bpm! : (syncedBpm ?? 64);
-    final heroLabel = isLive ? 'LIVE BPM' : syncedLabel;
-    final heroAt = isLive ? live.sampledAt : latest?.sampledAt;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        GestureDetector(
-          onTap: () => context.push('/metric/$dayKey/continuous_hr'),
-          child: HeartRateBpmHero(
-            bpm: heroBpm,
-            label: heroLabel,
-            at: heroAt,
-            isLive: isLive,
-          ),
-        ),
-        const SizedBox(height: HelioSpacing.xl),
         _sectionHeader(),
         const SizedBox(height: HelioSpacing.md),
         if (isLive && live.recentSamples.isNotEmpty) ...[

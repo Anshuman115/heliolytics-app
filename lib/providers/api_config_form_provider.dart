@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/services/config/api_config_storage.dart';
-import 'package:heliolytics/providers/cloud_sync_provider.dart';
+import 'package:heliolytics/providers/health_data_refresh_coordinator.dart';
 
 class ApiConfigForm {
   final String url;
@@ -10,8 +10,8 @@ class ApiConfigForm {
 
 final apiConfigFormProvider =
     AsyncNotifierProvider<ApiConfigFormNotifier, ApiConfigForm>(
-  ApiConfigFormNotifier.new,
-);
+      ApiConfigFormNotifier.new,
+    );
 
 class ApiConfigFormNotifier extends AsyncNotifier<ApiConfigForm> {
   @override
@@ -25,11 +25,24 @@ class ApiConfigFormNotifier extends AsyncNotifier<ApiConfigForm> {
   }
 
   Future<void> save(String url, String signingSecret) async {
-    await ref.read(apiConfigStorageProvider).save(
-          baseUrl: url.trim(),
-          signingSecret: signingSecret.trim(),
-        );
-    ref.invalidate(apiConfiguredProvider);
+    final storage = ref.read(apiConfigStorageProvider);
+    final nextUrl = url.trim();
+    final nextSecret = signingSecret.trim();
+    final current = await Future.wait([
+      storage.readBaseUrl(),
+      storage.readSigningSecret(),
+    ]);
+    final changed =
+        nextUrl != (current[0] ?? '').trim() ||
+        nextSecret != (current[1] ?? '').trim();
+    if (changed) {
+      await ref
+          .read(healthDataRefreshCoordinatorProvider)
+          .replaceApiConfiguration(
+            save: () =>
+                storage.save(baseUrl: nextUrl, signingSecret: nextSecret),
+          );
+    }
     ref.invalidateSelf();
   }
 }

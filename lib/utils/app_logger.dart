@@ -85,6 +85,14 @@ class AppLogger {
         validateStatus: (code) => code != null && code < 500,
       ),
     );
+    // Response bodies carry parsed health metrics (PHI). Full bodies are
+    // shown in the debug console for local development, but never enter
+    // the message text that gets persisted to disk in release —
+    // printResponseData off means TalkerDioLogger never formats body
+    // content into generateTextMessage() at all, so there's nothing for
+    // _PersistingObserver to write. Status, URL, timing, and headers
+    // (already redacted via hiddenHeaders for the ones that matter) still
+    // log either way — only the metric values themselves drop in release.
     dio.interceptors.add(
       TalkerDioLogger(
         talker: _talker,
@@ -92,7 +100,7 @@ class AppLogger {
           printRequestHeaders: true,
           printResponseHeaders: false,
           printResponseMessage: true,
-          printResponseData: true,
+          printResponseData: !kReleaseMode,
           printErrorHeaders: true,
           hiddenHeaders: _hiddenHeaders,
         ),

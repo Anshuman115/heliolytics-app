@@ -82,10 +82,10 @@ class SyncFetcher {
 
     String? sessionId;
     if (singleTypeCode == null) {
-      final hours = DateTime.now().difference(plan.anchorSince).inHours.clamp(
-        1,
-        24 * initialSyncBackfillDays,
-      );
+      final requestedHours = DateTime.now()
+          .difference(plan.anchorSince)
+          .inHours;
+      final hours = requestedHours < 1 ? 1 : requestedHours;
       sessionId = await store.createSession(
         deviceMac: mac,
         fetchWindowHours: hours,
@@ -110,7 +110,11 @@ class SyncFetcher {
           typeInt,
           SyncWindow.sinceForType(plan, codeStr),
         );
-        final parsed = SyncTypeFetch.run(codeStr: codeStr, fetch: fetched, log: log);
+        final parsed = SyncTypeFetch.run(
+          codeStr: codeStr,
+          fetch: fetched,
+          log: log,
+        );
         results.add(parsed.result);
         onTypeProgress?.call(codeStr, parsed.result);
         entries.add(parsed.entry);
@@ -125,7 +129,13 @@ class SyncFetcher {
     }
 
     if (singleTypeCode != null) {
-      return _singleOutcome(mergeBase!, singleTypeCode, entries, results, rawByCode);
+      return _singleOutcome(
+        mergeBase!,
+        singleTypeCode,
+        entries,
+        results,
+        rawByCode,
+      );
     }
 
     final catalog = buildCatalog(sessionId!, entries);
@@ -137,7 +147,11 @@ class SyncFetcher {
       auth: auth,
     );
     return SyncFetchOutcome(
-      payload: SyncPayload(session: session, catalog: catalog, rawByCode: rawByCode),
+      payload: SyncPayload(
+        session: session,
+        catalog: catalog,
+        rawByCode: rawByCode,
+      ),
       typeResults: results,
     );
   }

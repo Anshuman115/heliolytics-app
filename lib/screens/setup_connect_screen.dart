@@ -24,13 +24,16 @@ class _SetupConnectScreenState extends ConsumerState<SetupConnectScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _connect());
   }
 
-  Future<void> _connect() => ref.read(syncOrchestratorProvider.notifier).connect();
+  Future<void> _connect() =>
+      ref.read(syncOrchestratorProvider.notifier).connectForSetup();
 
   @override
   Widget build(BuildContext context) {
     final snap = ref.watch(syncOrchestratorProvider);
     ref.listen(syncOrchestratorProvider, (prev, next) {
-      if (next.state == SessionState.connected) context.push('/setup/backfill-days');
+      if (next.state == SessionState.connected) {
+        context.push('/setup/backfill-days');
+      }
     });
 
     return Scaffold(
@@ -40,10 +43,20 @@ class _SetupConnectScreenState extends ConsumerState<SetupConnectScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const HelioWizardStepHeader(step: 4, totalSteps: 5, title: 'Connecting'),
+            const HelioWizardStepHeader(
+              step: 4,
+              totalSteps: 5,
+              title: 'Connecting',
+            ),
             const SizedBox(height: HelioSpacing.xl),
-            _step('Connecting', snap.state.index >= SessionState.connecting.index),
-            _step('Authenticating', snap.state.index >= SessionState.authenticating.index),
+            _step(
+              'Connecting',
+              snap.state.index >= SessionState.connecting.index,
+            ),
+            _step(
+              'Authenticating',
+              snap.state.index >= SessionState.authenticating.index,
+            ),
             _step('Connected', snap.state == SessionState.connected),
             if (snap.state == SessionState.error) ...[
               const SizedBox(height: HelioSpacing.lg),

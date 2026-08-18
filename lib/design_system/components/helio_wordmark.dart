@@ -16,7 +16,7 @@ class HelioWordmark extends StatelessWidget {
           color: HelioColors.textPrimary,
           fontSize: 15,
           fontWeight: FontWeight.w300,
-          letterSpacing: 6,
+          letterSpacing: 0,
         ),
       ),
     );

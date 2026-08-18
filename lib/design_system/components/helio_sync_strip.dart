@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/models/session_state.dart';
+import 'package:heliolytics/providers/backfill_days_provider.dart';
 import 'package:heliolytics/providers/sync_orchestrator.dart';
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/utils/formatters.dart';
@@ -14,20 +15,21 @@ class HelioSyncStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snap = ref.watch(syncOrchestratorProvider);
+    final backfillDays = ref.watch(backfillDaysProvider);
     final status = ref.watch(syncStatusProvider).valueOrNull;
-    final busy = snap.state == SessionState.fetching ||
+    final busy =
+        snap.state == SessionState.fetching ||
         snap.state == SessionState.connecting ||
         snap.state == SessionState.authenticating ||
         snap.state == SessionState.scanning;
 
-    final label = _label(snap);
+    final label = _label(snap, backfillDays);
     final color = switch (snap.state) {
       SessionState.error => HelioColors.syncError,
       SessionState.fetching ||
       SessionState.connecting ||
       SessionState.authenticating ||
-      SessionState.scanning =>
-        HelioColors.syncActive,
+      SessionState.scanning => HelioColors.syncActive,
       _ => HelioColors.textSecondary,
     };
 
@@ -35,11 +37,11 @@ class HelioSyncStrip extends ConsumerWidget {
     final suffix = busy ? null : _idleSuffix(status?.lastSyncedAt, batt);
 
     return Material(
-      color: color.withValues(alpha: 0.08),
+      color: HelioColors.surface.withValues(alpha: 0.72),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: HelioSpacing.lg,
-          vertical: HelioSpacing.sm,
+          vertical: HelioSpacing.xs,
         ),
         child: Row(
           children: [
@@ -56,7 +58,7 @@ class HelioSyncStrip extends ConsumerWidget {
               child: Text(
                 suffix != null ? '$label · $suffix' : label,
                 style: TextStyle(fontSize: 12, color: color),
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -66,32 +68,32 @@ class HelioSyncStrip extends ConsumerWidget {
     );
   }
 
-  String _label(SessionSnapshot snap) {
+  String _label(SessionSnapshot snap, int? backfillDays) {
     return switch (snap.state) {
       SessionState.connecting => 'Connecting to strap…',
       SessionState.authenticating => 'Authenticating…',
       SessionState.scanning => 'Scanning for strap…',
-      SessionState.fetching => _fetchLabel(snap),
-      SessionState.error => snap.lastErrorMessage ?? 'Sync error',
+      SessionState.fetching => _fetchLabel(snap, backfillDays),
+      SessionState.error => 'Strap unavailable',
       _ => 'Ready',
     };
   }
 
-  String _fetchLabel(SessionSnapshot snap) {
+  String _fetchLabel(SessionSnapshot snap, int? backfillDays) {
     final code = snap.currentTypeCode;
     final done = snap.typeResults.length;
     final total = fetchTypeCodes.length;
     final typeName = code != null ? (typeCodeLabels[code] ?? 'data') : 'data';
     final base = 'Syncing strap · $typeName ($done/$total)';
-    if (done == 0) {
-      return '$base · first sync · up to $initialSyncBackfillDays days';
+    if (done == 0 && backfillDays != null) {
+      return '$base · first sync · up to $backfillDays days';
     }
     return base;
   }
 
   String _idleSuffix(DateTime? syncedAt, int? batt) {
     final ago = formatSyncAgo(syncedAt).replaceFirst('Synced ', 'Last synced ');
-    if (batt != null) return '$ago · 🔋 $batt%';
+    if (batt != null) return '$ago · $batt% battery';
     return ago;
   }
 }

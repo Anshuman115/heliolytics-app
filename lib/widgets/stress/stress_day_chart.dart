@@ -74,9 +74,11 @@ class _StressChartPainter extends CustomPainter {
 
   void _paintSpans(Canvas canvas, Size size, double Function(DateTime) xOf) {
     final paint = Paint()..color = Colors.white.withValues(alpha: 0.05);
+    final plotLeft = _padL;
+    final plotRight = size.width - _padR;
     for (final s in spans) {
-      final l = xOf(s.start);
-      final r = xOf(s.end);
+      final l = xOf(s.start).clamp(plotLeft, plotRight).toDouble();
+      final r = xOf(s.end).clamp(plotLeft, plotRight).toDouble();
       if (r <= l) continue;
       canvas.drawRect(
         Rect.fromLTRB(l, _padT, r, size.height - _padB),

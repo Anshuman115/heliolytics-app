@@ -9,7 +9,7 @@ void selectDay(WidgetRef ref, String dayKey) {
 
 void shiftSelectedDay(WidgetRef ref, int delta) {
   final current = ref.read(selectedDayKeyProvider) ?? todayDayKey();
-  final date = DateTime.parse(current).add(Duration(days: -delta));
+  final date = DateTime.parse(current).add(Duration(days: delta));
   final next = dayKeyFor(date);
   if (next.compareTo(todayDayKey()) > 0) return; // never page into the future
   ref.read(selectedDayKeyProvider.notifier).state = next;

@@ -6,8 +6,11 @@ import 'package:heliolytics/providers/backfill_days_provider.dart';
 import 'package:heliolytics/services/ble/sync_orchestrator_actions.dart';
 import 'package:heliolytics/services/ble/sync_orchestrator_run.dart';
 import 'package:heliolytics/services/ble/sync_session_log.dart';
+import 'package:heliolytics/services/ble/sync_setup_connector.dart';
 import 'package:heliolytics/services/session_store.dart';
 import 'package:heliolytics/models/sync_payload.dart';
+
+part 'sync_orchestrator_operations.dart';
 
 class SyncOrchestrator extends Notifier<SessionSnapshot> {
   late AuthKeyStorage _authStorage;
@@ -32,8 +35,12 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   Future<void> _initAsync() async {
     _store = await ref.read(sessionStoreProvider.future);
     final hasKey = await _authStorage.hasKey();
-    state = state.copyWith(state: hasKey ? SessionState.idle : SessionState.noAuthKey);
-    _sessionLog.log('App initialized. Auth key: ${hasKey ? "present" : "missing"}');
+    state = state.copyWith(
+      state: hasKey ? SessionState.idle : SessionState.noAuthKey,
+    );
+    _sessionLog.log(
+      'App initialized. Auth key: ${hasKey ? "present" : "missing"}',
+    );
     _emit(state.copyWith(logs: _sessionLog.logs));
   }
 
@@ -48,7 +55,11 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
     await _authStorage.clear();
     _sessionLog.clear();
     _results.clear();
-    state = state.copyWith(state: SessionState.noAuthKey, logs: [], typeResults: []);
+    state = state.copyWith(
+      state: SessionState.noAuthKey,
+      logs: [],
+      typeResults: [],
+    );
   }
 
   Future<void> connect() async {
@@ -63,7 +74,31 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
         state: state,
         emit: _emit,
         setPayload: (p) => _lastPayload = p,
-        runSync: _run,
+        runSync: (mac) => runOrchestratedSync(
+          ref: ref,
+          auth: _authStorage,
+          store: _store,
+          sessionLog: _sessionLog,
+          results: _results,
+          setPayload: (payload) => _lastPayload = payload,
+          emit: _emit,
+          readState: () => state,
+          mac: mac,
+        ),
+      );
+    } finally {
+      _connecting = false;
+    }
+  }
+
+  Future<void> connectForSetup() async {
+    _connecting = true;
+    try {
+      await connectForInitialSetup(
+        ref: ref,
+        readState: () => state,
+        sessionLog: _sessionLog,
+        emit: _emit,
       );
     } finally {
       _connecting = false;
@@ -71,82 +106,43 @@ class SyncOrchestrator extends Notifier<SessionSnapshot> {
   }
 
   Future<void> saveMac(String mac) async {
+    await _authStorage.markSetupPending();
     await _authStorage.saveMac(mac);
     _sessionLog.log('Strap MAC saved: $mac');
     _emit(state.copyWith(logs: _sessionLog.logs));
   }
 
-  Future<void> saveMacAndConnect(String mac) async {
-    await saveMac(mac);
+  Future<bool> hasSavedMac() => _authStorage.hasMac();
+
+  Future<void> startSetupSync(int days) async {
+    await _authStorage.markSetupPending();
+    ref.read(backfillDaysProvider.notifier).state = days;
     await connect();
   }
 
-  Future<bool> hasSavedMac() => _authStorage.hasMac();
-
-  Future<void> scheduleAutoConnect() => orchestratorAutoConnect(
-        ref: ref,
-        auth: _authStorage,
-        hasSavedMac: hasSavedMac,
-        isConnecting: () => _connecting,
-        readState: () => state,
-        sessionLog: _sessionLog,
-        emit: _emit,
-        connect: connect,
-      );
-
-  SyncPayload? get lastPayload => _lastPayload;
+  Future<void> scheduleAutoConnect() async {
+    _store ??= await ref.read(sessionStoreProvider.future);
+    await orchestratorAutoConnect(
+      ref: ref,
+      auth: _authStorage,
+      store: _store,
+      hasSavedMac: hasSavedMac,
+      isSetupPending: _authStorage.isSetupPending,
+      isConnecting: () => _connecting,
+      readState: () => state,
+      sessionLog: _sessionLog,
+      emit: _emit,
+      connect: connect,
+    );
+  }
 
   Future<void> retryLastUpload() => orchestratorRetryUpload(
-        ref: ref,
-        sessionLog: _sessionLog,
-        lastPayload: _lastPayload,
-        state: state,
-        emit: _emit,
-      );
-
-  Future<void> refetchType(String codeStr) async {
-    final store = _store;
-    if (store == null) return;
-    await orchestratorRefetch(
-      ref: ref,
-      auth: _authStorage,
-      store: store,
-      sessionLog: _sessionLog,
-      connecting: _connecting,
-      readState: () => state,
-      lastPayload: _lastPayload,
-      emit: _emit,
-      setPayload: (p) => _lastPayload = p,
-      setConnecting: (v) => _connecting = v,
-      codeStr: codeStr,
-    );
-  }
-
-  Future<void> _run(String mac) async {
-    final store = _store;
-    final authKey = await _authStorage.readBytes();
-    if (store == null || authKey == null) {
-      _sessionLog.log('No auth key stored');
-      _emit(state.copyWith(logs: _sessionLog.logs));
-      return;
-    }
-    final userBackfillDays = ref.read(backfillDaysProvider);
-    await runFullSync(
-      ref: ref,
-      auth: _authStorage,
-      store: store,
-      sessionLog: _sessionLog,
-      mac: mac,
-      authKey: authKey,
-      results: _results,
-      setPayload: (p) => _lastPayload = p,
-      emit: _emit,
-      userBackfillDays: userBackfillDays,
-    );
-    if (userBackfillDays != null && state.state != SessionState.error) {
-      ref.read(backfillDaysProvider.notifier).state = null;
-    }
-  }
+    ref: ref,
+    sessionLog: _sessionLog,
+    lastPayload: _lastPayload,
+    state: state,
+    emit: _emit,
+  );
 }
 
 final syncOrchestratorProvider =

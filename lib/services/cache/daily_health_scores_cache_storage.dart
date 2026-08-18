@@ -14,7 +14,9 @@ class DailyHealthScoresCacheStorage {
       final map = Map<String, dynamic>.from(jsonDecode(raw) as Map);
       final entry = map[dayKey];
       if (entry == null) return null;
-      return DailyHealthScores.fromJson(Map<String, dynamic>.from(entry as Map));
+      return DailyHealthScores.fromJson(
+        Map<String, dynamic>.from(entry as Map),
+      );
     } catch (_) {
       return null;
     }
@@ -34,8 +36,14 @@ class DailyHealthScoresCacheStorage {
     map[dayKey] = scores.toJson();
     await prefs.setString(dailyHealthScoresCacheKey, jsonEncode(map));
   }
+
+  Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(dailyHealthScoresCacheKey);
+  }
 }
 
-final dailyHealthScoresCacheStorageProvider = Provider<DailyHealthScoresCacheStorage>((ref) {
-  return DailyHealthScoresCacheStorage();
-});
+final dailyHealthScoresCacheStorageProvider =
+    Provider<DailyHealthScoresCacheStorage>((ref) {
+      return DailyHealthScoresCacheStorage();
+    });

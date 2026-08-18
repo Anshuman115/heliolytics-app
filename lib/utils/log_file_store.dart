@@ -9,6 +9,7 @@ import 'package:heliolytics/constants/constants.dart';
 /// the app or block a caller.
 class LogFileStore {
   Directory? _dir;
+  Future<void> _pendingWrite = Future<void>.value();
 
   Future<Directory> _logDir() async {
     if (_dir != null) return _dir!;
@@ -22,14 +23,24 @@ class LogFileStore {
   File _fileFor(Directory dir, int index) =>
       File('${dir.path}/$logFilePrefix$index$logFileExtension');
 
-  Future<void> append(String jsonLine) async {
+  Future<void> append(String jsonLine) {
+    final write = _pendingWrite.then((_) => _append(jsonLine));
+    _pendingWrite = write;
+    return write;
+  }
+
+  Future<void> _append(String jsonLine) async {
     try {
       final dir = await _logDir();
       final active = _fileFor(dir, 0);
       if (await active.exists() && await active.length() >= logFileMaxBytes) {
         await _rotate(dir);
       }
-      await active.writeAsString('$jsonLine\n', mode: FileMode.append, flush: false);
+      await active.writeAsString(
+        '$jsonLine\n',
+        mode: FileMode.append,
+        flush: false,
+      );
     } catch (_) {
       // Best-effort — a disk failure must never crash the app.
     }
@@ -48,6 +59,7 @@ class LogFileStore {
 
   Future<List<String>> readAllLines() async {
     try {
+      await _pendingWrite;
       final dir = await _logDir();
       final lines = <String>[];
       for (var i = logFileCount - 1; i >= 0; i--) {

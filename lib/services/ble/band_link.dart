@@ -214,7 +214,7 @@ class BandLink implements BandLinkPort {
       );
     }
 
-    final isWorkout = code == 0x05;
+    final isWorkout = code == 0x05 || code == 0x06;
     await f.fetchType(
       code,
       since,

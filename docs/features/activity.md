@@ -9,14 +9,22 @@ time-in-zone breakdown.
 | Kind | Type code | Meaning |
 |---|---|---|
 | **Workout** | `0x05` (summary, protobuf) + `0x06` (per-second HR/cadence detail) | User pressed start on the strap |
-| **Auto session** | `0x3B` (protobuf) | Strap detected activity without being told |
+| **Auto session** | Derived from `0x01` minute records | Sustained elevated HR, intensity, and movement without a manual workout |
 
-Both land in `CloudMetricsSnapshot` as separate lists (`workouts`, `activities`)
-and are parsed server-side. Sport names come from `utils/sport_labels.dart`.
+Both are produced server-side and land in `activityHistoryProvider`
+(`providers/activity_history_provider.dart`) as separate lists (`workouts`,
+`activitySessions`). Sport names come from `utils/sport_labels.dart`.
+
+`activityHistoryProvider` bulk-fetches roughly 90 days, session-cached only and
+not disk-cached, to populate the chronological activity feed. The selected day's
+Strain and summary metrics come from `dayBundleProvider`. See
+[home-and-rings.md](home-and-rings.md) for why the bounded history request is an
+exception to the normal one-day fetch pattern.
 
 ## Screens
 
-- `ActivityHubScreen` — combined list, newest first, via `ActivityRow`
+- `ActivityHubScreen` — date navigation, Strain hero, daily summary, and a
+  combined chronological activity feed
 - `ActivityDetail Screen` (`activity_detail_screen.dart`) — one session: summary
   stats, HR chart, zone bars, driven by `ActivityDetailPayload`
 
@@ -40,12 +48,11 @@ Time is attributed per sample, not per row, with two guards:
   credit an hour to whatever zone was last seen
 - `_tailSeconds = 60` — nominal dwell for the final sample, which has no successor
 
-### ⚠️ Max HR is a fixed fallback
+### Max HR fallback
 
 `defaultMaxHrFallback = 190` is used whenever a real max HR isn't supplied. It's a
 placeholder, not the user's measured max. **Zones read wrong for anyone whose true
-max differs materially.** The strap does report max HR (`0x3D`), so the fix is to
-thread that through instead of defaulting — currently an open item.
+max differs materially.** A measured or profile max-HR source is still an open item.
 
 `HrZoneBars` renders highest zone first (5 → 0), each row showing bpm range,
 percentage, duration, and a proportional bar.
@@ -54,7 +61,9 @@ percentage, duration, and a proportional bar.
 
 | File | Role |
 |---|---|
-| `screens/activity_hub_screen.dart` | Combined list |
+| `screens/activity_hub_screen.dart` | Date-aware Activity overview |
+| `widgets/activity/activity_overview_body.dart` | Strain summary and feed composition |
+| `widgets/activity/activity_feed_item.dart` | Workout/session feed adapter |
 | `screens/activity_detail_screen.dart` | Single-session detail |
 | `widgets/hr_zone_bars.dart` | Zone rows |
 | `widgets/activity_row.dart` | List row |

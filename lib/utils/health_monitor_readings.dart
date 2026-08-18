@@ -50,6 +50,9 @@ MetricBaseline? _baselineOf(
 
 String _signed(double v) => '${v >= 0 ? '+' : ''}${v.toStringAsFixed(1)}';
 
+MetricAssessment _availability(Object? value) =>
+    value == null ? MetricAssessment.noData : MetricAssessment.recorded;
+
 /// Builds every health-monitor reading for [day], judged against the user's own
 /// history in [allDays].
 List<HealthReading> buildHealthReadings({
@@ -58,14 +61,26 @@ List<HealthReading> buildHealthReadings({
 }) {
   final prior = _priorDays(allDays, day.dayKey);
 
-  final respBase = _baselineOf(prior, (d) => d.respRateAvg?.toDouble(),
-      bandFloor: healthBandFloorRespRate);
-  final rhrBase = _baselineOf(prior, (d) => d.restingHr?.toDouble(),
-      bandFloor: healthBandFloorRestingHr);
-  final hrvBase = _baselineOf(prior, (d) => d.hrvRmssd?.toDouble(),
-      bandFloor: healthBandFloorHrv);
-  final tempBase = _baselineOf(prior, (d) => d.tempAvgC,
-      bandFloor: healthSkinTempBandC);
+  final respBase = _baselineOf(
+    prior,
+    (d) => d.respRateAvg?.toDouble(),
+    bandFloor: healthBandFloorRespRate,
+  );
+  final rhrBase = _baselineOf(
+    prior,
+    (d) => d.restingHr?.toDouble(),
+    bandFloor: healthBandFloorRestingHr,
+  );
+  final hrvBase = _baselineOf(
+    prior,
+    (d) => d.hrvRmssd?.toDouble(),
+    bandFloor: healthBandFloorHrv,
+  );
+  final tempBase = _baselineOf(
+    prior,
+    (d) => d.tempAvgC,
+    bandFloor: healthSkinTempBandC,
+  );
 
   // Skin temperature is only meaningful as a deviation — the absolute number
   // tracks the room as much as the body.
@@ -126,7 +141,7 @@ List<HealthReading> buildHealthReadings({
   ];
 }
 
-/// Builds the 11-tile home-screen health reading list for [bundle], judged
+/// Builds the home-screen health reading list for [bundle], judged
 /// against the user's own history in [allDays] where a baseline exists, and
 /// otherwise sourced from the server-computed [scores].
 List<HealthReading> buildHomeHealthReadings({
@@ -136,16 +151,28 @@ List<HealthReading> buildHomeHealthReadings({
 }) {
   final day = bundle.day;
   final prior = _priorDays(allDays, day.dayKey);
-  final rhrBase = _baselineOf(prior, (d) => d.restingHr?.toDouble(),
-      bandFloor: healthBandFloorRestingHr);
-  final hrvBase = _baselineOf(prior, (d) => d.hrvRmssd?.toDouble(),
-      bandFloor: healthBandFloorHrv);
+  final rhrBase = _baselineOf(
+    prior,
+    (d) => d.restingHr?.toDouble(),
+    bandFloor: healthBandFloorRestingHr,
+  );
+  final hrvBase = _baselineOf(
+    prior,
+    (d) => d.hrvRmssd?.toDouble(),
+    bandFloor: healthBandFloorHrv,
+  );
 
   final mainSleep = bundle.mainSleep;
   final sleepMins = mainSleep?.totalMins;
   final timeInBedMins = mainSleep != null
       ? mainSleep.totalMins + mainSleep.wakeMins
       : null;
+  final sleepEfficiency =
+      scores.sleepEfficiencyPct ??
+      (mainSleep == null || timeInBedMins == null || timeInBedMins <= 0
+          ? null
+          : (mainSleep.totalMins * 100 / timeInBedMins).round());
+  final calories = scores.calories ?? day.calories;
 
   return [
     HealthReading(
@@ -165,19 +192,11 @@ List<HealthReading> buildHomeHealthReadings({
       metricId: 'rhr',
     ),
     HealthReading(
-      label: 'VO2 MAX',
-      icon: Icons.speed_outlined,
-      value: scores.vo2Max?.toString(),
-      unit: '',
-      assessment: MetricAssessment.noData,
-      metricId: 'vo2max',
-    ),
-    HealthReading(
       label: 'CALORIES',
       icon: Icons.local_fire_department_outlined,
-      value: scores.calories?.toString(),
+      value: calories?.toString(),
       unit: 'kcal',
-      assessment: MetricAssessment.noData,
+      assessment: _availability(calories),
       metricId: 'calories',
     ),
     HealthReading(
@@ -185,25 +204,15 @@ List<HealthReading> buildHomeHealthReadings({
       icon: Icons.bedtime_outlined,
       value: sleepMins != null ? (sleepMins / 60).toStringAsFixed(1) : null,
       unit: 'h',
-      assessment: MetricAssessment.noData,
+      assessment: _availability(sleepMins),
       metricId: 'sleep',
-    ),
-    HealthReading(
-      label: 'SLEEP NEEDED',
-      icon: Icons.hotel_outlined,
-      value: scores.sleepNeededMins != null
-          ? (scores.sleepNeededMins! / 60).toStringAsFixed(1)
-          : null,
-      unit: 'h',
-      assessment: MetricAssessment.noData,
-      metricId: 'sleep_needed',
     ),
     HealthReading(
       label: 'SLEEP EFFICIENCY',
       icon: Icons.percent_outlined,
-      value: scores.sleepEfficiencyPct?.toString(),
+      value: sleepEfficiency?.toString(),
       unit: '%',
-      assessment: MetricAssessment.noData,
+      assessment: _availability(sleepEfficiency),
       metricId: 'sleep_efficiency',
     ),
     HealthReading(
@@ -211,33 +220,17 @@ List<HealthReading> buildHomeHealthReadings({
       icon: Icons.favorite_border,
       value: scores.avgHeartRate?.toString(),
       unit: 'bpm',
-      assessment: MetricAssessment.noData,
+      assessment: _availability(scores.avgHeartRate),
       metricId: 'avg_hr',
-    ),
-    HealthReading(
-      label: 'SLEEP DEBT',
-      icon: Icons.trending_down,
-      value: scores.sleepDebtMins != null
-          ? (scores.sleepDebtMins! / 60).toStringAsFixed(1)
-          : null,
-      unit: 'h',
-      assessment: MetricAssessment.noData,
-      metricId: 'sleep_debt',
-    ),
-    HealthReading(
-      label: 'SLEEP CONSISTENCY',
-      icon: Icons.repeat,
-      value: scores.sleepConsistencyPct?.toString(),
-      unit: '%',
-      assessment: MetricAssessment.noData,
-      metricId: 'sleep_consistency',
     ),
     HealthReading(
       label: 'TIME IN BED',
       icon: Icons.king_bed_outlined,
-      value: timeInBedMins != null ? (timeInBedMins / 60).toStringAsFixed(1) : null,
+      value: timeInBedMins != null
+          ? (timeInBedMins / 60).toStringAsFixed(1)
+          : null,
       unit: 'h',
-      assessment: MetricAssessment.noData,
+      assessment: _availability(timeInBedMins),
       metricId: 'sleep',
     ),
   ];

@@ -43,10 +43,24 @@ Fallbacks, in order:
 | Coverage fetch failed / null | Backfill `initialSyncBackfillDays` for every type |
 | `coverage.types` non-empty | Per-type `since` from each type's watermark |
 | Only `dataThrough` set | Single cutoff for all types |
-| `hasData == false` | Full backfill |
+| `hasData == false` | Full backfill — uses the wizard's chosen day count if set (see below), else `initialSyncBackfillDays` |
 
 `SyncCoverage` (`models/sync_coverage.dart`) parses `dataThrough`, `lastIngestAt`,
 `hasData`, and the per-type map.
+
+### Wizard-chosen backfill days
+
+The device-setup wizard's last step (see
+[settings-and-device.md](settings-and-device.md)) lets the user pick how
+many days back the *first* sync should pull, via `backfillDaysProvider`
+(`StateProvider<int?>`). `SyncWindow.plan(..., userBackfillDays:)` only
+consumes it on the genuine "backend empty, first sync" path — a coverage
+fetch failure isn't a first-sync signal, so that fallback still uses the
+fixed `initialSyncBackfillDays` constant. `SyncOrchestrator._run` reads the
+provider, passes it through, and resets it to `null` **only if the sync
+actually succeeded** — a failed first attempt (Bluetooth hiccup, auth
+rejection) leaves the user's chosen value intact for the retry, rather than
+silently falling back to the 2-day default.
 
 ## Step 3 — Fetch per type
 
@@ -74,9 +88,12 @@ paging/anchor semantics — lives in protocol notes kept outside this repo.
 ## Step 4 — Commit
 
 `SyncPayloadBuilder` assembles the raw bytes + anchors into a `SyncPayload`.
-`SyncCommitter` (`sync_committer.dart`) uploads it, then refreshes
-`liveHealthProvider` and invalidates `detailMetricsProvider` so the UI repaints
-from the server's newly-parsed view.
+`SyncCommitter` (`sync_committer.dart`) uploads it, then delegates to
+`HealthDataRefreshCoordinator`. The coordinator clears stored day bundles and
+daily health scores before invalidating day bundles, health scores, activity
+history, detail metrics, metric trends, and sync status. Historical entries are
+also cleared because a selected first-sync range or delayed upload can change
+an older day.
 
 ## Key files
 
@@ -89,12 +106,13 @@ from the server's newly-parsed view.
 | `services/ble/sync_fetcher.dart` | Per-type driver over `BandLinkPort` |
 | `services/ble/sync_committer.dart` | Upload + cache invalidation |
 | `services/ble/sync_page_anchor.dart` | `(byteOffset, roundStart)` pairs |
+| `providers/health_data_refresh_coordinator.dart` | Cache clearing and provider invalidation |
 
 ## Gotchas
 
-- `BandLinkPort` is the seam for tests. If you add a param to `connectAndAuth`,
-  the mock in `test/core/ble/sync_fetcher_test.dart` must match or `flutter analyze`
-  fails with `invalid_override`.
+- `BandLinkPort` is the intended seam for BLE tests. On machines where the
+  workspace path prevents the Flutter test runner from resolving test URIs,
+  run the suite from an isolated path without special characters.
 - Fetch timeout is 30 s per type, `maxRounds` 20. A strap with months of backlog
   can hit the round cap before the timeout.
 - `probeOnly` fetches metadata without pulling data — used to discover which codes

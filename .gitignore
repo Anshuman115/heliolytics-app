@@ -68,3 +68,8 @@ CONTEXT.md
 ZEPP_EXPORT_6M
 *.zip
 *.png
+!assets/images/helio_strap.png
+*.md
+.agents
+.claude
+Ref

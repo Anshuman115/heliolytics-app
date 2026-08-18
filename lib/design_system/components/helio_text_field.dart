@@ -46,7 +46,8 @@ class HelioTextField extends StatelessWidget {
           autocorrect: false,
           enableSuggestions: false,
           inputFormatters: [
-            if (hexOnly) FilteringTextInputFormatter.allow(RegExp(r'[0-9a-fA-F]')),
+            if (hexOnly)
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9a-fA-F]')),
             if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
           ],
           style: HelioTypography.body,

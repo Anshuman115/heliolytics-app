@@ -81,9 +81,23 @@ class HelioMonitorPanel extends StatelessWidget {
             childAspectRatio: 1.4,
             children: [
               _tile('rhr', day.restingHr?.toString() ?? '—', open),
-              _tile('hrv', day.hrvRmssd != null ? '${day.hrvRmssd}' : '—', open, unit: 'ms'),
-              _tile('spo2', day.spo2Avg != null ? '${day.spo2Avg}%' : '—', open),
-              _tile('stress', day.stressAvg?.toString() ?? '—', open, status: _stressStatus(day.stressAvg)),
+              _tile(
+                'hrv',
+                day.hrvRmssd != null ? '${day.hrvRmssd}' : '—',
+                open,
+                unit: 'ms',
+              ),
+              _tile(
+                'spo2',
+                day.spo2Avg != null ? '${day.spo2Avg}%' : '—',
+                open,
+              ),
+              _tile(
+                'stress',
+                day.stressAvg?.toString() ?? '—',
+                open,
+                status: _stressStatus(day.stressAvg),
+              ),
               _respTile(open),
               _tempTile(day, open),
             ],

@@ -1,37 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
 
 class MetricStatsRow extends StatelessWidget {
   final MetricStats stats;
   final String unit;
+  final bool includeAverage;
 
-  const MetricStatsRow({super.key, required this.stats, required this.unit});
+  const MetricStatsRow({
+    super.key,
+    required this.stats,
+    required this.unit,
+    this.includeAverage = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     if (stats.count == 0) {
-      return Text('No minute data for this day.', style: Theme.of(context).textTheme.bodySmall);
+      return Text(
+        'No minute data for this day.',
+        style: Theme.of(context).textTheme.bodySmall,
+      );
     }
     return Row(
       children: [
-        _chip(context, 'Avg', _fmt(stats.avg)),
-        const SizedBox(width: HelioSpacing.sm),
+        if (includeAverage) ...[
+          _chip(context, 'Avg', _fmt(stats.avg)),
+          const SizedBox(width: HelioSpacing.sm),
+        ],
         _chip(context, 'Min', _fmt(stats.min)),
         const SizedBox(width: HelioSpacing.sm),
         _chip(context, 'Max', _fmt(stats.max)),
         const Spacer(),
-        Text('${stats.count} pts', style: Theme.of(context).textTheme.labelSmall),
+        Text(
+          '${stats.count} pts',
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
       ],
     );
   }
 
   Widget _chip(BuildContext ctx, String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.sm, vertical: HelioSpacing.xs),
+      padding: const EdgeInsets.symmetric(
+        horizontal: HelioSpacing.sm,
+        vertical: HelioSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(ctx).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(HelioRadii.card),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

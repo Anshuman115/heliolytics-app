@@ -18,6 +18,7 @@ class DayMetric {
   final double? tempAvgC;
   final int workoutCount;
   final int activitySessionCount;
+  final int? calories;
   final int napCount;
   final DateTime? updatedAt;
 
@@ -39,55 +40,58 @@ class DayMetric {
     this.tempAvgC,
     this.workoutCount = 0,
     this.activitySessionCount = 0,
+    this.calories,
     this.napCount = 0,
     this.updatedAt,
   });
 
   factory DayMetric.fromJson(Map<String, dynamic> j) => DayMetric(
-        dayKey: j['dayKey'] as String,
-        steps: (j['steps'] as num?)?.toInt() ?? 0,
-        paiScore: (j['paiScore'] as num?)?.toInt(),
-        readiness: (j['readiness'] as num?)?.toInt(),
-        spo2Avg: (j['spo2Avg'] as num?)?.toInt(),
-        hrvRmssd: (j['hrvRmssd'] as num?)?.toInt(),
-        restingHr: (j['restingHr'] as num?)?.toInt(),
-        respRateAvg: (j['respRateAvg'] as num?)?.toInt(),
-        stressAvg: (j['stressAvg'] as num?)?.toInt(),
-        sleepScore: (j['sleepScore'] as num?)?.toInt(),
-        sleepMins: (j['sleepMins'] as num?)?.toInt(),
-        sleepDeepMins: (j['sleepDeepMins'] as num?)?.toInt(),
-        sleepRemMins: (j['sleepRemMins'] as num?)?.toInt(),
-        sleepLightMins: (j['sleepLightMins'] as num?)?.toInt(),
-        tempAvgC: (j['tempAvgC'] as num?)?.toDouble(),
-        workoutCount: (j['workoutCount'] as num?)?.toInt() ?? 0,
-        activitySessionCount: (j['activitySessionCount'] as num?)?.toInt() ?? 0,
-        napCount: (j['napCount'] as num?)?.toInt() ?? 0,
-        updatedAt: j['updatedAt'] != null
-            ? DateTime.parse(j['updatedAt'] as String).toLocal()
-            : null,
-      );
+    dayKey: j['dayKey'] as String,
+    steps: (j['steps'] as num?)?.toInt() ?? 0,
+    paiScore: (j['paiScore'] as num?)?.toInt(),
+    readiness: (j['readiness'] as num?)?.toInt(),
+    spo2Avg: (j['spo2Avg'] as num?)?.toInt(),
+    hrvRmssd: (j['hrvRmssd'] as num?)?.toInt(),
+    restingHr: (j['restingHr'] as num?)?.toInt(),
+    respRateAvg: (j['respRateAvg'] as num?)?.toInt(),
+    stressAvg: (j['stressAvg'] as num?)?.toInt(),
+    sleepScore: (j['sleepScore'] as num?)?.toInt(),
+    sleepMins: (j['sleepMins'] as num?)?.toInt(),
+    sleepDeepMins: (j['sleepDeepMins'] as num?)?.toInt(),
+    sleepRemMins: (j['sleepRemMins'] as num?)?.toInt(),
+    sleepLightMins: (j['sleepLightMins'] as num?)?.toInt(),
+    tempAvgC: (j['tempAvgC'] as num?)?.toDouble(),
+    workoutCount: (j['workoutCount'] as num?)?.toInt() ?? 0,
+    activitySessionCount: (j['activitySessionCount'] as num?)?.toInt() ?? 0,
+    calories: ((j['caloriesTotal'] ?? j['calories']) as num?)?.toInt(),
+    napCount: (j['napCount'] as num?)?.toInt() ?? 0,
+    updatedAt: j['updatedAt'] != null
+        ? DateTime.parse(j['updatedAt'] as String).toLocal()
+        : null,
+  );
 
   Map<String, dynamic> toJson() => {
-        'dayKey': dayKey,
-        'steps': steps,
-        'paiScore': paiScore,
-        'readiness': readiness,
-        'spo2Avg': spo2Avg,
-        'hrvRmssd': hrvRmssd,
-        'restingHr': restingHr,
-        'respRateAvg': respRateAvg,
-        'stressAvg': stressAvg,
-        'sleepScore': sleepScore,
-        'sleepMins': sleepMins,
-        'sleepDeepMins': sleepDeepMins,
-        'sleepRemMins': sleepRemMins,
-        'sleepLightMins': sleepLightMins,
-        'tempAvgC': tempAvgC,
-        'workoutCount': workoutCount,
-        'activitySessionCount': activitySessionCount,
-        'napCount': napCount,
-        'updatedAt': updatedAt?.toUtc().toIso8601String(),
-      };
+    'dayKey': dayKey,
+    'steps': steps,
+    'paiScore': paiScore,
+    'readiness': readiness,
+    'spo2Avg': spo2Avg,
+    'hrvRmssd': hrvRmssd,
+    'restingHr': restingHr,
+    'respRateAvg': respRateAvg,
+    'stressAvg': stressAvg,
+    'sleepScore': sleepScore,
+    'sleepMins': sleepMins,
+    'sleepDeepMins': sleepDeepMins,
+    'sleepRemMins': sleepRemMins,
+    'sleepLightMins': sleepLightMins,
+    'tempAvgC': tempAvgC,
+    'workoutCount': workoutCount,
+    'activitySessionCount': activitySessionCount,
+    'caloriesTotal': calories,
+    'napCount': napCount,
+    'updatedAt': updatedAt?.toUtc().toIso8601String(),
+  };
 }
 
 class SleepMetric {
@@ -128,26 +132,29 @@ class SleepMetric {
       wakeMins: (j['wakeMins'] as num?)?.toInt() ?? 0,
       isNap: j['isNap'] as bool? ?? false,
       stages: rawStages
-          .map((e) => SleepStagePoint.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map(
+            (e) =>
+                SleepStagePoint.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
           .toList(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'dayKey': dayKey,
-        'startedAt': startedAt.toUtc().toIso8601String(),
-        'score': score,
-        'totalMins': totalMins,
-        'deepMins': deepMins,
-        'remMins': remMins,
-        'lightMins': lightMins,
-        'wakeMins': wakeMins,
-        'isNap': isNap,
-        'stages': stages.map((s) => s.toJson()).toList(),
-      };
+    'dayKey': dayKey,
+    'startedAt': startedAt.toUtc().toIso8601String(),
+    'score': score,
+    'totalMins': totalMins,
+    'deepMins': deepMins,
+    'remMins': remMins,
+    'lightMins': lightMins,
+    'wakeMins': wakeMins,
+    'isNap': isNap,
+    'stages': stages.map((s) => s.toJson()).toList(),
+  };
 }
 
-/// Auto-detected strap activity (0x3B) — same shape as manual workouts.
+/// Server-detected activity session, with the same shape as a manual workout.
 class ActivitySessionMetric {
   final String dayKey;
   final DateTime startedAt;
@@ -169,7 +176,8 @@ class ActivitySessionMetric {
     this.maxHr,
   });
 
-  factory ActivitySessionMetric.fromJson(Map<String, dynamic> j) => ActivitySessionMetric(
+  factory ActivitySessionMetric.fromJson(Map<String, dynamic> j) =>
+      ActivitySessionMetric(
         dayKey: j['dayKey'] as String,
         startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
         sportType: (j['sportType'] as num).toInt(),
@@ -181,15 +189,15 @@ class ActivitySessionMetric {
       );
 
   Map<String, dynamic> toJson() => {
-        'dayKey': dayKey,
-        'startedAt': startedAt.toUtc().toIso8601String(),
-        'sportType': sportType,
-        'sportName': sportName,
-        'durationSec': durationSec,
-        'calories': calories,
-        'avgHr': avgHr,
-        'maxHr': maxHr,
-      };
+    'dayKey': dayKey,
+    'startedAt': startedAt.toUtc().toIso8601String(),
+    'sportType': sportType,
+    'sportName': sportName,
+    'durationSec': durationSec,
+    'calories': calories,
+    'avgHr': avgHr,
+    'maxHr': maxHr,
+  };
 }
 
 class WorkoutMetric {
@@ -214,24 +222,24 @@ class WorkoutMetric {
   });
 
   factory WorkoutMetric.fromJson(Map<String, dynamic> j) => WorkoutMetric(
-        dayKey: j['dayKey'] as String,
-        startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
-        sportType: (j['sportType'] as num).toInt(),
-        sportName: j['sportName'] as String? ?? '',
-        durationSec: (j['durationSec'] as num).toInt(),
-        calories: (j['calories'] as num?)?.toInt(),
-        avgHr: (j['avgHr'] as num?)?.toInt(),
-        maxHr: (j['maxHr'] as num?)?.toInt(),
-      );
+    dayKey: j['dayKey'] as String,
+    startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
+    sportType: (j['sportType'] as num).toInt(),
+    sportName: j['sportName'] as String? ?? '',
+    durationSec: (j['durationSec'] as num).toInt(),
+    calories: (j['calories'] as num?)?.toInt(),
+    avgHr: (j['avgHr'] as num?)?.toInt(),
+    maxHr: (j['maxHr'] as num?)?.toInt(),
+  );
 
   Map<String, dynamic> toJson() => {
-        'dayKey': dayKey,
-        'startedAt': startedAt.toUtc().toIso8601String(),
-        'sportType': sportType,
-        'sportName': sportName,
-        'durationSec': durationSec,
-        'calories': calories,
-        'avgHr': avgHr,
-        'maxHr': maxHr,
-      };
+    'dayKey': dayKey,
+    'startedAt': startedAt.toUtc().toIso8601String(),
+    'sportType': sportType,
+    'sportName': sportName,
+    'durationSec': durationSec,
+    'calories': calories,
+    'avgHr': avgHr,
+    'maxHr': maxHr,
+  };
 }

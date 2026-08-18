@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'package:heliolytics/router/app_router.dart';
 import 'package:heliolytics/design_system/components/helio_backdrop.dart';
@@ -9,6 +10,7 @@ import 'package:heliolytics/design_system/theme/helio_theme.dart';
 import 'package:heliolytics/providers/bluetooth_prompt_provider.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/auth/secure_key_store.dart';
+import 'package:heliolytics/services/cache/daily_bundle_cache_storage.dart';
 import 'package:heliolytics/services/config/api_config_storage.dart';
 import 'package:heliolytics/constants/constants.dart';
 
@@ -20,10 +22,19 @@ Future<void> main() async {
       systemNavigationBarColor: Color(0xFF070A10),
     ),
   );
+  await Hive.initFlutter();
+  await Hive.openBox<String>(cachedDaysBoxName);
+  try {
+    await DailyBundleCacheStorage().migrateSchemaIfNeeded();
+  } catch (_) {
+    // Reads ignore mismatched cache schemas, so startup can continue safely.
+  }
+
   final store = SecureKeyStore();
 
   //To get signing key and api url from env vars
-  final seedApiConfig = kDebugMode ||
+  final seedApiConfig =
+      kDebugMode ||
       (defaultApiUrl.isNotEmpty && defaultApiSigningSecret.isNotEmpty);
   if (seedApiConfig) {
     await ApiConfigStorage(store).ensureDevDefaults();
@@ -45,9 +56,7 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: [
-        authKeyStoreProvider.overrideWithValue(store),
-      ],
+      overrides: [authKeyStoreProvider.overrideWithValue(store)],
       child: const HeliolyticsApp(),
     ),
   );
@@ -71,14 +80,16 @@ class HeliolyticsApp extends ConsumerWidget {
           content: const Text('Turn on Bluetooth to sync with your strap.'),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('OK')),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
           ],
         ),
       );
     });
     return MaterialApp.router(
       title: 'Heliolytics',
+      debugShowCheckedModeBanner: false,
       theme: buildHelioTheme(),
       themeMode: ThemeMode.dark,
       routerConfig: router,
@@ -89,4 +100,3 @@ class HeliolyticsApp extends ConsumerWidget {
     );
   }
 }
-

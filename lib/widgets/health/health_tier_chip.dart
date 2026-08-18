@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
+import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/utils/metric_assessment.dart';
 
@@ -29,7 +30,7 @@ class HealthTierChip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(HelioRadii.sm),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

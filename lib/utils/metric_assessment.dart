@@ -30,6 +30,11 @@ class MetricAssessment {
     tier: MetricTier.unknown,
     label: 'building baseline',
   );
+
+  static const recorded = MetricAssessment(
+    tier: MetricTier.unknown,
+    label: 'recorded',
+  );
 }
 
 String _fmt(double v, int decimals) => v.toStringAsFixed(decimals);
@@ -127,10 +132,7 @@ MetricAssessment assessDeviation(
   if (deviation == null) return MetricAssessment.noData;
   final b = _fmt(band, decimals);
   if (deviation.abs() <= band) {
-    return MetricAssessment(
-      tier: MetricTier.optimal,
-      label: 'near -$b to +$b',
-    );
+    return MetricAssessment(tier: MetricTier.optimal, label: 'near -$b to +$b');
   }
   return MetricAssessment(
     tier: MetricTier.caution,

@@ -31,19 +31,23 @@ Future<void> orchestratorConnect({
   final live = ref.read(liveHrProvider);
   if (live.isLive || live.isConnecting) {
     sessionLog.log('Connect skipped: stop live HR first');
-    emit(state.copyWith(
-      lastErrorMessage: 'Stop live HR before syncing',
-      logs: sessionLog.logs,
-    ));
+    emit(
+      state.copyWith(
+        lastErrorMessage: 'Stop live HR before syncing',
+        logs: sessionLog.logs,
+      ),
+    );
     return;
   }
   final bandOp = ref.read(bandSessionProvider).activeOp;
   if (bandOp == BandSessionOp.bandAlerts) {
     sessionLog.log('Connect skipped: turn off band alerts first');
-    emit(state.copyWith(
-      lastErrorMessage: 'Turn off band alerts before syncing',
-      logs: sessionLog.logs,
-    ));
+    emit(
+      state.copyWith(
+        lastErrorMessage: 'Turn off band alerts before syncing',
+        logs: sessionLog.logs,
+      ),
+    );
     return;
   }
   if (state.state == SessionState.error) {
@@ -52,21 +56,25 @@ Future<void> orchestratorConnect({
   final mac = await auth.readMac();
   if (mac == null || mac.isEmpty) {
     sessionLog.log('ERROR: No MAC saved. Please scan first.');
-    emit(state.copyWith(
-      state: SessionState.error,
-      error: SessionError.scanFailed,
-      lastErrorMessage: 'No strap MAC saved.',
-      logs: sessionLog.logs,
-    ));
+    emit(
+      state.copyWith(
+        state: SessionState.error,
+        error: SessionError.scanFailed,
+        lastErrorMessage: 'No strap MAC saved.',
+        logs: sessionLog.logs,
+      ),
+    );
     return;
   }
   if (!await ref.read(apiConfiguredProvider.future)) {
     sessionLog.log('Connect skipped: configure Cloud API in Settings first');
-    emit(state.copyWith(
-      state: SessionState.error,
-      lastErrorMessage: cloudApiRequiredBeforeSyncMessage,
-      logs: sessionLog.logs,
-    ));
+    emit(
+      state.copyWith(
+        state: SessionState.error,
+        lastErrorMessage: cloudApiRequiredBeforeSyncMessage,
+        logs: sessionLog.logs,
+      ),
+    );
     return;
   }
   await runSync(mac);
@@ -94,27 +102,33 @@ Future<void> orchestratorRefetch({
   final live = ref.read(liveHrProvider);
   if (live.isLive || live.isConnecting) {
     sessionLog.log('Refetch skipped: stop live HR first');
-    emit(state.copyWith(
-      lastErrorMessage: 'Stop live HR before syncing',
-      logs: sessionLog.logs,
-    ));
+    emit(
+      state.copyWith(
+        lastErrorMessage: 'Stop live HR before syncing',
+        logs: sessionLog.logs,
+      ),
+    );
     return;
   }
   if (ref.read(bandSessionProvider).activeOp == BandSessionOp.bandAlerts) {
     sessionLog.log('Refetch skipped: turn off band alerts first');
-    emit(state.copyWith(
-      lastErrorMessage: 'Turn off band alerts before syncing',
-      logs: sessionLog.logs,
-    ));
+    emit(
+      state.copyWith(
+        lastErrorMessage: 'Turn off band alerts before syncing',
+        logs: sessionLog.logs,
+      ),
+    );
     return;
   }
   if (!await ref.read(apiConfiguredProvider.future)) {
     sessionLog.log('Refetch skipped: configure Cloud API in Settings first');
-    emit(state.copyWith(
-      state: SessionState.error,
-      lastErrorMessage: cloudApiRequiredBeforeSyncMessage,
-      logs: sessionLog.logs,
-    ));
+    emit(
+      state.copyWith(
+        state: SessionState.error,
+        lastErrorMessage: cloudApiRequiredBeforeSyncMessage,
+        logs: sessionLog.logs,
+      ),
+    );
     return;
   }
   setConnecting(true);
@@ -132,11 +146,13 @@ Future<void> orchestratorRefetch({
   } finally {
     state = readState();
     final bandConnected = ref.read(bandSessionProvider).isConnected;
-    emit(state.copyWith(
-      state: bandConnected ? SessionState.connected : SessionState.idle,
-      currentTypeCode: null,
-      logs: sessionLog.logs,
-    ));
+    emit(
+      state.copyWith(
+        state: bandConnected ? SessionState.connected : SessionState.idle,
+        currentTypeCode: null,
+        logs: sessionLog.logs,
+      ),
+    );
     setConnecting(false);
   }
 }
@@ -153,11 +169,13 @@ Future<void> orchestratorRetryUpload({
   try {
     await SyncCommitter.fromRef(ref, sessionLog.log).commit(p);
   } catch (e) {
-    emit(state.copyWith(
-      state: SessionState.error,
-      lastErrorMessage: 'Cloud upload failed: $e',
-      logs: sessionLog.logs,
-    ));
+    emit(
+      state.copyWith(
+        state: SessionState.error,
+        lastErrorMessage: 'Cloud upload failed: $e',
+        logs: sessionLog.logs,
+      ),
+    );
     rethrow;
   }
   emit(state.copyWith(logs: sessionLog.logs));
@@ -166,7 +184,9 @@ Future<void> orchestratorRetryUpload({
 Future<void> orchestratorAutoConnect({
   required Ref ref,
   required AuthKeyStorage auth,
+  required SessionStore? store,
   required Future<bool> Function() hasSavedMac,
+  required Future<bool> Function() isSetupPending,
   required bool Function() isConnecting,
   required SessionSnapshot Function() readState,
   required SyncSessionLog sessionLog,
@@ -175,10 +195,12 @@ Future<void> orchestratorAutoConnect({
 }) async {
   if (!await auth.hasKey()) return;
   if (!await hasSavedMac()) return;
-  if (ref.read(bandSessionProvider).activeOp == BandSessionOp.bandAlerts) return;
+  if (await isSetupPending()) return;
+  if (ref.read(bandSessionProvider).activeOp == BandSessionOp.bandAlerts) {
+    return;
+  }
   final snap = readState();
-  if (snap.state != SessionState.idle &&
-      snap.state != SessionState.connected) {
+  if (snap.state != SessionState.idle && snap.state != SessionState.connected) {
     return;
   }
   if (!await ref.read(apiConfiguredProvider.future)) {
@@ -186,10 +208,25 @@ Future<void> orchestratorAutoConnect({
     emit(snap.copyWith(logs: sessionLog.logs));
     return;
   }
+  if (await _syncedRecently(store)) {
+    sessionLog.log('Auto-sync skipped: last sync is within 15 minutes');
+    emit(snap.copyWith(logs: sessionLog.logs));
+    return;
+  }
   // Let flutter_blue_plus finish post-hot-restart cleanup before connecting.
   await Future<void>.delayed(const Duration(milliseconds: 800));
+  if (await isSetupPending()) return;
   if (isConnecting() || readState().state != SessionState.idle) return;
   sessionLog.log('Auto-sync: connecting to saved strap');
   emit(readState().copyWith(logs: sessionLog.logs));
   await connect();
+}
+
+Future<bool> _syncedRecently(SessionStore? store) async {
+  if (store == null) return false;
+  final id = await store.latestSessionId();
+  if (id == null) return false;
+  final session = await store.readSessionJson(id);
+  final at = session.endedAt ?? session.startedAt;
+  return DateTime.now().difference(at.toLocal()) < autoSyncCooldown;
 }

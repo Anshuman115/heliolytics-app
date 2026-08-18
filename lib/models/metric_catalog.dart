@@ -24,13 +24,15 @@ class MetricCatalog {
   static final _all = <String, MetricDef>{
     'readiness': MetricDef(
       id: 'readiness',
-      title: 'Readiness',
+      title: 'Recovery',
       seriesKey: null,
       color: HelioMetricColors.readiness,
       icon: Icons.bolt,
       unit: '',
-      note: 'Daily recovery score from overnight HRV, resting HR, sleep, and breathing rate vs your personal baseline.',
-      detail: 'HRV is the biggest driver, then resting HR, sleep, and breathing rate — each compared to your own ~7–60 day baseline. Compare to yourself, not others. Use it to decide how hard to push today.',
+      note:
+          'Daily recovery score from overnight HRV, resting HR, sleep, and breathing rate vs your personal baseline.',
+      detail:
+          'HRV is the biggest driver, then resting HR, sleep, and breathing rate — each compared to your own ~7–60 day baseline. Compare to yourself, not others. Use it to decide how hard to push today.',
     ),
     'sleep': MetricDef(
       id: 'sleep',
@@ -40,7 +42,8 @@ class MetricCatalog {
       icon: Icons.bedtime,
       unit: '',
       note: 'Overnight sleep score and stage breakdown (deep, REM, light).',
-      detail: 'Score reflects duration and architecture. Deep and REM support recovery; light sleep is transitional.',
+      detail:
+          'Score reflects duration and architecture. Deep and REM support recovery; light sleep is transitional.',
     ),
     'stress': MetricDef(
       id: 'stress',
@@ -50,7 +53,8 @@ class MetricCatalog {
       icon: Icons.psychology,
       unit: '',
       note: 'Auto stress score each minute (0–100). Lower is calmer.',
-      detail: 'Derived from HR variability patterns during the day. Spikes often align with meetings, workouts, or poor sleep.',
+      detail:
+          'Derived from HR variability patterns during the day. Spikes often align with meetings, workouts, or poor sleep.',
     ),
     'hrv': MetricDef(
       id: 'hrv',
@@ -59,8 +63,10 @@ class MetricCatalog {
       color: HelioMetricColors.hrv,
       icon: Icons.favorite,
       unit: 'ms',
-      note: 'RMSSD heart-rate variability. Higher usually means better recovery.',
-      detail: 'Measured during sleep and rest. Track your personal baseline — compare to yourself, not others.',
+      note:
+          'RMSSD heart-rate variability. Higher usually means better recovery.',
+      detail:
+          'Measured during sleep and rest. Track your personal baseline — compare to yourself, not others.',
     ),
     'rhr': MetricDef(
       id: 'rhr',
@@ -70,7 +76,8 @@ class MetricCatalog {
       icon: Icons.monitor_heart,
       unit: 'bpm',
       note: 'Resting heart-rate readings through the day.',
-      detail: 'Elevated RHR vs your baseline can signal illness, poor sleep, or accumulated fatigue.',
+      detail:
+          'Elevated RHR vs your baseline can signal illness, poor sleep, or accumulated fatigue.',
     ),
     'continuous_hr': MetricDef(
       id: 'continuous_hr',
@@ -79,8 +86,10 @@ class MetricCatalog {
       color: HelioMetricColors.restingHr,
       icon: Icons.favorite,
       unit: 'bpm',
-      note: 'Continuous PPG heart rate (~1/sec) when the strap records a session.',
-      detail: 'Synced from strap type 0x46. Gaps are normal when continuous monitoring was off.',
+      note:
+          'Continuous PPG heart rate (~1/sec) when the strap records a session.',
+      detail:
+          'Synced from strap type 0x46. Gaps are normal when continuous monitoring was off.',
     ),
     'spo2': MetricDef(
       id: 'spo2',
@@ -90,7 +99,8 @@ class MetricCatalog {
       icon: Icons.air,
       unit: '%',
       note: 'Blood oxygen spot checks during the day.',
-      detail: 'Typical healthy range is 95–100%. Sustained dips warrant medical follow-up.',
+      detail:
+          'Typical healthy range is 95–100%. Sustained dips warrant medical follow-up.',
     ),
     'spo2_sleep': MetricDef(
       id: 'spo2_sleep',
@@ -100,7 +110,8 @@ class MetricCatalog {
       icon: Icons.nights_stay,
       unit: '%',
       note: 'Overnight blood oxygen during sleep.',
-      detail: 'Useful for spotting breathing disturbances. Compare night-to-night trends.',
+      detail:
+          'Useful for spotting breathing disturbances. Compare night-to-night trends.',
     ),
     'resp_rate': MetricDef(
       id: 'resp_rate',
@@ -110,7 +121,8 @@ class MetricCatalog {
       icon: Icons.air,
       unit: 'br/min',
       note: 'Breaths per minute during sleep.',
-      detail: 'Stable baseline is personal. Sudden sustained increases can reflect illness or altitude.',
+      detail:
+          'Stable baseline is personal. Sudden sustained increases can reflect illness or altitude.',
     ),
     'temperature': MetricDef(
       id: 'temperature',
@@ -120,17 +132,19 @@ class MetricCatalog {
       icon: Icons.thermostat,
       unit: '°C',
       note: 'Wrist skin temperature minute samples.',
-      detail: 'Relative changes vs your baseline matter more than absolute values. Useful for illness and cycle tracking.',
+      detail:
+          'Relative changes vs your baseline matter more than absolute values. Useful for illness and cycle tracking.',
     ),
     'pai': MetricDef(
       id: 'pai',
-      title: 'PAI',
+      title: 'Strain',
       seriesKey: null,
       color: HelioMetricColors.pai,
       icon: Icons.local_fire_department,
       unit: '',
       note: 'Personal Activity Intelligence — weekly cardio load score.',
-      detail: 'Helio/Zepp PAI rewards elevated heart rate. Aim to stay above your personal target over 7 days.',
+      detail:
+          'Strain reflects elevated heart rate and daily movement. Use the 7-day trend to balance activity and recovery.',
     ),
     'steps': MetricDef(
       id: 'steps',
@@ -140,7 +154,8 @@ class MetricCatalog {
       icon: Icons.directions_walk,
       unit: '',
       note: 'Total steps counted for the calendar day (IST).',
-      detail: 'Includes walking and general movement from the strap accelerometer pipeline.',
+      detail:
+          'Includes walking and general movement from the strap accelerometer pipeline.',
     ),
     'vo2max': MetricDef(
       id: 'vo2max',
@@ -160,7 +175,8 @@ class MetricCatalog {
       icon: Icons.local_fire_department,
       unit: 'kcal',
       note: 'Total calories burned for the day.',
-      detail: 'Calorie totals are not yet available from the backend.',
+      detail:
+          'Calories are the total workout calories recorded for the calendar day.',
     ),
     'avg_hr': MetricDef(
       id: 'avg_hr',
@@ -170,7 +186,8 @@ class MetricCatalog {
       icon: Icons.favorite,
       unit: 'bpm',
       note: 'Average heart rate for the day.',
-      detail: 'Average heart rate is not yet available from the backend.',
+      detail:
+          'Daily average across synced heart-rate samples. Use longer-term changes to understand cardiovascular load and recovery.',
     ),
     'sleep_efficiency': MetricDef(
       id: 'sleep_efficiency',
@@ -237,20 +254,22 @@ class MetricDef {
   });
 
   String summaryValue(DayMetric day) => switch (id) {
-        'readiness' => _i(day.readiness),
-        'sleep' => _i(day.sleepScore),
-        'stress' => _i(day.stressAvg),
-        'hrv' => day.hrvRmssd != null ? '${day.hrvRmssd}' : '—',
-        'rhr' => day.restingHr != null ? '${day.restingHr}' : '—',
-        'resp_rate' => day.respRateAvg != null ? '${day.respRateAvg}' : '—',
-        'continuous_hr' => '—',
-        'spo2' => day.spo2Avg != null ? '${day.spo2Avg}' : '—',
-        'spo2_sleep' => day.spo2Avg != null ? '${day.spo2Avg}' : '—',
-        'pai' => _i(day.paiScore),
-        'steps' => '${day.steps}',
-        'temperature' => day.tempAvgC != null ? day.tempAvgC!.toStringAsFixed(1) : '—',
-        _ => '—',
-      };
+    'readiness' => day.readiness != null ? '${day.readiness}%' : '—',
+    'sleep' => _i(day.sleepScore),
+    'stress' => _i(day.stressAvg),
+    'hrv' => day.hrvRmssd != null ? '${day.hrvRmssd}' : '—',
+    'rhr' => day.restingHr != null ? '${day.restingHr}' : '—',
+    'resp_rate' => day.respRateAvg != null ? '${day.respRateAvg}' : '—',
+    'continuous_hr' => '—',
+    'spo2' => day.spo2Avg != null ? '${day.spo2Avg}' : '—',
+    'spo2_sleep' => day.spo2Avg != null ? '${day.spo2Avg}' : '—',
+    'pai' =>
+      day.paiScore != null ? (day.paiScore! / 10).toStringAsFixed(1) : '—',
+    'steps' => '${day.steps}',
+    'temperature' =>
+      day.tempAvgC != null ? day.tempAvgC!.toStringAsFixed(1) : '—',
+    _ => '—',
+  };
 
   String _i(int? v) => v?.toString() ?? '—';
 }

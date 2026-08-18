@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/utils/hr_chart_samples.dart';
+import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/utils/hr_zones.dart';
 import 'package:heliolytics/utils/sport_icons.dart';
 import 'package:heliolytics/utils/sport_labels.dart';
 import 'package:heliolytics/design_system/components/helio_surface_card.dart';
+import 'package:heliolytics/design_system/components/helio_bottom_nav.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
@@ -28,23 +29,35 @@ class ActivityDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final payload = extra ?? GoRouterState.of(context).extra;
     if (payload is! ActivityDetailPayload) {
-      return _shell(context, null, const Center(child: Text('Activity data unavailable')));
+      return _shell(
+        context,
+        null,
+        const Center(child: Text('Activity data unavailable')),
+      );
     }
     final w = payload.workout;
     final s = payload.session;
     final view = w != null
         ? _WorkoutView(w)
         : s != null
-            ? _SessionView(s)
-            : null;
+        ? _SessionView(s)
+        : null;
     if (view == null) {
-      return _shell(context, null, const Center(child: Text('Activity not found')));
+      return _shell(
+        context,
+        null,
+        const Center(child: Text('Activity not found')),
+      );
     }
 
-    final detail = ref.watch(detailMetricsProvider).valueOrNull;
+    final detail = ref.watch(detailMetricsProvider(view.dayKey)).valueOrNull;
     final hr = detail == null
         ? const <HeartRateSample>[]
-        : _inWindow(detail.heartRateFor(view.dayKey), view.start, view.durationSec);
+        : _inWindow(
+            detail.heartRateFor(view.dayKey),
+            view.start,
+            view.durationSec,
+          );
 
     return _shell(context, view.title, _content(view, hr));
   }
@@ -52,15 +65,30 @@ class ActivityDetailScreen extends ConsumerWidget {
   Widget _shell(BuildContext context, String? title, Widget body) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: HelioTopBar(showBack: true, onBack: () => context.pop(), title: title),
+      appBar: HelioTopBar(
+        showBack: true,
+        onBack: () => context.pop(),
+        title: title,
+      ),
       body: body,
+      bottomNavigationBar: HelioBottomNav(
+        index: 2,
+        showTabs: false,
+        onChanged: (_) {},
+        onOrbTap: () => context.push('/profile/view'),
+      ),
     );
   }
 
   Widget _content(_ActivityView view, List<HeartRateSample> hr) {
     final zones = computeHrZones(hr, maxHr: view.maxHr);
     return ListView(
-      padding: const EdgeInsets.all(HelioSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(
+        HelioSpacing.lg,
+        HelioSpacing.lg,
+        HelioSpacing.lg,
+        shellContentBottomPadding,
+      ),
       children: [
         _header(view),
         const SizedBox(height: HelioSpacing.xl),
@@ -85,20 +113,29 @@ class ActivityDetailScreen extends ConsumerWidget {
           const SizedBox(height: HelioSpacing.xl),
           Text('HEART RATE ZONES', style: HelioTypography.sectionTitle),
           const SizedBox(height: HelioSpacing.md),
-          HrZoneBars(breakdown: zones),
+          HelioSurfaceCard(
+            padding: const EdgeInsets.all(HelioSpacing.md),
+            child: HrZoneBars(breakdown: zones),
+          ),
         ],
-        const SizedBox(height: HelioSpacing.xl),
-        Text('KEY STATISTICS', style: HelioTypography.sectionTitle),
-        const SizedBox(height: HelioSpacing.md),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: HelioSpacing.sm,
-          mainAxisSpacing: HelioSpacing.sm,
-          childAspectRatio: 1.9,
-          children: [for (final s in view.keyStats) _StatCard(stat: s)],
-        ),
+        if (view.keyStats.isNotEmpty) ...[
+          const SizedBox(height: HelioSpacing.xl),
+          Text('KEY STATISTICS', style: HelioTypography.sectionTitle),
+          const SizedBox(height: HelioSpacing.md),
+          SizedBox(
+            height: 128,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: view.keyStats.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: HelioSpacing.sm),
+              itemBuilder: (_, index) => SizedBox(
+                width: 205,
+                child: _StatCard(stat: view.keyStats[index]),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -123,12 +160,7 @@ class ActivityDetailScreen extends ConsumerWidget {
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(view.title.toUpperCase(),
-                  style: HelioTypography.scoreMedium.copyWith(fontSize: 20)),
-              const SizedBox(height: 2),
-              Text(view.subtitle, style: HelioTypography.bodyMuted),
-            ],
+            children: [Text(view.subtitle, style: HelioTypography.bodyMuted)],
           ),
         ),
       ],
@@ -136,25 +168,51 @@ class ActivityDetailScreen extends ConsumerWidget {
   }
 
   Widget _heroStats(_ActivityView view) {
-    final left = view.avgHr != null
-        ? _ActivityStat(Icons.favorite, 'Avg HR', '${view.avgHr}', 'bpm')
-        : _ActivityStat(Icons.timer_outlined, 'Duration',
-            formatDurationSec(view.durationSec), '');
-    final right = view.calories != null
-        ? _ActivityStat(Icons.local_fire_department, 'Calories', '${view.calories}', 'cal')
-        : _ActivityStat(Icons.trending_up, 'Max HR',
-            view.maxHr != null ? '${view.maxHr}' : '—', 'bpm');
+    final stats = <_ActivityStat>[
+      if (view.avgHr != null)
+        _ActivityStat(Icons.favorite, 'Avg HR', '${view.avgHr}', 'bpm'),
+      _ActivityStat(
+        Icons.timer_outlined,
+        'Duration',
+        _formatActivityDuration(view.durationSec),
+        '',
+      ),
+      if (view.avgHr == null && view.calories != null)
+        _ActivityStat(
+          Icons.local_fire_department,
+          'Calories',
+          '${view.calories}',
+          'cal',
+        ),
+      if (view.avgHr == null && view.calories == null && view.maxHr != null)
+        _ActivityStat(Icons.trending_up, 'Max HR', '${view.maxHr}', 'bpm'),
+    ];
     return Row(
       children: [
-        Expanded(child: _BigStat(stat: left)),
-        const SizedBox(width: HelioSpacing.sm),
-        Expanded(child: _BigStat(stat: right)),
+        for (var i = 0; i < stats.take(2).length; i++) ...[
+          if (i > 0) const SizedBox(width: HelioSpacing.sm),
+          Expanded(child: _BigStat(stat: stats[i])),
+        ],
       ],
     );
   }
 }
 
-List<HeartRateSample> _inWindow(List<HeartRateSample> hr, DateTime start, int durationSec) {
+String _formatActivityDuration(int seconds) {
+  final hours = seconds ~/ 3600;
+  final minutes = (seconds % 3600) ~/ 60;
+  final remaining = seconds % 60;
+  if (hours > 0) {
+    return '$hours:${minutes.toString().padLeft(2, '0')}:${remaining.toString().padLeft(2, '0')}';
+  }
+  return '$minutes:${remaining.toString().padLeft(2, '0')}';
+}
+
+List<HeartRateSample> _inWindow(
+  List<HeartRateSample> hr,
+  DateTime start,
+  int durationSec,
+) {
   final end = start.add(Duration(seconds: durationSec));
   return hr
       .where((h) => !h.sampledAt.isBefore(start) && !h.sampledAt.isAfter(end))
@@ -184,21 +242,28 @@ class _BigStat extends StatelessWidget {
             children: [
               Icon(stat.icon, size: 15, color: HelioColors.strainBlue),
               const SizedBox(width: 6),
-              Text(stat.label.toUpperCase(),
-                  style: HelioTypography.capsLabel.copyWith(fontSize: 10)),
+              Text(
+                stat.label.toUpperCase(),
+                style: HelioTypography.capsLabel.copyWith(fontSize: 10),
+              ),
             ],
           ),
           const SizedBox(height: HelioSpacing.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(stat.value, style: HelioTypography.scoreMedium.copyWith(fontSize: 28)),
+              Text(
+                stat.value,
+                style: HelioTypography.scoreMedium.copyWith(fontSize: 28),
+              ),
               if (stat.unit.isNotEmpty) ...[
                 const SizedBox(width: 4),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(stat.unit,
-                      style: HelioTypography.bodyMuted.copyWith(fontSize: 12)),
+                  child: Text(
+                    stat.unit,
+                    style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
+                  ),
                 ),
               ],
             ],
@@ -225,13 +290,17 @@ class _StatCard extends StatelessWidget {
             children: [
               Icon(stat.icon, size: 15, color: HelioColors.strainBlue),
               const SizedBox(width: 6),
-              Text(stat.label.toUpperCase(),
-                  style: HelioTypography.capsLabel.copyWith(fontSize: 10)),
+              Text(
+                stat.label.toUpperCase(),
+                style: HelioTypography.capsLabel.copyWith(fontSize: 10),
+              ),
             ],
           ),
           const SizedBox(height: HelioSpacing.xs),
-          Text('${stat.value}${stat.unit.isNotEmpty ? ' ${stat.unit}' : ''}',
-              style: HelioTypography.scoreMedium.copyWith(fontSize: 20)),
+          Text(
+            '${stat.value}${stat.unit.isNotEmpty ? ' ${stat.unit}' : ''}',
+            style: HelioTypography.scoreMedium.copyWith(fontSize: 20),
+          ),
         ],
       ),
     );
@@ -262,7 +331,8 @@ class _WorkoutView implements _ActivityView {
   final WorkoutMetric w;
 
   @override
-  String get title => w.sportName.isNotEmpty ? w.sportName : sportLabel(w.sportType);
+  String get title =>
+      w.sportName.isNotEmpty ? w.sportName : sportLabel(w.sportType);
   @override
   String get subtitle => _timeRange(w.startedAt, w.durationSec);
   @override
@@ -281,12 +351,16 @@ class _WorkoutView implements _ActivityView {
   IconData get icon => sportIcon(w.sportType, name: title);
   @override
   List<_ActivityStat> get keyStats => [
-        _ActivityStat(Icons.timer_outlined, 'Duration', formatDurationSec(w.durationSec), ''),
-        if (w.maxHr != null) _ActivityStat(Icons.trending_up, 'Max HR', '${w.maxHr}', 'bpm'),
-        if (w.calories != null)
-          _ActivityStat(Icons.local_fire_department_outlined, 'Calories', '${w.calories}', 'cal'),
-        if (w.avgHr != null) _ActivityStat(Icons.favorite_outline, 'Avg HR', '${w.avgHr}', 'bpm'),
-      ];
+    if (w.calories != null)
+      _ActivityStat(
+        Icons.local_fire_department,
+        'Calories',
+        '${w.calories}',
+        'cal',
+      ),
+    if (w.maxHr != null)
+      _ActivityStat(Icons.trending_up, 'Max HR', '${w.maxHr}', 'bpm'),
+  ];
 }
 
 class _SessionView implements _ActivityView {
@@ -294,7 +368,8 @@ class _SessionView implements _ActivityView {
   final ActivitySessionMetric s;
 
   @override
-  String get title => s.sportName.isNotEmpty ? s.sportName : sportLabel(s.sportType);
+  String get title =>
+      s.sportName.isNotEmpty ? s.sportName : sportLabel(s.sportType);
   @override
   String get subtitle => _timeRange(s.startedAt, s.durationSec);
   @override
@@ -313,10 +388,14 @@ class _SessionView implements _ActivityView {
   IconData get icon => sportIcon(s.sportType, name: title);
   @override
   List<_ActivityStat> get keyStats => [
-        _ActivityStat(Icons.timer_outlined, 'Duration', formatDurationSec(s.durationSec), ''),
-        if (s.maxHr != null) _ActivityStat(Icons.trending_up, 'Max HR', '${s.maxHr}', 'bpm'),
-        if (s.calories != null)
-          _ActivityStat(Icons.local_fire_department_outlined, 'Calories', '${s.calories}', 'cal'),
-        if (s.avgHr != null) _ActivityStat(Icons.favorite_outline, 'Avg HR', '${s.avgHr}', 'bpm'),
-      ];
+    if (s.calories != null)
+      _ActivityStat(
+        Icons.local_fire_department,
+        'Calories',
+        '${s.calories}',
+        'cal',
+      ),
+    if (s.maxHr != null)
+      _ActivityStat(Icons.trending_up, 'Max HR', '${s.maxHr}', 'bpm'),
+  ];
 }

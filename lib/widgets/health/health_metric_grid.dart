@@ -26,7 +26,7 @@ class HealthMetricGrid extends ConsumerWidget {
         crossAxisCount: 2,
         crossAxisSpacing: HelioSpacing.md,
         mainAxisSpacing: HelioSpacing.md,
-        childAspectRatio: 0.98,
+        childAspectRatio: 1.35,
       ),
       itemCount: readings.length,
       itemBuilder: (_, i) => _card(context, readings[i]),

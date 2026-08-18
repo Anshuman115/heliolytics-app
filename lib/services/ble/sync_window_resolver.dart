@@ -5,6 +5,7 @@ import 'package:heliolytics/services/ble/sync_window_plan.dart';
 import 'package:heliolytics/utils/app_logger.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
+import 'package:heliolytics/constants/constants.dart';
 
 Future<SyncWindowPlan> resolveSyncWindow(Ref ref, {int? userBackfillDays}) async {
   final configured = await ref.read(apiConfiguredProvider.future);
@@ -16,7 +17,7 @@ Future<SyncWindowPlan> resolveSyncWindow(Ref ref, {int? userBackfillDays}) async
     return SyncWindow.plan(coverage: cov, userBackfillDays: userBackfillDays);
   } catch (e) {
     AppLogger.instance.log(
-      'coverage fetch failed, using 10-day backfill',
+      'coverage fetch failed, using $initialSyncBackfillDays-day backfill',
       tag: 'sync',
       error: e,
     );

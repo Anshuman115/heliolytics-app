@@ -25,7 +25,9 @@ class HelioWizardStepHeader extends StatelessWidget {
             final active = i < step;
             return Expanded(
               child: Container(
-                margin: EdgeInsets.only(right: i == totalSteps - 1 ? 0 : HelioSpacing.xs),
+                margin: EdgeInsets.only(
+                  right: i == totalSteps - 1 ? 0 : HelioSpacing.xs,
+                ),
                 height: 3,
                 color: active ? HelioColors.sleepBlue : HelioColors.border,
               ),

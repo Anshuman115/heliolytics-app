@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 
@@ -32,7 +33,12 @@ class HelioPrimaryButton extends StatelessWidget {
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : Text(label.toUpperCase(), style: HelioTypography.capsLabel),
+            : Text(
+                label.toUpperCase(),
+                style: HelioTypography.capsLabel.copyWith(
+                  color: HelioColors.textPrimary,
+                ),
+              ),
       ),
     );
   }

@@ -21,12 +21,18 @@ class HelioCloudBanner extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.cloud_off, size: 20, color: HelioColors.recoveryLow),
+                const Icon(
+                  Icons.cloud_off,
+                  size: 20,
+                  color: HelioColors.recoveryLow,
+                ),
                 const SizedBox(width: HelioSpacing.sm),
                 Expanded(
                   child: Text(
                     'CLOUD API REQUIRED',
-                    style: HelioTypography.capsLabel.copyWith(color: HelioColors.recoveryLow),
+                    style: HelioTypography.capsLabel.copyWith(
+                      color: HelioColors.recoveryLow,
+                    ),
                   ),
                 ),
               ],
@@ -36,7 +42,9 @@ class HelioCloudBanner extends StatelessWidget {
             const SizedBox(height: HelioSpacing.sm),
             Text(
               'Tap to configure →',
-              style: HelioTypography.capsLabel.copyWith(color: HelioColors.sleepBlue),
+              style: HelioTypography.capsLabel.copyWith(
+                color: HelioColors.sleepBlue,
+              ),
             ),
           ],
         ),

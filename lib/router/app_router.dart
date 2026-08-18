@@ -8,6 +8,7 @@ import 'package:heliolytics/screens/auth_key_screen.dart';
 import 'package:heliolytics/screens/device_scan_screen.dart';
 import 'package:heliolytics/screens/intro_screen.dart';
 import 'package:heliolytics/screens/profile_screen.dart';
+import 'package:heliolytics/screens/profile_overview_screen.dart';
 import 'package:heliolytics/screens/setup_bluetooth_screen.dart';
 import 'package:heliolytics/screens/setup_permission_screen.dart';
 import 'package:heliolytics/screens/setup_connect_screen.dart';
@@ -32,8 +33,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.onDispose(refresh.dispose);
   ref.listen(syncOrchestratorProvider, (prev, next) {
-    final authChanged = prev?.state != next.state &&
-        (prev?.state == SessionState.noAuthKey || next.state == SessionState.noAuthKey);
+    final authChanged =
+        prev?.state != next.state &&
+        (prev?.state == SessionState.noAuthKey ||
+            next.state == SessionState.noAuthKey);
     if (authChanged) refresh.value++;
   });
   ref.listen(onboardingProvider, (prev, next) {
@@ -61,14 +64,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/auth', builder: (_, __) => const AuthKeyScreen()),
       GoRoute(path: '/intro', builder: (_, __) => const IntroScreen()),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+      GoRoute(
+        path: '/profile/view',
+        builder: (_, __) => const ProfileOverviewScreen(),
+      ),
       GoRoute(path: '/', builder: (_, __) => const HelioShell()),
       GoRoute(
         path: '/health/:dayKey',
-        builder: (_, s) => HealthMonitorScreen(dayKey: s.pathParameters['dayKey']!),
+        builder: (_, s) =>
+            HealthMonitorScreen(dayKey: s.pathParameters['dayKey']!),
       ),
       GoRoute(
         path: '/stress/:dayKey',
-        builder: (_, s) => StressMonitorScreen(dayKey: s.pathParameters['dayKey']!),
+        builder: (_, s) =>
+            StressMonitorScreen(dayKey: s.pathParameters['dayKey']!),
       ),
       GoRoute(
         path: '/metric/:dayKey/:metricId',
@@ -81,13 +90,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/activity/detail',
         builder: (_, s) => ActivityDetailScreen(extra: s.extra),
       ),
-      GoRoute(path: '/settings/api', builder: (_, __) => const ApiSettingsScreen()),
-      GoRoute(path: '/settings/logs', builder: (_, __) => const AppLogsScreen()),
+      GoRoute(
+        path: '/settings/api',
+        builder: (_, __) => const ApiSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/auth-key',
+        builder: (_, __) => const AuthKeyScreen(settingsMode: true),
+      ),
+      GoRoute(
+        path: '/settings/logs',
+        builder: (_, __) => const AppLogsScreen(),
+      ),
       GoRoute(
         path: '/settings/band-alerts',
         builder: (_, __) => const BandAlertsSettingsScreen(),
       ),
-      GoRoute(path: '/settings/diagnostics', builder: (_, __) => const DiagnosticsScreen()),
+      GoRoute(
+        path: '/settings/diagnostics',
+        builder: (_, __) => const DiagnosticsScreen(),
+      ),
       GoRoute(path: '/settings/about', builder: (_, __) => const AboutScreen()),
       GoRoute(
         path: '/settings/band-alerts/apps',
@@ -107,11 +129,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return const BandAlertsAppsScreen();
         },
       ),
-      GoRoute(path: '/setup/bluetooth', builder: (_, __) => const SetupBluetoothScreen()),
-      GoRoute(path: '/setup/permission', builder: (_, __) => const SetupPermissionScreen()),
-      GoRoute(path: '/setup/scan', builder: (_, __) => const DeviceScanScreen()),
-      GoRoute(path: '/setup/connect', builder: (_, __) => const SetupConnectScreen()),
-      GoRoute(path: '/setup/backfill-days', builder: (_, __) => const SetupBackfillDaysScreen()),
+      GoRoute(
+        path: '/setup/bluetooth',
+        builder: (_, __) => const SetupBluetoothScreen(),
+      ),
+      GoRoute(
+        path: '/setup/permission',
+        builder: (_, __) => const SetupPermissionScreen(),
+      ),
+      GoRoute(
+        path: '/setup/scan',
+        builder: (_, __) => const DeviceScanScreen(),
+      ),
+      GoRoute(
+        path: '/setup/connect',
+        builder: (_, __) => const SetupConnectScreen(),
+      ),
+      GoRoute(
+        path: '/setup/backfill-days',
+        builder: (_, __) => const SetupBackfillDaysScreen(),
+      ),
     ],
   );
 });

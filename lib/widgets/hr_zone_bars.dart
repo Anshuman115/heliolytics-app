@@ -23,7 +23,7 @@ class HrZoneBars extends StatelessWidget {
       children: [
         for (final z in ordered) ...[
           _ZoneRow(zone: z, totalSeconds: total),
-          const SizedBox(height: HelioSpacing.sm),
+          if (z != ordered.last) const SizedBox(height: HelioSpacing.md),
         ],
       ],
     );
@@ -50,14 +50,23 @@ class _ZoneRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('ZONE ${zone.index}',
+            SizedBox(
+              width: 54,
+              child: Text(
+                'ZONE ${zone.index}',
                 style: HelioTypography.capsLabel.copyWith(
                   fontSize: 11,
                   color: HelioColors.textPrimary,
-                )),
+                ),
+              ),
+            ),
             const SizedBox(width: HelioSpacing.sm),
-            Text(range, style: HelioTypography.bodyMuted.copyWith(fontSize: 11)),
-            const Spacer(),
+            Expanded(
+              child: Text(
+                range,
+                style: HelioTypography.bodyMuted.copyWith(fontSize: 11),
+              ),
+            ),
             Text('$pct%',
                 style: HelioTypography.bodyMuted.copyWith(fontSize: 11)),
             const SizedBox(width: HelioSpacing.sm),
@@ -75,7 +84,7 @@ class _ZoneRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(HelioRadii.pill),
           child: LinearProgressIndicator(
             value: frac.clamp(0.0, 1.0),
-            minHeight: 6,
+            minHeight: 8,
             backgroundColor: HelioColors.surfaceElevated,
             color: color,
           ),
