@@ -11,8 +11,10 @@ import 'package:heliolytics/providers/bluetooth_prompt_provider.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/auth/secure_key_store.dart';
 import 'package:heliolytics/services/cache/daily_bundle_cache_storage.dart';
+import 'package:heliolytics/services/cache/cache_box_bootstrap.dart';
 import 'package:heliolytics/services/config/api_config_storage.dart';
 import 'package:heliolytics/constants/constants.dart';
+import 'package:heliolytics/utils/app_logger.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,11 +25,15 @@ Future<void> main() async {
     ),
   );
   await Hive.initFlutter();
-  await Hive.openBox<String>(cachedDaysBoxName);
-  try {
-    await DailyBundleCacheStorage().migrateSchemaIfNeeded();
-  } catch (_) {
-    // Reads ignore mismatched cache schemas, so startup can continue safely.
+  final cacheReady = await ensureDailyBundleCacheBox(
+    log: (message) => AppLogger.instance.log(message, tag: 'cache'),
+  );
+  if (cacheReady) {
+    try {
+      await DailyBundleCacheStorage().migrateSchemaIfNeeded();
+    } catch (_) {
+      // Reads ignore mismatched cache schemas, so startup can continue safely.
+    }
   }
 
   final store = SecureKeyStore();

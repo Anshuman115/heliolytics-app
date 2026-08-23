@@ -8,6 +8,7 @@ import 'package:heliolytics/providers/api_config_form_provider.dart';
 import 'package:heliolytics/providers/daily_health_scores_provider.dart';
 import 'package:heliolytics/providers/day_bundle_provider.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
+import 'package:heliolytics/providers/health_data_refresh_coordinator.dart';
 import 'package:heliolytics/providers/metric_trend_provider.dart';
 import 'package:heliolytics/providers/sync_status_provider.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
@@ -16,6 +17,41 @@ import 'package:heliolytics/services/cache/daily_bundle_cache_storage.dart';
 import 'package:heliolytics/services/cache/daily_health_scores_cache_storage.dart';
 
 void main() {
+  test('refresh deletes the selected historical cache entries first', () async {
+    const dayKey = '2026-08-01';
+    final events = <String>[];
+    final container = ProviderContainer(
+      overrides: [
+        dailyBundleCacheStorageProvider.overrideWithValue(
+          _RecordingBundleCache(events),
+        ),
+        dailyHealthScoresCacheStorageProvider.overrideWithValue(
+          _RecordingScoresCache(events),
+        ),
+        dayBundleProvider.overrideWith((ref, key) async {
+          events.add('bundle-load:$key');
+          return DayBundle(day: DayMetric(dayKey: key, steps: 0));
+        }),
+        dailyHealthScoresProvider.overrideWith((ref, key) async {
+          events.add('scores-load:$key');
+          return DailyHealthScores.empty(key);
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(healthDataRefreshCoordinatorProvider)
+        .refreshDay(dayKey, healthScores: true);
+
+    expect(events, [
+      'bundle-delete:$dayKey',
+      'scores-delete:$dayKey',
+      'bundle-load:$dayKey',
+      'scores-load:$dayKey',
+    ]);
+  });
+
   test('config change clears caches before invalidating health data', () async {
     const dayKey = '2026-08-01';
     final events = <String>[];
@@ -98,6 +134,10 @@ class _RecordingBundleCache extends DailyBundleCacheStorage {
 
   @override
   Future<void> clear() async => events.add('bundle-clear');
+
+  @override
+  Future<void> delete(String dayKey) async =>
+      events.add('bundle-delete:$dayKey');
 }
 
 class _RecordingScoresCache extends DailyHealthScoresCacheStorage {
@@ -106,6 +146,10 @@ class _RecordingScoresCache extends DailyHealthScoresCacheStorage {
 
   @override
   Future<void> clear() async => events.add('scores-clear');
+
+  @override
+  Future<void> delete(String dayKey) async =>
+      events.add('scores-delete:$dayKey');
 }
 
 class _MemoryAuthKeyStore implements AuthKeyStore {

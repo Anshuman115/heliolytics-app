@@ -41,6 +41,23 @@ class DailyHealthScoresCacheStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(dailyHealthScoresCacheKey);
   }
+
+  Future<void> delete(String dayKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(dailyHealthScoresCacheKey);
+    if (raw == null) return;
+    try {
+      final map = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      map.remove(dayKey);
+      if (map.isEmpty) {
+        await prefs.remove(dailyHealthScoresCacheKey);
+      } else {
+        await prefs.setString(dailyHealthScoresCacheKey, jsonEncode(map));
+      }
+    } catch (_) {
+      await prefs.remove(dailyHealthScoresCacheKey);
+    }
+  }
 }
 
 final dailyHealthScoresCacheStorageProvider =

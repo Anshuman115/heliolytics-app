@@ -16,25 +16,33 @@ class DailyBundleCacheStorage {
 
   final Box<String>? _boxOverride;
 
-  Box<String> get _box => _boxOverride ?? Hive.box<String>(cachedDaysBoxName);
+  Box<String>? get _box {
+    if (_boxOverride != null) return _boxOverride;
+    if (!Hive.isBoxOpen(cachedDaysBoxName)) return null;
+    return Hive.box<String>(cachedDaysBoxName);
+  }
 
   bool get _hasCurrentSchema =>
-      _box.get(dailyBundleCacheSchemaKey) ==
+      _box?.get(dailyBundleCacheSchemaKey) ==
       dailyBundleCacheSchemaVersion.toString();
 
   /// Removes entries produced before cache completeness was enforced.
   /// Returns true only when a migration was required.
   Future<bool> migrateSchemaIfNeeded() async {
+    final box = _box;
+    if (box == null) return false;
     if (_hasCurrentSchema) return false;
-    await _box.clear();
+    await box.clear();
     await _markSchemaCurrent();
     return true;
   }
 
   Future<DayBundle?> read(String dayKey) async {
+    final box = _box;
+    if (box == null) return null;
     if (!_hasCurrentSchema) return null;
     try {
-      final raw = _box.get(dayKey);
+      final raw = box.get(dayKey);
       if (raw == null) return null;
       return DayBundle.fromJson(
         Map<String, dynamic>.from(jsonDecode(raw) as Map),
@@ -47,15 +55,21 @@ class DailyBundleCacheStorage {
   Future<void> write(String dayKey, DayBundle bundle) async {
     try {
       await migrateSchemaIfNeeded();
-      await _box.put(dayKey, jsonEncode(bundle.toJson()));
+      await _box?.put(dayKey, jsonEncode(bundle.toJson()));
     } catch (_) {
       // Best-effort — a disk failure must never crash the app.
     }
   }
 
   Future<void> clear() async {
-    await _box.clear();
+    final box = _box;
+    if (box == null) return;
+    await box.clear();
     await _markSchemaCurrent();
+  }
+
+  Future<void> delete(String dayKey) async {
+    await _box?.delete(dayKey);
   }
 
   /// All cached days' DayMetric only (no sleep/workouts) — used to seed
@@ -63,9 +77,11 @@ class DailyBundleCacheStorage {
   /// as the user visits more days; empty on a fresh install. Skips any
   /// individually corrupt entry rather than discarding the whole cache.
   Future<List<DayMetric>> readAllCachedDays() async {
+    final box = _box;
+    if (box == null) return const [];
     if (!_hasCurrentSchema) return const [];
     final out = <DayMetric>[];
-    for (final entry in _box.toMap().entries) {
+    for (final entry in box.toMap().entries) {
       if (entry.key == dailyBundleCacheSchemaKey) continue;
       try {
         final map = Map<String, dynamic>.from(jsonDecode(entry.value) as Map);
@@ -77,10 +93,12 @@ class DailyBundleCacheStorage {
     return out;
   }
 
-  Future<void> _markSchemaCurrent() => _box.put(
-    dailyBundleCacheSchemaKey,
-    dailyBundleCacheSchemaVersion.toString(),
-  );
+  Future<void> _markSchemaCurrent() async {
+    await _box?.put(
+      dailyBundleCacheSchemaKey,
+      dailyBundleCacheSchemaVersion.toString(),
+    );
+  }
 }
 
 final dailyBundleCacheStorageProvider = Provider<DailyBundleCacheStorage>((

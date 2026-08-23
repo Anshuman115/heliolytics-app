@@ -8,6 +8,8 @@ import 'package:heliolytics/utils/hr_zones.dart';
 import 'package:heliolytics/utils/sport_icons.dart';
 import 'package:heliolytics/utils/sport_labels.dart';
 import 'package:heliolytics/design_system/components/helio_surface_card.dart';
+import 'package:heliolytics/design_system/components/helio_empty_state.dart';
+import 'package:heliolytics/design_system/components/helio_loading.dart';
 import 'package:heliolytics/design_system/components/helio_bottom_nav.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
@@ -17,6 +19,7 @@ import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/hr_sample.dart';
 import 'package:heliolytics/models/activity_detail_payload.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
+import 'package:heliolytics/providers/health_data_refresh_coordinator.dart';
 import 'package:heliolytics/widgets/hr_zone_bars.dart';
 import 'package:heliolytics/widgets/minute_series_chart.dart';
 
@@ -50,16 +53,18 @@ class ActivityDetailScreen extends ConsumerWidget {
       );
     }
 
-    final detail = ref.watch(detailMetricsProvider(view.dayKey)).valueOrNull;
-    final hr = detail == null
-        ? const <HeartRateSample>[]
-        : _inWindow(
-            detail.heartRateFor(view.dayKey),
-            view.start,
-            view.durationSec,
-          );
-
-    return _shell(context, view.title, _content(view, hr));
+    final detail = ref.watch(detailMetricsProvider(view.dayKey));
+    return _shell(
+      context,
+      view.title,
+      _content(
+        view,
+        detail,
+        onRetry: () => ref
+            .read(healthDataRefreshCoordinatorProvider)
+            .retryDay(view.dayKey, details: true),
+      ),
+    );
   }
 
   Widget _shell(BuildContext context, String? title, Widget body) {
@@ -80,7 +85,18 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _content(_ActivityView view, List<HeartRateSample> hr) {
+  Widget _content(
+    _ActivityView view,
+    AsyncValue<DetailMetrics> detail, {
+    required VoidCallback onRetry,
+  }) {
+    final hr = detail.valueOrNull == null
+        ? const <HeartRateSample>[]
+        : _inWindow(
+            detail.valueOrNull!.heartRateFor(view.dayKey),
+            view.start,
+            view.durationSec,
+          );
     final zones = computeHrZones(hr, maxHr: view.maxHr);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -93,6 +109,26 @@ class ActivityDetailScreen extends ConsumerWidget {
         _header(view),
         const SizedBox(height: HelioSpacing.xl),
         _heroStats(view),
+        if (detail.isLoading) ...[
+          const SizedBox(height: HelioSpacing.xl),
+          const HelioLoading(message: 'Loading heart-rate readings…'),
+        ] else if (detail.hasError) ...[
+          const SizedBox(height: HelioSpacing.xl),
+          HelioEmptyState(
+            icon: Icons.error_outline,
+            title: 'Heart rate unavailable',
+            message: detail.error.toString(),
+            actionLabel: 'Retry',
+            onAction: onRetry,
+          ),
+        ] else if (hr.isEmpty) ...[
+          const SizedBox(height: HelioSpacing.xl),
+          const HelioEmptyState(
+            icon: Icons.monitor_heart_outlined,
+            title: 'No heart-rate readings',
+            message: 'The strap did not record heart rate for this activity.',
+          ),
+        ],
         if (hr.isNotEmpty) ...[
           const SizedBox(height: HelioSpacing.xl),
           Text('HEART RATE', style: HelioTypography.sectionTitle),

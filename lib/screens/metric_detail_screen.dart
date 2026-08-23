@@ -39,9 +39,7 @@ class MetricDetailScreen extends ConsumerWidget {
     if (definition == null) return _unknown(context);
 
     final bundle = ref.watch(dayBundleProvider(dayKey));
-    final detail =
-        ref.watch(detailMetricsProvider(dayKey)).valueOrNull ??
-        const DetailMetrics();
+    final detail = ref.watch(detailMetricsProvider(dayKey));
     return bundle.when(
       loading: () =>
           Scaffold(appBar: _topBar(context), body: const HelioLoading()),
@@ -57,16 +55,18 @@ class MetricDetailScreen extends ConsumerWidget {
               .retryDay(dayKey, details: true, trends: true),
         ),
       ),
-      data: (data) => _loaded(context, definition, data, detail),
+      data: (data) => _loaded(context, ref, definition, data, detail),
     );
   }
 
   Widget _loaded(
     BuildContext context,
+    WidgetRef ref,
     MetricDef definition,
     DayBundle bundle,
-    DetailMetrics detail,
+    AsyncValue<DetailMetrics> detailAsync,
   ) {
+    final detail = detailAsync.valueOrNull ?? const DetailMetrics();
     final day = bundle.day;
     final trendFirst = _trendFirst(definition.id);
     final showRing = const {
@@ -122,12 +122,7 @@ class MetricDetailScreen extends ConsumerWidget {
             MetricDetailHero(definition: definition, day: day),
             const SizedBox(height: HelioSpacing.lg),
           ],
-          MetricDetailBody(
-            definition: definition,
-            bundle: bundle,
-            detail: detail,
-            dayKey: dayKey,
-          ),
+          _detailBody(ref, definition, bundle, detailAsync),
           if (!trendFirst && _supportsTrend(definition.id)) ...[
             const SizedBox(height: HelioSpacing.xxl),
             MetricTrendSection(definition: definition, anchorDayKey: dayKey),
@@ -142,6 +137,49 @@ class MetricDetailScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _detailBody(
+    WidgetRef ref,
+    MetricDef definition,
+    DayBundle bundle,
+    AsyncValue<DetailMetrics> detail,
+  ) {
+    Widget loaded(DetailMetrics value) => MetricDetailBody(
+      definition: definition,
+      bundle: bundle,
+      detail: value,
+      dayKey: dayKey,
+    );
+
+    if (!_requiresDetail(definition)) {
+      return loaded(detail.valueOrNull ?? const DetailMetrics());
+    }
+    return detail.when(
+      data: loaded,
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: HelioSpacing.xxl),
+        child: HelioLoading(message: 'Loading detailed readings…'),
+      ),
+      error: (error, _) => HelioEmptyState(
+        icon: Icons.error_outline,
+        title: 'Detailed readings unavailable',
+        message: error.toString(),
+        actionLabel: 'Retry',
+        onAction: () => ref
+            .read(healthDataRefreshCoordinatorProvider)
+            .retryDay(dayKey, details: true),
+      ),
+    );
+  }
+
+  bool _requiresDetail(MetricDef definition) =>
+      definition.seriesKey != null ||
+      const {
+        'continuous_hr',
+        'temperature',
+        'pai',
+        'avg_hr',
+      }.contains(definition.id);
 
   bool _trendFirst(String id) => const {
     'hrv',

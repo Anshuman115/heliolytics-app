@@ -39,18 +39,18 @@ class HealthDataRefreshCoordinator {
     bool details = false,
     bool trends = false,
   }) async {
-    retryDay(
-      dayKey,
-      healthScores: healthScores,
-      details: details,
-      trends: trends,
-    );
+    await _ref.read(dailyBundleCacheStorageProvider).delete(dayKey);
+    if (healthScores) {
+      await _ref.read(dailyHealthScoresCacheStorageProvider).delete(dayKey);
+    }
     final loads = <Future<void>>[
-      _ref.read(dayBundleProvider(dayKey).future).then((_) {}),
+      _ref.refresh(dayBundleProvider(dayKey).future).then((_) {}),
       if (healthScores)
-        _ref.read(dailyHealthScoresProvider(dayKey).future).then((_) {}),
-      if (details) _ref.read(detailMetricsProvider(dayKey).future).then((_) {}),
+        _ref.refresh(dailyHealthScoresProvider(dayKey).future).then((_) {}),
+      if (details)
+        _ref.refresh(detailMetricsProvider(dayKey).future).then((_) {}),
     ];
+    if (trends) _ref.invalidate(metricTrendProvider);
     await Future.wait(loads, eagerError: true);
   }
 
