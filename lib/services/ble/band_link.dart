@@ -12,10 +12,10 @@ import 'package:heliolytics/services/ble/live_hr_stream.dart';
 /// BLE connect, ZeppOS auth, and activity-fetch for the Helio Strap.
 /// The caller provides a [log] callback and sets [onUpdate] to react to data.
 class BandLink implements BandLinkPort {
-  static const String writeUuid  = '00000016-0000-3512-2118-0009af100700';
+  static const String writeUuid = '00000016-0000-3512-2118-0009af100700';
   static const String notifyUuid = '00000017-0000-3512-2118-0009af100700';
   static const String controlUuid = '00000004-0000-3512-2118-0009af100700';
-  static const String dataUuid   = '00000005-0000-3512-2118-0009af100700';
+  static const String dataUuid = '00000005-0000-3512-2118-0009af100700';
 
   final void Function(String) log;
   void Function()? onUpdate;
@@ -66,6 +66,7 @@ class BandLink implements BandLinkPort {
           physicallyConnected &&
           comms != null) {
         log('• link lost');
+        fetcher?.abortDisconnected();
         onLinkLost?.call();
       }
     });
@@ -95,10 +96,10 @@ class BandLink implements BandLinkPort {
     for (final s in services) {
       for (final c in s.characteristics) {
         final u = c.uuid.str.toLowerCase();
-        if (u == writeUuid)   _write   = c;
-        if (u == notifyUuid)  _notify  = c;
+        if (u == writeUuid) _write = c;
+        if (u == notifyUuid) _notify = c;
         if (u == controlUuid) _control = c;
-        if (u == dataUuid)    _data    = c;
+        if (u == dataUuid) _data = c;
         if (u.contains('2a37')) _hrChar = c;
       }
     }
@@ -106,7 +107,9 @@ class BandLink implements BandLinkPort {
       log('✗ chunked chars not found');
       return false;
     }
-    log('char resolution: write=${_write != null}, notify=${_notify != null}, control=${_control != null}, data=${_data != null}, hrChar=${_hrChar != null}');
+    log(
+      'char resolution: write=${_write != null}, notify=${_notify != null}, control=${_control != null}, data=${_data != null}, hrChar=${_hrChar != null}',
+    );
     log('✓ found chunked chars');
 
     auth = DeviceHandshake(
@@ -154,7 +157,7 @@ class BandLink implements BandLinkPort {
       sequence: auth!.sequence ?? 0,
       log: log,
       writeChunk: (c) => _write!.write(c, withoutResponse: true),
-      writeAck:   (c) => _notify!.write(c, withoutResponse: true),
+      writeAck: (c) => _notify!.write(c, withoutResponse: true),
       onPayload: _handlePayload,
     );
     _notifyHandler = (v) => comms!.onNotify(v);
@@ -199,16 +202,14 @@ class BandLink implements BandLinkPort {
   /// and returns the packet count as a 4-byte LE integer (for logging).
   /// This prevents 0x07 GPS / other huge types from hanging the scan.
   @override
-  Future<TypeFetchResult> fetchCode(
-    int code,
-    DateTime since,
-  ) async {
+  Future<TypeFetchResult> fetchCode(int code, DateTime since) async {
     final f = fetcher;
     if (f == null) {
       return (
         raw: Uint8List(0),
         expected: -1,
         skipped: false,
+        outcome: TypeFetchOutcome.disconnected,
         roundStart: null,
         roundSegments: <SyncPageAnchor>[],
       );
@@ -222,7 +223,7 @@ class BandLink implements BandLinkPort {
       maxRounds: isWorkout ? 100 : 400,
       timeout: isWorkout
           ? const Duration(seconds: 150)
-          : const Duration(days: 7),
+          : const Duration(minutes: 10),
     );
     final expected = f.lastExpected;
     final roundStart = f.firstRoundStart;
@@ -233,6 +234,7 @@ class BandLink implements BandLinkPort {
         raw: Uint8List(0),
         expected: expected,
         skipped: false,
+        outcome: f.lastOutcome,
         roundStart: null,
         roundSegments: roundSegments,
       );
@@ -242,6 +244,7 @@ class BandLink implements BandLinkPort {
       raw: f.lastRaw,
       expected: expected,
       skipped: false,
+      outcome: f.lastOutcome,
       roundStart: roundStart,
       roundSegments: roundSegments,
     );
@@ -264,6 +267,7 @@ class BandLink implements BandLinkPort {
         raw: Uint8List(0),
         expected: -1,
         skipped: false,
+        outcome: TypeFetchOutcome.disconnected,
         roundStart: null,
         roundSegments: <SyncPageAnchor>[],
       );
@@ -285,6 +289,7 @@ class BandLink implements BandLinkPort {
         raw: Uint8List(0),
         expected: expected,
         skipped: false,
+        outcome: f.lastOutcome,
         roundStart: null,
         roundSegments: roundSegments,
       );
@@ -293,6 +298,7 @@ class BandLink implements BandLinkPort {
       raw: f.lastRaw,
       expected: expected,
       skipped: false,
+      outcome: f.lastOutcome,
       roundStart: roundStart,
       roundSegments: roundSegments,
     );
@@ -320,7 +326,9 @@ class BandLink implements BandLinkPort {
     Duration timeout = const Duration(seconds: 4),
   }) async {
     final prior = _endpointWaiters.remove(endpoint);
-    if (prior != null && !prior.isCompleted) prior.completeError(StateError('superseded'));
+    if (prior != null && !prior.isCompleted) {
+      prior.completeError(StateError('superseded'));
+    }
     final waiter = Completer<Uint8List>();
     _endpointWaiters[endpoint] = waiter;
     try {
@@ -354,11 +362,15 @@ class BandLink implements BandLinkPort {
 
     _liveHr?.onEndpointPayload(endpoint, payload);
     final hex = payload.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    log('← endpoint 0x${endpoint.toRadixString(16).padLeft(4, '0')} '
-        '(${payload.length}B): $hex');
+    log(
+      '← endpoint 0x${endpoint.toRadixString(16).padLeft(4, '0')} '
+      '(${payload.length}B): $hex',
+    );
 
-    if (endpoint == 0x0016 && payload.length >= 15 &&
-        payload[0] == 0x04 && payload[1] == 0x01) {
+    if (endpoint == 0x0016 &&
+        payload.length >= 15 &&
+        payload[0] == 0x04 &&
+        payload[1] == 0x01) {
       final bd = ByteData.sublistView(payload);
       final a = bd.getUint32(3, Endian.little);
       final b = bd.getUint32(7, Endian.little);
@@ -375,7 +387,9 @@ class BandLink implements BandLinkPort {
         final ep = bd.getUint16(off, Endian.little);
         final enc = payload[off + 2] != 0;
         if (ep == 0x004b) has4b = true;
-        services.add('0x${ep.toRadixString(16).padLeft(4, '0')}${enc ? '*' : ''}');
+        services.add(
+          '0x${ep.toRadixString(16).padLeft(4, '0')}${enc ? '*' : ''}',
+        );
         off += 3;
       }
       log('✓ SERVICES ($n): ${services.join(' ')}');
@@ -415,6 +429,7 @@ class BandLink implements BandLinkPort {
 
   @override
   Future<void> disconnect() async {
+    fetcher?.abortDisconnected();
     await _liveHr?.stop();
     _liveHr?.dispose();
     _liveHr = null;
@@ -427,6 +442,8 @@ class BandLink implements BandLinkPort {
       if (!w.isCompleted) w.completeError(StateError('disconnected'));
     }
     _endpointWaiters.clear();
-    try { await _device?.disconnect(); } catch (_) {}
+    try {
+      await _device?.disconnect();
+    } catch (_) {}
   }
 }

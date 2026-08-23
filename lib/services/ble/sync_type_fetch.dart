@@ -19,6 +19,28 @@ class SyncTypeFetch {
     final expected = fetch.expected;
     final skipped = fetch.skipped;
 
+    if (fetch.outcome != TypeFetchOutcome.complete) {
+      final reason = fetch.outcome == TypeFetchOutcome.timedOut
+          ? 'timed out'
+          : 'strap disconnected';
+      log('  ✗ $codeStr: $reason');
+      return (
+        entry: DumpEntry(
+          code: codeStr,
+          status: DumpStatus.unknown,
+          samples: 0,
+          bytes: 0,
+        ),
+        result: TypeCodeResult(
+          code: codeStr,
+          label: label,
+          status: 'error',
+          errorMsg: reason,
+        ),
+        raw: null,
+      );
+    }
+
     String status;
     String? rawHex;
     if (skipped) {
@@ -29,7 +51,9 @@ class SyncTypeFetch {
       log('  — $codeStr: ${expected < 0 ? "rejected" : "empty"}');
     } else {
       status = 'ok';
-      final fullHex = raw.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      final fullHex = raw
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join();
       final previewLen = raw.length > 1000 ? 512 : 128;
       rawHex = fullHex.length > previewLen
           ? fullHex.substring(0, previewLen)
@@ -42,8 +66,8 @@ class SyncTypeFetch {
       status: status == 'ok'
           ? DumpStatus.ok
           : status == 'empty'
-              ? DumpStatus.empty
-              : DumpStatus.rejected,
+          ? DumpStatus.empty
+          : DumpStatus.rejected,
       samples: raw.length ~/ 4,
       bytes: raw.length,
       file: '${codeStr}_raw.bin',

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:heliolytics/services/ble/parsers/activity_parser.dart';
+import 'package:heliolytics/services/ble/band_link_port.dart';
 import 'package:heliolytics/services/ble/sync_page_anchor.dart';
 import 'package:heliolytics/utils/huami_time.dart';
 
@@ -21,6 +22,7 @@ class TypeSyncEngine {
   _FetchJob? _job;
   int lastExpected = 0;
   Uint8List lastRaw = Uint8List(0);
+  TypeFetchOutcome lastOutcome = TypeFetchOutcome.complete;
   DateTime? firstRoundStart;
   final List<SyncPageAnchor> roundSegments = [];
 
@@ -33,6 +35,7 @@ class TypeSyncEngine {
     int maxRounds = 20,
     Duration timeout = const Duration(seconds: 30),
   }) {
+    lastOutcome = TypeFetchOutcome.complete;
     lastExpected = -1;
     firstRoundStart = null;
     roundSegments.clear();
@@ -48,12 +51,22 @@ class TypeSyncEngine {
           log?.call('  fetch 0x${code.toRadixString(16)} timed out');
         }
         lastRaw = job.allRaw.toBytes();
+        lastOutcome = TypeFetchOutcome.timedOut;
         _job = null;
         // Tell the strap we're done so it's ready for the next code.
         writeControl([_cmdAck, _ackKeep]);
         return lastRaw;
       },
     );
+  }
+
+  void abortDisconnected() {
+    final job = _job;
+    if (job == null) return;
+    lastRaw = job.allRaw.toBytes();
+    lastOutcome = TypeFetchOutcome.disconnected;
+    _job = null;
+    if (!job.completer.isCompleted) job.completer.complete(lastRaw);
   }
 
   void _startRound() {

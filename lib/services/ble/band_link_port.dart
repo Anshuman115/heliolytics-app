@@ -2,10 +2,20 @@ import 'dart:typed_data';
 
 import 'package:heliolytics/services/ble/sync_page_anchor.dart';
 
+enum TypeFetchOutcome { complete, timedOut, disconnected }
+
+class BandLinkDisconnectedException implements Exception {
+  const BandLinkDisconnectedException();
+
+  @override
+  String toString() => 'Strap disconnected during sync';
+}
+
 typedef TypeFetchResult = ({
   Uint8List raw,
   int expected,
   bool skipped,
+  TypeFetchOutcome outcome,
   DateTime? roundStart,
   List<SyncPageAnchor> roundSegments,
 });

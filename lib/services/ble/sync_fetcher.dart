@@ -110,6 +110,9 @@ class SyncFetcher {
           typeInt,
           SyncWindow.sinceForType(plan, codeStr),
         );
+        if (fetched.outcome == TypeFetchOutcome.disconnected) {
+          throw const BandLinkDisconnectedException();
+        }
         final parsed = SyncTypeFetch.run(
           codeStr: codeStr,
           fetch: fetched,
@@ -119,6 +122,8 @@ class SyncFetcher {
         onTypeProgress?.call(codeStr, parsed.result);
         entries.add(parsed.entry);
         if (parsed.raw != null) rawByCode[codeStr] = parsed.raw!;
+      } on BandLinkDisconnectedException {
+        rethrow;
       } catch (e) {
         log('  ✗ $codeStr: ERROR — $e');
         final err = SyncTypeFetch.errorResult(codeStr, e);

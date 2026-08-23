@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:heliolytics/services/ble/type_sync_engine.dart';
+import 'package:heliolytics/services/ble/band_link_port.dart';
+import 'package:heliolytics/services/ble/sync_type_fetch.dart';
 import 'package:heliolytics/utils/huami_time.dart';
 
 void main() {
@@ -69,6 +71,52 @@ void main() {
     engine.onControl(_startReply(expected: 0, start: finalBlock));
     expect(await fetched, isNotEmpty);
     expect(engine.roundSegments, hasLength(1));
+  });
+
+  test('timeout marks partial data as timed out', () async {
+    final engine = TypeSyncEngine((_) async {});
+    final fetched = engine.fetchType(
+      0x01,
+      DateTime(2026, 8, 23),
+      timeout: const Duration(milliseconds: 5),
+    );
+    engine.onData(Uint8List.fromList([0, 1, 2, 3]));
+
+    expect(await fetched, isEmpty);
+    expect(engine.lastOutcome, TypeFetchOutcome.timedOut);
+  });
+
+  test('disconnect completes the active fetch immediately', () async {
+    final engine = TypeSyncEngine((_) async {});
+    final fetched = engine.fetchType(
+      0x01,
+      DateTime(2026, 8, 23),
+      timeout: const Duration(days: 1),
+    );
+    engine.onData(Uint8List.fromList([0, 4, 5]));
+    engine.abortDisconnected();
+
+    expect(await fetched, isEmpty);
+    expect(engine.lastOutcome, TypeFetchOutcome.disconnected);
+  });
+
+  test('timed-out fetch never exposes partial bytes for upload', () {
+    final parsed = SyncTypeFetch.run(
+      codeStr: '0x01',
+      fetch: (
+        raw: Uint8List.fromList([1, 2, 3]),
+        expected: 10,
+        skipped: false,
+        outcome: TypeFetchOutcome.timedOut,
+        roundStart: null,
+        roundSegments: const [],
+      ),
+      log: (_) {},
+    );
+
+    expect(parsed.result.status, 'error');
+    expect(parsed.raw, isNull);
+    expect(parsed.entry.bytes, 0);
   });
 }
 
