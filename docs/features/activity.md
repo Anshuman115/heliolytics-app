@@ -1,4 +1,4 @@
-# Feature — Activity
+# Feature : Activity
 
 The Activity tab: workouts the user started deliberately, plus auto-detected
 sessions the strap noticed on its own. Drill in for a per-workout HR chart and
@@ -23,15 +23,15 @@ exception to the normal one-day fetch pattern.
 
 ## Screens
 
-- `ActivityHubScreen` — date navigation, Strain hero, daily summary, and a
+- `ActivityHubScreen` : date navigation, Strain hero, daily summary, and a
   combined chronological activity feed
-- `ActivityDetail Screen` (`activity_detail_screen.dart`) — one session: summary
+- `ActivityDetail Screen` (`activity_detail_screen.dart`) : one session: summary
   stats, HR chart, zone bars, driven by `ActivityDetailPayload`
 
 ## HR zones
 
-`utils/hr_zones.dart` computes time-in-zone from per-second HR samples. The standard
-rest + 5-zone model, each zone a fraction of max HR:
+`utils/hr_zones.dart` computes time-in-zone from timestamped HR samples fetched for the day. The implemented
+rest + 5-zone display model, each zone a fraction of max HR:
 
 ```dart
 const List<double> hrZoneLowerFractions = [0.0, 0.5, 0.6, 0.7, 0.8, 0.9];
@@ -44,15 +44,16 @@ Zone `i` spans `[fraction[i], fraction[i+1])` of max HR; zone 5 is open-ended.
 
 Time is attributed per sample, not per row, with two guards:
 
-- `_maxGapSeconds = 120` — caps dwell for any one sample, so a BLE gap doesn't
+- `_maxGapSeconds = 120` : caps dwell for any one sample, so a BLE gap doesn't
   credit an hour to whatever zone was last seen
-- `_tailSeconds = 60` — nominal dwell for the final sample, which has no successor
+- `_tailSeconds = 60` : nominal dwell for the final sample, which has no successor
 
 ### Max HR fallback
 
 `defaultMaxHrFallback = 190` is used whenever a real max HR isn't supplied. It's a
-placeholder, not the user's measured max. **Zones read wrong for anyone whose true
-max differs materially.** A measured or profile max-HR source is still an open item.
+placeholder, not the user's measured max. The workout detail currently supplies its recorded session maximum when present;
+that is not necessarily a physiological maximum. User-configurable maximum HR
+and zones are not implemented.
 
 `HrZoneBars` renders highest zone first (5 → 0), each row showing bpm range,
 percentage, duration, and a proportional bar.
@@ -75,4 +76,4 @@ percentage, duration, and a proportional bar.
 
 > The two parsers under `services/ble/parsers/` handle **fetch framing** (record
 > striding, page boundaries), not health interpretation. Health parsing is the
-> server's job — see [ble-sync.md](ble-sync.md).
+> server's job : see [ble-sync.md](ble-sync.md).

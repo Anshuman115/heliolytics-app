@@ -55,9 +55,10 @@ reports/
 TODO.md
 UI.md
 
-# Docs: feature docs are published; protocol/validation/decisions stay local.
+# Documentation: only feature docs are published.
 docs/*
 !docs/features/
+!docs/features/**
 .github/
 log.txt
 
@@ -69,7 +70,11 @@ ZEPP_EXPORT_6M
 *.zip
 *.png
 !assets/images/helio_strap.png
-*.md
 .agents
 .claude
 Ref
+
+# Local project documentation and planning
+.planning/
+.specify/
+docs/local/

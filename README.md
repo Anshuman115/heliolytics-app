@@ -1,186 +1,74 @@
-# Heliolytics
+# Heliolytics App
 
-**A self-hosted health platform for a BLE fitness band** — built end-to-end from the
-device's wireless protocol up to the mobile UI. It reverse-engineers the band's
-Bluetooth Low Energy protocol, uploads raw sessions to a Go ingestion/analytics
-backend, and renders sleep, recovery, and activity insights in a Flutter app.
+Flutter phone client for a personal wearable-health system. It pairs with a strap,
+uploads raw bytes to your Go server and displays the parsed results.
 
-> **This repository is the Flutter mobile client.** It pairs with a Go API + PostgreSQL/TimescaleDB
-> backend and a Next.js dashboard — see [System architecture](#system-architecture).
+Source review: 7 September 2026. Describes the local code, not an installed-app or deployment check.
 
----
+## How the product fits together
 
-## Engineering highlights
+| Repo | Responsibility |
+|---|---|
+| Heliolytics_App | Bluetooth, onboarding, sync, mobile screens |
+| Heliolytics | Historical health parsing, storage, summaries and API |
+| Heliolytics_Web | Server-side metric reads and browser dashboard |
 
-- **Reverse-engineered the wearable's BLE protocol from scratch** (no vendor SDK):
-  ECDH key exchange on the binary curve `sect163k1`, an AES-128 challenge-response
-  handshake, and a custom chunked transport over GATT — all implemented in Dart.
-- **Binary health-data decoding** — per-type-code parsers for ~20 data streams
-  (per-minute activity & heart rate, sleep stages, HRV, SpO₂, skin temperature,
-  workouts, respiratory rate…) across two distinct on-device timestamp models.
-- **Validated against the vendor's own data export** — sleep-stage minutes matched on
-  26/27 nights; per-minute heart rate and full-day step totals matched **exactly** in
-  side-by-side validation.
-- **Thin-client, server-authoritative sync** — the phone uploads raw session bytes; the
-  Go server owns all parsing, storage, and per-type "coverage" windows. Fetch state lives
-  on the server, so it survives app reinstalls, and **no health data is persisted on the device**.
-- **Science-backed recovery score** — a daily readiness score derived from HRV
-  (`ln(RMSSD)`), resting heart rate, sleep, and respiratory rate compared to a personal
-  rolling baseline, following established HRV-guided-training research (Plews et al.),
-  with documented weighting and cold-start handling.
-- **Production-minded engineering** — TimescaleDB hypertables for per-minute time series;
-  idempotent ingest (overlapping re-syncs never double-count steps); lazy-loaded metrics
-  API to cut mobile bandwidth; a layer-first architecture with a one-responsibility,
-  ≤150-lines-per-file discipline; unit-tested parsers and scoring.
+The app fetches fourteen band data types. Go owns their historical health parsing.
+Flutter decodes transport framing and expands API responses for display; it does
+not calculate the backend recovery score.
 
----
+## What you can use
 
-## System architecture
+- Home: sleep, recovery and strain rings, daily insight, activities and seven health tiles.
+- Health: baseline, live HR access, stress and metric detail views.
+- Activity: workouts, automatic sessions and detail charts with HR zones.
+- More: device status, cloud settings, alerts, diagnostics, logs and About.
+- Setup: profile, Bluetooth permissions, scan, auth key, connection and backfill choice.
 
-Three repositories, one platform:
+Sleep detail opens from Home or the metric route. `SleepHubScreen` exists in source
+but is not a tab in the current shell. AI, journaling and configurable personal
+goals are not implemented.
 
-| Repo | Role | Stack |
-|------|------|-------|
-| **Heliolytics_App** (this repo) | BLE sync, raw upload, health UI | Flutter · Dart · Riverpod |
-| **Heliolytics** | Ingest, parse, store, metrics API | Go · PostgreSQL + TimescaleDB · Docker |
-| **Heliolytics_Web** | Web dashboard | Next.js |
+## Read the code
 
-```
- Band ──BLE (ECDH+AES, chunked)──►  Flutter app  ──HTTPS (HMAC)──►  Go API
-                                    (raw bytes)        POST /ingest     │
-                                                                        ▼
-                                                            parse → PostgreSQL/TimescaleDB
-                                                                   ╱              ╲
-                                                       Flutter GET /metrics     Next.js dashboard
-```
+[Architecture](docs/local/ARCHITECTURE.md) maps screens, providers and services.
 
-All health parsing happens **server-side** after ingest; the app keeps only the minimal
-on-device logic needed to page data off the band over BLE.
+| Feature guide | Read for |
+|---|---|
+| [BLE sync](docs/features/ble-sync.md) | Coverage, fetch windows, raw uploads |
+| [Home and rings](docs/features/home-and-rings.md) | Navigation, day bundles, cache, health tiles |
+| [Sleep](docs/features/sleep.md) | Night selection, stages and naps |
+| [Activity](docs/features/activity.md) | History and workout detail |
+| [Band alerts](docs/features/band-alerts.md) | Call/app forwarding and vibration patterns |
+| [Settings and device](docs/features/settings-and-device.md) | Setup, credentials, profile and logs |
 
----
+## Local storage
 
-## How it works
+Credentials and profile use platform secure storage. Closed-day server responses
+are cached in Hive and SharedPreferences. Session metadata and diagnostic logs
+also remain on-device; user-triggered raw dumps are separate files.
+The server owns sync coverage. See [privacy](docs/local/PRIVACY.md) for the full distinction.
 
-1. **Pair** — the user provides the band's auth key once (stored in Android
-   EncryptedSharedPreferences / iOS Keychain). No third-party cloud login.
-2. **Sync** — the app performs the ECDH + AES handshake, then fetches each data type in
-   chunks over GATT. The fetch window per data type comes from the server's coverage
-   API, so the client stays stateless and reinstall-safe.
-3. **Upload** — raw session bytes are uploaded with a short-lived HMAC-signed token.
-4. **Parse & store** — the Go server decodes each binary stream into typed samples and
-   writes them to TimescaleDB; daily rollups (steps, sleep, recovery, …) are computed on ingest.
-5. **Render** — the app reads daily metrics and per-minute series from the metrics API and
-   draws rings, charts, and a health-monitor grid.
+## Build instructions
 
----
+Use the Flutter/Dart requirements in `pubspec.yaml` and select a connected device:
 
-## Tech stack
-
-**Mobile:** Flutter, Dart, Riverpod, `flutter_blue_plus`, `flutter_secure_storage`,
-GoRouter, `fl_chart`, Dio · **Crypto:** ECDH (`sect163k1`), AES-128, HMAC ·
-**Backend (sibling repo):** Go, PostgreSQL + TimescaleDB, `sqlc`, Docker · **Web:** Next.js
-
----
-
-## Project structure (this repo)
-
-Layer-first, one responsibility per file:
-
-```
-lib/
-  screens/          Full pages (Home, Sleep, Activity, Settings, metric detail…)
-  widgets/          Screen-specific UI chunks (charts, sections, settings cards)
-  providers/        Riverpod state + orchestration
-  services/
-    ble/            BLE protocol, auth handshake, sync pipeline, per-type parsers
-    network/        Dio client + HMAC token minting
-    config/         Secure-storage config
-  models/           Domain + JSON entities
-  router/           GoRouter + auth redirect
-  utils/            Logging, formatters, time/zone helpers
-  constants/        App-wide literals
-  design_system/    Tokens, theme, reusable components
-```
-
-**Flow:** `screens → providers → services → models` · See [ARCHITECTURE.md](ARCHITECTURE.md).
-
----
-
-## Build & run
-
-```bash
+```sh
 flutter pub get
-flutter run -d android        # USB debugging enabled; auto-picks a single device
+flutter devices
+flutter run -d <device-id>
 ```
 
-**Personal APK** (API URL + signing secret baked in at build time):
+For a personal APK, copy `build.env.example` to private `build.env`, configure it,
+and use `tool/build_apk.sh`. Build-time signing credentials are appropriate only
+for your personal distribution. A public build should be configured in-app.
 
-```bash
-cp build.env.example build.env   # set API_URL and API_SIGNING_SECRET
-./tool/build_apk.sh
-adb install -r build/app/outputs/flutter-apk/app-release.apk
-```
-
-**Play Store AAB** (API configured in-app on first launch):
-
-```bash
+```sh
 flutter build appbundle --release
 ```
 
-Start the backend stack from the **Heliolytics** repo first. The app mints short-lived
-HMAC tokens itself — no tokens are pasted by hand.
+These are commands for future use; this documentation update did not build or run
+the app. A source review does not prove Play Store or device behavior.
 
----
-
-## Security & privacy
-
-- The band **auth key** is used only over BLE — it is never sent to the API.
-- API requests are signed with short-lived **HMAC** tokens; credentials live in encrypted
-  device storage.
-- Device lock (PIN/biometrics) gates access when a screen lock is set.
-- Health data is uploaded only to the server **you** configure; nothing is persisted on the
-  device. See [PRIVACY.md](PRIVACY.md).
-
----
-
-## Documentation
-
-Engineering rules and layer boundaries live in [CLAUDE.md](CLAUDE.md). One guide per
-feature, written to be read before changing that area:
-
-| Guide | Covers |
-|-------|--------|
-| [BLE sync](docs/features/ble-sync.md) | Coverage-driven fetch windows, per-type paging, raw upload |
-| [Band alerts](docs/features/band-alerts.md) | Call/app forwarding, vibration patterns, session locking |
-| [Home & rings](docs/features/home-and-rings.md) | Shell, tabs, and the two-tier metrics split |
-| [Sleep](docs/features/sleep.md) | Hypnogram, stage bars, clock-axis consistency chart |
-| [Activity](docs/features/activity.md) | Workouts, auto-detected sessions, HR zones |
-| [Settings & device](docs/features/settings-and-device.md) | Auth key, pairing, cloud API, request signing |
-
----
-
-## Status
-
-Actively developed; deployed to the Play Store from this repo. Current line of work
-(`v6`): band alerts — forwarding incoming calls and allow-listed app notifications to
-the strap with user-editable vibration patterns — plus per-workout heart-rate zones
-and a rebuilt sleep view.
-
-Earlier lines brought the server-computed recovery score, lazy-loaded metrics for
-lower bandwidth, and idempotent step ingestion.
-
----
-
-## Development notes
-
-This project is built intensively with [Claude Code](https://claude.com/claude-code)
-as an engineering assistant — architecture, protocol decoding, and validation are
-reviewed and directed by hand, and the AI-assisted commits are attributed as such in
-the history. The rules the assistant works under are the same ones in
-[CLAUDE.md](CLAUDE.md).
-
----
-
-## License
-
+Engineering rules: [docs/local/AGENTS.md](docs/local/AGENTS.md), [CLAUDE.md](CLAUDE.md).
 [Apache License 2.0](LICENSE).

@@ -1,12 +1,12 @@
-# Feature — Band alerts
+# Feature : Band alerts
 
 Forwards phone events (incoming calls, allowed app notifications) to the strap so it
 vibrates. The strap has no display: an alert is **felt, not read**.
 
-Shipped in v6. One-way only — phone → strap. Inbound dismiss/mute/reject is ignored.
+Shipped in v6. One-way only : phone → strap. Inbound dismiss/mute/reject is ignored.
 
 Its own dedicated Settings screen (`BandAlertsSettingsScreen`, Settings →
-Band Alerts) — previously an inline card on the Settings hub itself, now a
+Band Alerts) : previously an inline card on the Settings hub itself, now a
 full screen reached via `/settings/band-alerts` (see
 [settings-and-device.md](settings-and-device.md) for the current Settings
 structure). All the state/logic below is unchanged, only the container
@@ -27,7 +27,7 @@ moved.
 ## Session contention
 
 `BandSessionProvider` is a mutex. **While band alerts mode is active, sync and live
-HR are blocked** — the user must toggle alerts off first. This is deliberate: the
+HR are blocked** : the user must toggle alerts off first. This is deliberate: the
 alerts foreground service holds the link open so alerts fire instantly, and a sync
 would need to tear it down.
 
@@ -38,12 +38,12 @@ session warm while you stay in Settings, then closes on exit or after 2 min idle
 
 `BandAlertsInitService.run()` (`services/ble/band_alerts_init.dart`), after BLE auth:
 
-1. `ZeppServiceRegistry.requestServices(link)` — negotiate the strap's service list
-2. `NotificationChannelInit.initialize(link)` — returns `NotificationCaps` (defaults `v4`)
-3. If `forwardCalls`: `PhonePairService.initialize(link, bluetoothName:)` — ZeppOS
+1. `ZeppServiceRegistry.requestServices(link)` : negotiate the strap's service list
+2. `NotificationChannelInit.initialize(link)` : returns `NotificationCaps` (defaults `v4`)
+3. If `forwardCalls`: `PhonePairService.initialize(link, bluetoothName:)` : ZeppOS
    phone pairing on `0x000b`, using the phone's Bluetooth adapter name (falls back
    to `"Heliolytics"`)
-4. `VibrationPatternService` — push patterns to endpoint `0x0018`
+4. `VibrationPatternService` : push patterns to endpoint `0x0018`
 
 Each step is spaced by `bandAlertsInitStepDelayMs`. Any failure aborts with
 `success: false`.
@@ -59,7 +59,7 @@ Defaults (`vibration_pattern_service.dart`):
 | `vibrationTypeAppAlerts` | `[300, 600]` |
 | `vibrationTypeIncomingCall` | `[300, 200, 600, 2000]` |
 
-**v6 added user-editable patterns** — `band_alerts_call_pattern_screen.dart` and
+**v6 added user-editable patterns** : `band_alerts_call_pattern_screen.dart` and
 `band_alerts_app_pattern_screen.dart`, backed by `vibration_pattern_form.dart` and
 persisted via `band_alerts_call_pattern_storage.dart` /
 `band_alerts_app_patterns_storage.dart`. `testBuzz` plays a pattern immediately
@@ -78,7 +78,7 @@ app must send the end payload or the strap keeps vibrating.
 
 If BLE drops while the mode is active, the app **stops retrying** and notifies the
 user. Alerts stay dead until the user toggles the mode off and on. This is
-intentional — silent auto-reconnect loops drained the battery and hid failures.
+intentional : silent auto-reconnect loops drained the battery and hid failures.
 
 If connect fails, the app warns that the official Zepp app may be holding the BLE
 connection (the two coexist; only one can hold the link).

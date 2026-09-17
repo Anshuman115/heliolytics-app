@@ -1,10 +1,12 @@
-# Feature — BLE sync
+# Feature : BLE sync
 
 Pulls historical health data off the Helio Strap and uploads it to the Go API.
 This is the app's core job. Everything else reads what this produces.
 
-The phone does **not** parse health data and does **not** store it. It fetches raw
-session bytes, wraps them with paging anchors, and posts them. The server parses.
+The phone does not parse historical health blobs. It fetches raw session bytes,
+wraps them with paging anchors, and posts them. The server parses. Closed-day
+server responses are cached locally; session metadata and diagnostic dumps are
+separate local storage. See [home and caching](home-and-rings.md).
 
 ## Flow
 
@@ -18,15 +20,15 @@ UI (SettingsHub / HomeScreen)
             └─ SyncCommitter.upload(payload)     ← POST /api/v1/ingest
 ```
 
-## Step 1 — Acquire the band
+## Step 1 : Acquire the band
 
 `BandSessionProvider` is a mutex over the single `BandLink`. Sync, live HR, and band
 alerts all contend for it. `tryAcquire(BandSessionOp.sync)` returns a non-null
 message if something else holds it, and the run aborts with that message.
 
-Band alerts mode blocks sync outright — the user must toggle it off first.
+Band alerts mode blocks sync outright : the user must toggle it off first.
 
-## Step 2 — Resolve the sync window (server-driven)
+## Step 2 : Resolve the sync window (server-driven)
 
 `resolveSyncWindow` (`sync_window_resolver.dart`) calls `GET /api/v1/metrics/coverage`
 and hands the result to `SyncWindow.plan(...)` (`sync_window.dart`), which decides a
@@ -35,15 +37,15 @@ and hands the result to `SyncWindow.plan(...)` (`sync_window.dart`), which decid
 This is what makes reinstall safe: the phone keeps no bookmarks. The server is the
 only authority on what's already ingested.
 
-Fallbacks, in order:
+Planning cases (the empty-backend case is checked before per-type coverage):
 
 | Condition | Plan |
 |---|---|
-| API not configured | Refuse — "configure Cloud API before syncing" |
+| API not configured | Sync action rejects with "configure Cloud API before syncing"; the window planner alone returns a fallback |
 | Coverage fetch failed / null | Backfill `initialSyncBackfillDays` for every type |
 | `coverage.types` non-empty | Per-type `since` from each type's watermark |
 | Only `dataThrough` set | Single cutoff for all types |
-| `hasData == false` | Full backfill — uses the wizard's chosen day count if set (see below), else `initialSyncBackfillDays` |
+| `hasData == false` | Full backfill : uses the wizard's chosen day count if set (see below), else `initialSyncBackfillDays` |
 
 `SyncCoverage` (`models/sync_coverage.dart`) parses `dataThrough`, `lastIngestAt`,
 `hasData`, and the per-type map.
@@ -54,18 +56,18 @@ The device-setup wizard's last step (see
 [settings-and-device.md](settings-and-device.md)) lets the user pick how
 many days back the *first* sync should pull, via `backfillDaysProvider`
 (`StateProvider<int?>`). `SyncWindow.plan(..., userBackfillDays:)` only
-consumes it on the genuine "backend empty, first sync" path — a coverage
+consumes it on the genuine "backend empty, first sync" path : a coverage
 fetch failure isn't a first-sync signal, so that fallback still uses the
 fixed `initialSyncBackfillDays` constant. `SyncOrchestrator._run` reads the
 provider, passes it through, and resets it to `null` **only if the sync
-actually succeeded** — a failed first attempt (Bluetooth hiccup, auth
+actually succeeded** : a failed first attempt (Bluetooth hiccup, auth
 rejection) leaves the user's chosen value intact for the retry, rather than
-silently falling back to the 2-day default.
+silently falling back to the configured default (currently 20 days).
 
-## Step 3 — Fetch per type
+## Step 3 : Fetch per type
 
 `TypeSyncEngine` (`type_sync_engine.dart`) speaks the Huami activity-fetch protocol
-over plaintext GATT — control `0x0004`, data `0x0005`:
+over plaintext GATT : control `0x0004`, data `0x0005`:
 
 ```
 [0x01, type] + HuamiTime   →  meta reply [0x10, 0x01, status, expected, date]
@@ -74,7 +76,7 @@ over plaintext GATT — control `0x0004`, data `0x0005`:
 ```
 
 Each round yields a `roundStart` from the device. The engine records
-`(byteOffset, roundStart)` pairs into `roundSegments` — **per page, not one global
+`(byteOffset, roundStart)` pairs into `roundSegments` : **per page, not one global
 anchor**. Server-side parsers depend on these to timestamp rows correctly.
 
 Type codes live in `constants/constants.dart`. The fetched set includes `0x01`
@@ -82,12 +84,12 @@ Type codes live in `constants/constants.dart`. The fetched set includes `0x01`
 `0x46` (continuous HR), `0x2E` (temperature), `0x39` (readiness), and others.
 Some codes are deliberately never fetched (`0x07` is a ~20 MB firmware log).
 
-Byte-level detail — the full chunked protocol, per-code record layouts, and the
-paging/anchor semantics — lives in protocol notes kept outside this repo.
+Byte-level detail : the full chunked protocol, per-code record layouts, and the
+paging/anchor semantics : lives in protocol notes kept outside this repo.
 
-## Step 4 — Commit
+## Step 4 : Commit
 
-`SyncPayloadBuilder` assembles the raw bytes + anchors into a `SyncPayload`.
+The fetch flow assembles the raw bytes + anchors into a `SyncPayload`.
 `SyncCommitter` (`sync_committer.dart`) uploads it, then delegates to
 `HealthDataRefreshCoordinator`. The coordinator clears stored day bundles and
 daily health scores before invalidating day bundles, health scores, activity
@@ -113,7 +115,8 @@ an older day.
 - `BandLinkPort` is the intended seam for BLE tests. On machines where the
   workspace path prevents the Flutter test runner from resolving test URIs,
   run the suite from an isolated path without special characters.
-- Fetch timeout is 30 s per type, `maxRounds` 20. A strap with months of backlog
+- Fetch timeout and round limits are defined in `lib/constants/constants.dart`
+  and the type engine; consult those values before changing a sync budget. A strap with months of backlog
   can hit the round cap before the timeout.
-- `probeOnly` fetches metadata without pulling data — used to discover which codes
+- `probeOnly` fetches metadata without pulling data : used to discover which codes
   a strap actually holds.
