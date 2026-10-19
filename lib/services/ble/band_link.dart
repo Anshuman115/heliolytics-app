@@ -34,6 +34,24 @@ class BandLink implements BandLinkPort {
   LiveHrStream? _liveHr;
   final _endpointWaiters = <int, Completer<Uint8List>>{};
   void Function()? onLinkLost;
+  final _disconnectListeners = <void Function()>{};
+  bool _disconnectNotified = false;
+
+  void addDisconnectListener(void Function() listener) =>
+      _disconnectListeners.add(listener);
+
+  void removeDisconnectListener(void Function() listener) =>
+      _disconnectListeners.remove(listener);
+
+  void _notifyDisconnected() {
+    if (_disconnectNotified) return;
+    _disconnectNotified = true;
+    for (final listener in List<void Function()>.of(_disconnectListeners)) {
+      listener();
+    }
+    onLinkLost?.call();
+  }
+
   @override
   int? batteryPercent;
 
@@ -49,6 +67,7 @@ class BandLink implements BandLinkPort {
     required Uint8List authKey,
     bool commsOnly = false,
   }) async {
+    _disconnectNotified = false;
     final done = Completer<bool>();
     _device = BluetoothDevice.fromId(mac);
 
@@ -62,12 +81,16 @@ class BandLink implements BandLinkPort {
         log('• disconnected before auth completed');
         done.complete(false);
       }
-      if (s == BluetoothConnectionState.disconnected &&
-          physicallyConnected &&
-          comms != null) {
+      if (s == BluetoothConnectionState.disconnected && physicallyConnected) {
         log('• link lost');
         fetcher?.abortDisconnected();
-        onLinkLost?.call();
+        comms?.close();
+        comms = null;
+        for (final waiter in _endpointWaiters.values) {
+          if (!waiter.isCompleted) waiter.complete(Uint8List(0));
+        }
+        _endpointWaiters.clear();
+        _notifyDisconnected();
       }
     });
 
@@ -159,8 +182,9 @@ class BandLink implements BandLinkPort {
       writeChunk: (c) => _write!.write(c, withoutResponse: true),
       writeAck: (c) => _notify!.write(c, withoutResponse: true),
       onPayload: _handlePayload,
+      onSendFailure: () => unawaited(disconnect().catchError((Object _) {})),
     );
-    _notifyHandler = (v) => comms!.onNotify(v);
+    _notifyHandler = (v) => comms?.onNotify(v);
 
     if (commsOnly) {
       log('✓ post-auth comms ready');
@@ -319,15 +343,13 @@ class BandLink implements BandLinkPort {
   /// True when post-auth encrypted comms are ready on an active GATT link.
   bool get isCommsReady => comms != null && (_device?.isConnected ?? false);
 
-  /// Send a payload on a ZeppOS chunked endpoint (post-auth).
-  /// Wait for the next payload on [endpoint], or null on timeout.
+  /// Waits for the next payload on [endpoint], or null on timeout. A second waiter on the same endpoint throws.
   Future<Uint8List?> awaitEndpointPayload(
     int endpoint, {
     Duration timeout = const Duration(seconds: 4),
   }) async {
-    final prior = _endpointWaiters.remove(endpoint);
-    if (prior != null && !prior.isCompleted) {
-      prior.completeError(StateError('superseded'));
+    if (_endpointWaiters.containsKey(endpoint)) {
+      throw StateError('endpoint 0x${endpoint.toRadixString(16)} is busy');
     }
     final waiter = Completer<Uint8List>();
     _endpointWaiters[endpoint] = waiter;
@@ -342,6 +364,13 @@ class BandLink implements BandLinkPort {
     }
   }
 
+  void cancelEndpointPayload(int endpoint) {
+    final waiter = _endpointWaiters.remove(endpoint);
+    if (waiter != null && !waiter.isCompleted) {
+      waiter.complete(Uint8List(0));
+    }
+  }
+
   Future<bool> sendEndpointPayload(
     int endpoint,
     List<int> payload, {
@@ -352,8 +381,26 @@ class BandLink implements BandLinkPort {
       log('✗ comms not ready');
       return false;
     }
-    await c.send(endpoint, Uint8List.fromList(payload), encrypt: encrypt);
-    return true;
+    try {
+      await c.send(endpoint, Uint8List.fromList(payload), encrypt: encrypt);
+      return true;
+    } catch (error) {
+      cancelEndpointPayload(endpoint);
+      // The endpoint has already closed its queue. Retire the GATT transport
+      // as well so every later command requires authentication again.
+      try {
+        await disconnect();
+      } catch (_) {
+        // Preserve the original encoding or chunk-send failure.
+      }
+      log('✗ endpoint send failed: $error');
+      rethrow;
+    }
+  }
+
+  Future<void> retireEndpoint(int endpoint) async {
+    cancelEndpointPayload(endpoint);
+    await disconnect();
   }
 
   void _handlePayload(int endpoint, Uint8List payload) {
@@ -430,6 +477,14 @@ class BandLink implements BandLinkPort {
   @override
   Future<void> disconnect() async {
     fetcher?.abortDisconnected();
+    comms?.close();
+    comms = null;
+    for (final w in _endpointWaiters.values) {
+      if (!w.isCompleted) w.complete(Uint8List(0));
+    }
+    _endpointWaiters.clear();
+    _notifyDisconnected();
+    _notifyHandler = null;
     await _liveHr?.stop();
     _liveHr?.dispose();
     _liveHr = null;
@@ -438,10 +493,6 @@ class BandLink implements BandLinkPort {
     await _dataSub?.cancel();
     await _connSub?.cancel();
     _connSub = null;
-    for (final w in _endpointWaiters.values) {
-      if (!w.isCompleted) w.completeError(StateError('disconnected'));
-    }
-    _endpointWaiters.clear();
     try {
       await _device?.disconnect();
     } catch (_) {}

@@ -87,7 +87,6 @@ Future<void> orchestratorRefetch({
   required SyncSessionLog sessionLog,
   required bool connecting,
   required SessionSnapshot Function() readState,
-  required SyncPayload? lastPayload,
   required void Function(SessionSnapshot) emit,
   required void Function(SyncPayload?) setPayload,
   required void Function(bool) setConnecting,
@@ -139,7 +138,6 @@ Future<void> orchestratorRefetch({
       store: store,
       sessionLog: sessionLog,
       codeStr: codeStr,
-      lastPayload: lastPayload,
       setPayload: setPayload,
       emit: emit,
     );

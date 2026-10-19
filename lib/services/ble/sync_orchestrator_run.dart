@@ -2,7 +2,11 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heliolytics/models/band_session_state.dart';
+import 'package:heliolytics/models/session_state.dart';
+import 'package:heliolytics/models/strap_health_config.dart';
+import 'package:heliolytics/models/sync_payload.dart';
 import 'package:heliolytics/providers/band_session_provider.dart';
+import 'package:heliolytics/providers/strap_health_config_provider.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/band_link_port.dart';
 import 'package:heliolytics/services/ble/sync_fetcher.dart';
@@ -10,8 +14,7 @@ import 'package:heliolytics/services/ble/sync_orchestrator_helpers.dart';
 import 'package:heliolytics/services/ble/sync_session_log.dart';
 import 'package:heliolytics/services/ble/sync_session_port.dart';
 import 'package:heliolytics/services/ble/sync_window_resolver.dart';
-import 'package:heliolytics/models/session_state.dart';
-import 'package:heliolytics/models/sync_payload.dart';
+import 'package:heliolytics/services/ble/zepp/health_config_service.dart';
 
 Future<void> runFullSync({
   required Ref ref,
@@ -75,8 +78,29 @@ Future<void> runFullSync({
       return;
     }
 
-    void linkLostHandler() => band.onLinkLost();
-    link.onLinkLost = linkLostHandler;
+    HealthConfigSnapshot? strapConfig;
+    try {
+      strapConfig = await ref
+          .read(strapHealthConfigProvider.notifier)
+          .reconcileWithinSession(link);
+      sessionLog.log('✓ health configuration read before fetch');
+    } on HealthConfigError catch (error) {
+      if (!error.requiresReconnect && link.isCommsReady) {
+        strapConfig = error.actual;
+        sessionLog.log('• health configuration mismatch: ${error.message}');
+      } else {
+        emit(
+          syncSnap(
+            SessionState.error,
+            sessionLog,
+            results,
+            error: SessionError.bleDisconnected,
+            lastErrorMessage: error.message,
+          ),
+        );
+        return;
+      }
+    }
 
     final plan = await resolveSyncWindow(
       ref,
@@ -99,6 +123,7 @@ Future<void> runFullSync({
           mac: mac,
           authKey: authKey,
           plan: plan,
+          strapConfig: strapConfig,
           client: link,
           disconnectAfter: false,
           onTypeStart: (code) => emit(
@@ -161,8 +186,6 @@ Future<void> runFullSync({
       ),
     );
   } finally {
-    final link = band.session.link;
-    if (link != null) link.onLinkLost = null;
     band.release(BandSessionOp.sync);
   }
 }

@@ -11,7 +11,7 @@ uploads raw bytes to your Go server and displays the parsed results.
 | Heliolytics | Historical health parsing, storage, summaries and API |
 | Heliolytics_Web | Server-side metric reads and browser dashboard |
 
-The app fetches fourteen band data types. Go owns their historical health parsing.
+The app fetches twelve band data types. Go owns their historical health parsing.
 Flutter decodes transport framing and expands API responses for display; it does
 not calculate the backend recovery score.
 

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/models/sync_coverage.dart';
+import 'package:heliolytics/services/ble/sync_type_catalog.dart';
 import 'package:heliolytics/services/ble/sync_window.dart';
 
 void main() {
@@ -9,7 +10,7 @@ void main() {
   test('clean backend honors the selected first-sync range', () {
     final coverage = SyncCoverage(
       hasData: false,
-      types: {for (final code in fetchTypeCodes) code: null},
+      types: {for (final code in productionFetchTypeCodes) code: null},
     );
 
     final plan = SyncWindow.plan(
@@ -19,7 +20,7 @@ void main() {
     );
 
     expect(plan.anchorSince, now.subtract(const Duration(days: 14)));
-    for (final code in fetchTypeCodes) {
+    for (final code in productionFetchTypeCodes) {
       expect(SyncWindow.sinceForType(plan, code), plan.anchorSince);
     }
     expect(plan.logLines.first, contains('last 14 days'));
@@ -29,7 +30,7 @@ void main() {
     final plan = SyncWindow.plan(
       coverage: SyncCoverage(
         hasData: false,
-        types: {for (final code in fetchTypeCodes) code: null},
+        types: {for (final code in productionFetchTypeCodes) code: null},
       ),
       now: now,
     );
@@ -56,5 +57,33 @@ void main() {
       SyncWindow.sinceForType(plan, '0x01'),
       through.subtract(const Duration(minutes: syncCoverageOverlapMinutes)),
     );
+    expect(
+      SyncWindow.sinceForType(plan, '0x25'),
+      plan.anchorSince,
+      reason: 'A different type never inherits the global display watermark',
+    );
   });
+  test(
+    'partial accepted prefix uses its watermark plus normal overlap, never the trailing fragment time',
+    () {
+      final accepted = now.subtract(const Duration(days: 1, hours: 3));
+      final laterDisplayWatermark = now.subtract(const Duration(minutes: 10));
+      final coverage = SyncCoverage(
+        hasData: true,
+        dataThrough: laterDisplayWatermark,
+        types: {'0x25': accepted, '0x01': laterDisplayWatermark},
+      );
+      final plan = SyncWindow.plan(coverage: coverage, now: now);
+      expect(
+        SyncWindow.sinceForType(plan, '0x25'),
+        accepted.subtract(const Duration(minutes: syncCoverageOverlapMinutes)),
+      );
+      expect(
+        SyncWindow.sinceForType(plan, '0x01'),
+        laterDisplayWatermark.subtract(
+          const Duration(minutes: syncCoverageOverlapMinutes),
+        ),
+      );
+    },
+  );
 }

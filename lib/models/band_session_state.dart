@@ -1,19 +1,8 @@
 /// Shared BLE link lifecycle (independent of sync upload state).
-enum BandLinkState {
-  disconnected,
-  connecting,
-  connected,
-  error,
-}
+enum BandLinkState { disconnected, connecting, connected, error }
 
 /// Exclusive operation holding the shared [BandLink].
-enum BandSessionOp {
-  none,
-  sync,
-  liveHr,
-  motorProof,
-  bandAlerts,
-}
+enum BandSessionOp { none, sync, liveHr, motorProof, bandAlerts, strapConfig }
 
 class BandSessionSnapshot {
   final BandLinkState linkState;
@@ -39,12 +28,12 @@ class BandSessionSnapshot {
     int? batteryPercent,
     bool clearError = false,
     bool clearBattery = false,
-  }) =>
-      BandSessionSnapshot(
-        linkState: linkState ?? this.linkState,
-        activeOp: activeOp ?? this.activeOp,
-        errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-        batteryPercent:
-            clearBattery ? null : (batteryPercent ?? this.batteryPercent),
-      );
+  }) => BandSessionSnapshot(
+    linkState: linkState ?? this.linkState,
+    activeOp: activeOp ?? this.activeOp,
+    errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    batteryPercent: clearBattery
+        ? null
+        : (batteryPercent ?? this.batteryPercent),
+  );
 }

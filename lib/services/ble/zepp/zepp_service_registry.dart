@@ -9,12 +9,13 @@ class ZeppServiceRegistry {
   Future<bool> requestServices(BandLink link) async {
     log('→ zepp service list');
     final waiter = link.awaitEndpointPayload(zeppServicesEndpoint);
-    final ok = await link.sendEndpointPayload(
-      zeppServicesEndpoint,
-      [zeppServicesGetListCmd],
-      encrypt: false,
-    );
-    if (!ok) return false;
+    final ok = await link.sendEndpointPayload(zeppServicesEndpoint, [
+      zeppServicesGetListCmd,
+    ], encrypt: false);
+    if (!ok) {
+      link.cancelEndpointPayload(zeppServicesEndpoint);
+      return false;
+    }
     final reply = await waiter;
     if (reply == null || reply.isEmpty) {
       log('• service list timeout (continuing)');

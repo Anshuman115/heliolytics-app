@@ -1,6 +1,7 @@
+import 'package:heliolytics/models/sync_coverage.dart';
+import 'package:heliolytics/services/ble/sync_type_catalog.dart';
 import 'package:heliolytics/services/ble/sync_window_plan.dart';
 import 'package:heliolytics/constants/constants.dart';
-import 'package:heliolytics/models/sync_coverage.dart';
 
 class SyncWindow {
   SyncWindow._();
@@ -51,7 +52,7 @@ class SyncWindow {
     final logs = <String>[
       'Fetch: per-type backend coverage (${cov.types.length} types)',
     ];
-    for (final code in fetchTypeCodes) {
+    for (final code in productionFetchTypeCodes) {
       final since = _sinceForEntry(code, cov.types, clock);
       perType[code] = since;
       logs.add('  $code: fetch from ${since.toIso8601String()}');
@@ -115,7 +116,7 @@ class SyncWindow {
   }
 
   static Map<String, DateTime> _uniformSince(DateTime since) {
-    return {for (final c in fetchTypeCodes) c: since};
+    return {for (final c in productionFetchTypeCodes) c: since};
   }
 
   static List<String> _perTypeLogLines(Map<String, DateTime> perType) {

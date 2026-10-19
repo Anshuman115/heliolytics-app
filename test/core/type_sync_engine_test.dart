@@ -9,7 +9,7 @@ import 'package:heliolytics/utils/huami_time.dart';
 void main() {
   for (final code in [0x05, 0x06]) {
     test(
-      '0x${code.toRadixString(16)} uses selected range and keeps empty data',
+      '0x${code.toRadixString(16).padLeft(2, '0')} uses selected range and keeps empty data',
       () async {
         final writes = <List<int>>[];
         final engine = TypeSyncEngine((bytes) async {
@@ -72,6 +72,79 @@ void main() {
     expect(await fetched, isNotEmpty);
     expect(engine.roundSegments, hasLength(1));
   });
+
+  test(
+    'two 0x25 rounds retain both version bytes, payload bits and exact catalog offsets',
+    () async {
+      final writes = <List<int>>[];
+      final engine = TypeSyncEngine(
+        (bytes) async => writes.add(List<int>.from(bytes)),
+      );
+      final firstTime = DateTime(2026, 1, 2, 8);
+      final secondTime = firstTime.add(const Duration(hours: 1));
+      Uint8List round(DateTime timestamp, int sample) {
+        final bytes = Uint8List(66);
+        bytes[0] = 2;
+        ByteData.sublistView(
+          bytes,
+        ).setUint32(1, timestamp.millisecondsSinceEpoch ~/ 1000, Endian.little);
+        bytes[5] = sample;
+        return bytes;
+      }
+
+      final first = round(firstTime, 0xe4);
+      final second = round(secondTime, 0xe1);
+      final firstReply = _startReply(expected: 1, start: firstTime);
+      final secondReply = _startReply(expected: 1, start: secondTime);
+      final fetched = engine.fetchType(
+        0x25,
+        firstTime.subtract(const Duration(days: 1)),
+        maxRounds: 2,
+      );
+      engine.onControl(firstReply);
+      engine.onData(Uint8List.fromList([0, ...first]));
+      engine.onControl(Uint8List.fromList([0x10, 2, 1]));
+      expect(writes.last, [
+        1,
+        0x25,
+        ...HuamiTime.fromDateTime(firstTime.add(const Duration(minutes: 1))),
+      ]);
+      engine.onControl(secondReply);
+      engine.onData(Uint8List.fromList([0, ...second]));
+      engine.onControl(Uint8List.fromList([0x10, 2, 1]));
+      final raw = await fetched;
+      expect(raw, [...first, ...second]);
+      expect(raw[0], 2);
+      expect(raw[66], 2);
+      expect(raw[5], 0xe4);
+      expect(raw[71], 0xe1);
+      expect(engine.roundSegments.map((segment) => segment.byteOffset), [
+        0,
+        66,
+      ]);
+      expect(engine.roundSegments.map((segment) => segment.roundStart), [
+        HuamiTime.parseStartDate(firstReply)!.start,
+        HuamiTime.parseStartDate(secondReply)!.start,
+      ]);
+      final parsed = SyncTypeFetch.run(
+        codeStr: '0x25',
+        fetch: (
+          raw: raw,
+          expected: engine.lastExpected,
+          skipped: false,
+          outcome: engine.lastOutcome,
+          roundStart: engine.firstRoundStart,
+          roundSegments: engine.roundSegments,
+        ),
+        log: (_) {},
+      );
+      expect(parsed.raw, raw);
+      expect(parsed.entry.roundSegments.map((segment) => segment.byteOffset), [
+        0,
+        66,
+      ]);
+    },
+  );
 
   test('timeout marks partial data as timed out', () async {
     final engine = TypeSyncEngine((_) async {});

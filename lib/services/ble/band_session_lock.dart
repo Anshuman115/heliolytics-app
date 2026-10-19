@@ -12,7 +12,9 @@ class BandSessionLock {
       _holder = op;
       return null;
     }
-    if (_holder == op) return null;
+    if (_holder == op) {
+      return 'Wait for the current ${_label(op)} operation to finish';
+    }
     return _blockedMessage(op, _holder);
   }
 
@@ -25,7 +27,8 @@ class BandSessionLock {
     if (requested == BandSessionOp.sync && active == BandSessionOp.bandAlerts) {
       return 'Turn off band alerts before syncing';
     }
-    if (requested == BandSessionOp.liveHr && active == BandSessionOp.bandAlerts) {
+    if (requested == BandSessionOp.liveHr &&
+        active == BandSessionOp.bandAlerts) {
       return 'Turn off band alerts before live HR';
     }
     if (requested == BandSessionOp.sync && active == BandSessionOp.liveHr) {
@@ -41,10 +44,11 @@ class BandSessionLock {
   }
 
   String _label(BandSessionOp op) => switch (op) {
-        BandSessionOp.sync => 'sync',
-        BandSessionOp.liveHr => 'live HR',
-        BandSessionOp.motorProof => 'test vibration',
-        BandSessionOp.bandAlerts => 'band alerts',
-        BandSessionOp.none => 'idle',
-      };
+    BandSessionOp.sync => 'sync',
+    BandSessionOp.liveHr => 'live HR',
+    BandSessionOp.motorProof => 'test vibration',
+    BandSessionOp.bandAlerts => 'band alerts',
+    BandSessionOp.strapConfig => 'strap health settings',
+    BandSessionOp.none => 'idle',
+  };
 }

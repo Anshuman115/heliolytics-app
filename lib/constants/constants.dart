@@ -10,24 +10,6 @@ const String chunkedReadUUID = chunkedNotifyUUID;
 const String activityControlUUID = '00000004-0000-3512-2118-0009af100700';
 const String activityDataUUID = '00000005-0000-3512-2118-0009af100700';
 
-/// BLE types fetched during sync — must have a Go ingest parser wired.
-const List<String> fetchTypeCodes = [
-  '0x01', // HR + steps + activity per-minute (8B/rec)
-  '0x05', // Workout summaries (protobuf)
-  '0x06', // Workout details (per-second HR/cadence)
-  '0x0D', // PAI scores
-  '0x13', // Stress auto (1B/min)
-  '0x25', // SpO2 spot (65B/rec)
-  '0x26', // SpO2 sleep
-  '0x2E', // Temperature (8B/rec)
-  '0x38', // Sleep respiratory rate (8B/rec)
-  '0x39', // Daily readiness score
-  '0x3A', // Resting HR (6B/rec)
-  '0x46', // Continuous HR (PPG session, ~1/sec)
-  '0x48', // Sleep session blobs (594B/session)
-  '0x49', // HRV RMSSD (6B/rec)
-];
-
 /// Reference map of known Huami type codes (not all are fetched).
 const Map<String, String> typeCodeLabels = {
   '0x01': 'HR samples',

@@ -44,7 +44,6 @@ class ActivityParser {
         return _lastEpochStride(raw, 30, header: 0x02);
       case 0x38:
         return _lastEpochStride(raw, 8);
-      case 0x3A:
       case 0x3D:
       case 0x49:
         return _lastEpochStride(raw, 6);
@@ -57,10 +56,9 @@ class ActivityParser {
 
   static DateTime? _lastEpochStride(Uint8List raw, int stride, {int? header}) {
     var start = 0;
-    if (header != null && raw.isNotEmpty && raw[0] == header) {
+    if (header != null) {
+      if (raw.isEmpty || raw[0] != header) return null;
       start = 1;
-    } else if (header != null && raw.length % stride == 0) {
-      start = 0;
     }
     DateTime? last;
     for (var i = start; i + stride <= raw.length; i += stride) {
