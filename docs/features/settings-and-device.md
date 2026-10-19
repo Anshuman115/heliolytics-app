@@ -78,8 +78,7 @@ Closed-day health responses are cached separately in Hive/SharedPreferences.
 Normal sync also stores session/catalog metadata. Diagnostics can capture and
 share raw band files on explicit user action.
 
-There is no separate biometric/PIN app lock in the current source. See
-the local-only privacy notes for storage and removal behavior.
+There is no separate biometric/PIN app lock in the current source.
 
 ## Source map
 
@@ -89,3 +88,5 @@ the local-only privacy notes for storage and removal behavior.
 - `lib/services/network/metrics_api_transport.dart`: signed metric transport.
 - `lib/widgets/settings/settings_menu_list.dart`: destination list.
 - `lib/utils/app_logger.dart`, `lib/utils/log_file_store.dart`: logging.
+
+Validation: not run for this revision.

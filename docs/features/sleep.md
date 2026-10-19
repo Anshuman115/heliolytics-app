@@ -31,3 +31,5 @@ A configurable sleep target and bounded multi-night regularity view would be new
 features. Existing values and charts are not personalized goal settings.
 
 See [home and data loading](home-and-rings.md) for caching, refresh and the selected day.
+
+Validation: not run for this revision.

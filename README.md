@@ -27,9 +27,9 @@ Sleep detail opens from Home or the metric route. `SleepHubScreen` exists in sou
 but is not a tab in the current shell. AI, journaling and configurable personal
 goals are not implemented.
 
-## Read the code
+## Feature guides
 
-Architecture notes live in the local-only `docs/local/` directory, which maps screens, providers and services. They are not published with this repository.
+The feature guides describe the current screens, providers, services, data flow and storage behavior.
 
 | Feature guide | Read for |
 |---|---|
@@ -57,7 +57,7 @@ flutter devices
 flutter run -d <device-id>
 ```
 
-For a personal APK, copy `build.env.example` to private `build.env`, configure it,
+For a personal distribution, copy `build.env.example` to private `build.env`, configure it,
 and use `tool/build_apk.sh`. Build-time signing credentials are appropriate only
 for your personal distribution. A public build should be configured in-app.
 
@@ -67,5 +67,4 @@ flutter build appbundle --release
 
 Validation: the app was not built or run for this revision. A source review does not prove Play Store or device behavior.
 
-Engineering rules live in the local-only agent notes.
 [Apache License 2.0](LICENSE).

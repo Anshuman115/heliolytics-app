@@ -15,17 +15,19 @@ Both are produced server-side and land in `activityHistoryProvider`
 (`providers/activity_history_provider.dart`) as separate lists (`workouts`,
 `activitySessions`). Sport names come from `utils/sport_labels.dart`.
 
-`activityHistoryProvider` bulk-fetches roughly 90 days, session-cached only and
-not disk-cached, to populate the chronological activity feed. The selected day's
-Strain and summary metrics come from `dayBundleProvider`. See
-[home-and-rings.md](home-and-rings.md) for why the bounded history request is an
-exception to the normal one-day fetch pattern.
+`activityHistoryProvider` fetches 90 days of workouts and automatic sessions,
+keeps the result in the session only, and does not cache it on disk. The selected
+day's Strain and summary metrics come from `dayBundleProvider`. The bounded history
+request is an exception to the normal one-day fetch pattern described in
+[home-and-rings.md](home-and-rings.md).
+
+Validation: not run for this revision.
 
 ## Screens
 
 - `ActivityHubScreen` : date navigation, Strain hero, daily summary, and a
   combined chronological activity feed
-- `ActivityDetail Screen` (`activity_detail_screen.dart`) : one session: summary
+- `ActivityDetailScreen` (`activity_detail_screen.dart`) : one session: summary
   stats, HR chart, zone bars, driven by `ActivityDetailPayload`
 
 ## HR zones

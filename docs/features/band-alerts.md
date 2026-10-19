@@ -3,14 +3,12 @@
 Forwards phone events (incoming calls, allowed app notifications) to the strap so it
 vibrates. The strap has no display: an alert is **felt, not read**.
 
-Shipped in v6. One-way only : phone → strap. Inbound dismiss/mute/reject is ignored.
+Band alerts are one-way, from phone to strap. Inbound dismiss, mute, and reject
+actions are ignored.
 
-Its own dedicated Settings screen (`BandAlertsSettingsScreen`, Settings →
-Band Alerts) : previously an inline card on the Settings hub itself, now a
-full screen reached via `/settings/band-alerts` (see
-[settings-and-device.md](settings-and-device.md) for the current Settings
-structure). All the state/logic below is unchanged, only the container
-moved.
+Band alerts use the dedicated `BandAlertsSettingsScreen`, reached from Settings →
+Band Alerts at `/settings/band-alerts`. See [settings-and-device.md](settings-and-device.md)
+for the Settings destinations.
 
 ## Vocabulary
 
@@ -59,7 +57,7 @@ Defaults (`vibration_pattern_service.dart`):
 | `vibrationTypeAppAlerts` | `[300, 600]` |
 | `vibrationTypeIncomingCall` | `[300, 200, 600, 2000]` |
 
-**v6 added user-editable patterns** : `band_alerts_call_pattern_screen.dart` and
+User-editable patterns use `band_alerts_call_pattern_screen.dart` and
 `band_alerts_app_pattern_screen.dart`, backed by `vibration_pattern_form.dart` and
 persisted via `band_alerts_call_pattern_storage.dart` /
 `band_alerts_app_patterns_storage.dart`. `testBuzz` plays a pattern immediately
@@ -106,3 +104,5 @@ Out (v1): SMS-only, alarms, goals, idle alerts, reminders, strap-initiated actio
 
 Gadgetbridge-compatible Huami/ZeppOS protocol. The official Zepp app does not do
 alert forwarding for the Helio Strap, so there is no first-party behavior to mirror.
+
+Validation: not run for this revision.

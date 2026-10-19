@@ -63,10 +63,12 @@ before saving the new API values.
 Hive initialization can recover a corrupt disposable cache. A schema marker
 rejects old bundle formats. None of this changes server-authoritative coverage.
 
-## Read next
+## Related code and behavior
 
 - `lib/screens/home_screen.dart`: composition and ring navigation.
 - `lib/providers/day_bundle_provider.dart`: cache/read path.
 - `lib/providers/detail_metrics_provider.dart`: heavy series.
 - `lib/providers/health_data_refresh_coordinator.dart`: actual invalidation list.
 - [Sleep](sleep.md), [activity](activity.md), [settings](settings-and-device.md).
+
+Validation: not run for this revision.

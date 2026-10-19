@@ -84,8 +84,8 @@ Type codes live in `constants/constants.dart`. The fetched set includes `0x01`
 `0x46` (continuous HR), `0x2E` (temperature), `0x39` (readiness), and others.
 Some codes are deliberately never fetched (`0x07` is a ~20 MB firmware log).
 
-Byte-level detail : the full chunked protocol, per-code record layouts, and the
-paging/anchor semantics : lives in protocol notes kept outside this repo.
+Byte-level detail, including the full chunked protocol, per-code record layouts,
+and paging and anchor semantics, lives in protocol notes kept outside this repo.
 
 ## Step 4 : Commit
 
@@ -120,3 +120,5 @@ an older day.
   can hit the round cap before the timeout.
 - `probeOnly` fetches metadata without pulling data : used to discover which codes
   a strap actually holds.
+
+Validation: not run for this revision.
