@@ -1,7 +1,5 @@
 # Settings, setup and local data
 
-Source review: 7 September 2026.
-
 ## Onboarding and profile
 
 The router checks onboarding before the strap-auth state. Incomplete onboarding
@@ -81,7 +79,7 @@ Normal sync also stores session/catalog metadata. Diagnostics can capture and
 share raw band files on explicit user action.
 
 There is no separate biometric/PIN app lock in the current source. See
-[data handling](../local/PRIVACY.md) for storage and removal behavior.
+the local-only privacy notes for storage and removal behavior.
 
 ## Source map
 

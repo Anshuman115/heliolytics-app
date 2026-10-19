@@ -1,7 +1,5 @@
 # Sleep
 
-Source review: 7 September 2026. Describes the local code, not an installed-app or deployment check.
-
 ## How to reach it
 
 Tap the Sleep ring on Home. The generic metric route renders the sleep body.

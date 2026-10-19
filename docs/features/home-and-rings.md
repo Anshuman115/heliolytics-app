@@ -1,7 +1,5 @@
 # Home, navigation and data loading
 
-Source review: 7 September 2026. Describes the local code, not an installed-app or deployment check.
-
 ## Current tabs
 
 | Tab | Screen |

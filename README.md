@@ -3,8 +3,6 @@
 Flutter phone client for a personal wearable-health system. It pairs with a strap,
 uploads raw bytes to your Go server and displays the parsed results.
 
-Source review: 7 September 2026. Describes the local code, not an installed-app or deployment check.
-
 ## How the product fits together
 
 | Repo | Responsibility |
@@ -31,7 +29,7 @@ goals are not implemented.
 
 ## Read the code
 
-[Architecture](docs/local/ARCHITECTURE.md) maps screens, providers and services.
+Architecture notes live in the local-only `docs/local/` directory, which maps screens, providers and services. They are not published with this repository.
 
 | Feature guide | Read for |
 |---|---|
@@ -47,7 +45,7 @@ goals are not implemented.
 Credentials and profile use platform secure storage. Closed-day server responses
 are cached in Hive and SharedPreferences. Session metadata and diagnostic logs
 also remain on-device; user-triggered raw dumps are separate files.
-The server owns sync coverage. See [privacy](docs/local/PRIVACY.md) for the full distinction.
+The server owns sync coverage. The local-only privacy notes describe the full distinction.
 
 ## Build instructions
 
@@ -67,8 +65,7 @@ for your personal distribution. A public build should be configured in-app.
 flutter build appbundle --release
 ```
 
-These are commands for future use; this documentation update did not build or run
-the app. A source review does not prove Play Store or device behavior.
+Validation: the app was not built or run for this revision. A source review does not prove Play Store or device behavior.
 
-Engineering rules: [docs/local/AGENTS.md](docs/local/AGENTS.md), [CLAUDE.md](CLAUDE.md).
+Engineering rules live in the local-only agent notes.
 [Apache License 2.0](LICENSE).

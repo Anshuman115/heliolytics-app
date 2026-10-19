@@ -78,3 +78,7 @@ Ref
 .planning/
 .specify/
 docs/local/
+
+# Agent instructions are local-only
+AGENTS.md
+CLAUDE.md
