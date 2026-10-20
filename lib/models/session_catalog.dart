@@ -3,7 +3,6 @@ import 'package:heliolytics/models/strap_health_config.dart';
 import 'package:heliolytics/models/unsolicited_entry.dart';
 
 class SessionCatalog {
-  static const int schemaVersion = 1;
   final String sessionId;
   final List<DumpEntry> chunked;
   final List<UnsolicitedEntry> unsolicited;
@@ -17,7 +16,6 @@ class SessionCatalog {
   });
 
   Map<String, dynamic> toJson() => {
-    'schemaVersion': schemaVersion,
     'sessionId': sessionId,
     'chunked': chunked.map((e) => e.toJson()).toList(),
     'unsolicited': unsolicited.map((e) => e.toJson()).toList(),

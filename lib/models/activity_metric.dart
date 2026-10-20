@@ -1,4 +1,4 @@
-/// One activity from `GET /api/v1/activities`; [kind] separates recorded
+/// One activity from `GET /api/activities`; [kind] separates recorded
 /// workouts from heuristic auto-detected activities.
 enum ActivityKind {
   workout,

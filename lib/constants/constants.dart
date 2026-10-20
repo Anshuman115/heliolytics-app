@@ -287,31 +287,21 @@ const String defaultStrapMac = String.fromEnvironment(
   'STRAP_MAC',
   defaultValue: '',
 );
-const String appBuildMarker = 'v3-helio1';
 const String appDocsSubdir = 'heliolytics';
 const String authKeyStorageKey = 'heliolytics.auth_key';
 const String strapMacStorageKey = 'heliolytics.strap_mac';
 const String strapSetupPendingStorageKey = 'heliolytics.strap_setup_pending';
 const String strapBatteryStorageKey = 'heliolytics.strap_battery';
 const String userProfileStorageKey = 'heliolytics.user_profile';
-const String userProfileSchemaKey = 'heliolytics.user_profile_schema';
-const int userProfileSchemaVersion = 2;
 const String onboardingCompleteStorageKey = 'heliolytics.onboarding_complete';
 
-/// Secure-storage slots for the API origin, phone key and key re-entry flag.
+/// Secure-storage slots for the API origin and phone key.
 const String apiBaseUrlStorageKey = 'api_base_url';
-const String apiKeyStorageKey = 'api_key_v2';
-const String apiKeyReentryStorageKey = 'api_key_needs_reentry';
+const String apiKeyStorageKey = 'api_key';
 
 /// Hive box name for the per-day bundle cache (see DailyBundleCacheStorage).
 /// Opened once at app startup in main.dart.
 const String cachedDaysBoxName = 'cached_days_box';
-const String dailyBundleCacheSchemaKey = '__bundle_schema_version__';
-
-/// Cache schema version. A stored mismatch clears every cached day bundle.
-const int dailyBundleCacheSchemaVersion = 3;
-const String legacyDailyHealthScoresCacheKey =
-    'heliolytics.daily_health_scores_cache';
 
 /// Shown when strap sync is blocked until Cloud API is configured.
 const String cloudApiRequiredBeforeSyncMessage =

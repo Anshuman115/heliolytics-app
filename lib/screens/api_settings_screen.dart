@@ -70,13 +70,6 @@ class _ApiSettingsScreenState extends ConsumerState<ApiSettingsScreen> {
                 'API key. Required before your first strap sync.',
                 style: HelioTypography.bodyMuted,
               ),
-              if (cfg.needsKeyReentry) ...[
-                const SizedBox(height: HelioSpacing.md),
-                const Text(
-                  'Re-enter the new phone API key. The old v1 secret is no '
-                  'longer accepted.',
-                ),
-              ],
               if (cfg.keyError != null) ...[
                 const SizedBox(height: HelioSpacing.md),
                 Text(cfg.keyError!),

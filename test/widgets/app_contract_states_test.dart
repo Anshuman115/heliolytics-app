@@ -17,7 +17,7 @@ void main() {
     final container = _container(
       (ref, key) async => throw const MetricsApiException(
         type: MetricsApiFailureType.serverError,
-        path: '/api/v1/daily-metrics',
+        path: '/api/daily-metrics',
         statusCode: 500,
       ),
     );
@@ -40,7 +40,7 @@ void main() {
     final container = _container(
       (ref, key) async => throw const MetricsApiException(
         type: MetricsApiFailureType.notConfigured,
-        path: '/api/v1/daily-metrics',
+        path: '/api/daily-metrics',
         message: 'Configure Cloud API in Settings before syncing.',
       ),
     );

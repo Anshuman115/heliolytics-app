@@ -27,7 +27,7 @@ final dayBundleProvider = FutureProvider.family<DayBundle, String>((
   if (!configured) {
     throw const MetricsApiException(
       type: MetricsApiFailureType.notConfigured,
-      path: '/api/v1/daily-metrics',
+      path: '/api/daily-metrics',
       message: cloudApiRequiredBeforeSyncMessage,
     );
   }

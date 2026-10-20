@@ -8,8 +8,8 @@ allows Intro/Profile; the missing-key state then routes to `/auth`.
 The profile has five optional fields: name, birth date, sex, height and weight.
 Every field may be unset. Birth date is a date-only value validated against
 calendar rollover, `>1900-01-01` and `<= today IST`. Sex is `male`, `female` or
-unset and is never inferred. A one-time storage reset clears any pre-v4 local
-profile and asks again, so no approximate date of birth is derived from an old age.
+unset and is never inferred. An unreadable stored profile is treated as no
+profile, and a date of birth is never estimated from an old age.
 
 `ProfileApiClient.submitProfile` sends one pre-encoded signed PUT with every
 required camelCase key, nulls included, and requires a 204. A local save and a
@@ -41,13 +41,12 @@ storage. It is separate from the phone API key.
 ## Cloud configuration
 
 `ApiConfigStorage` stores the API origin and a `phone.<64 lowercase hex>` API key in
-secure storage under `api_base_url` and `api_key_v2`. Settings rejects web keys,
+secure storage under `api_base_url` and `api_key`. Settings rejects web keys,
 unknown kids, uppercase or short secrets and malformed values before any request.
 
-There is no automatic migration from the v1 settings. The old `signing_secret` and
-`api_key` slots are cleared once at startup without logging their values, and the
-screen then asks for the new phone API key. `--dart-define=API_URL` may seed an
-origin at build time; the API key is never a build input.
+While the app is in beta, clear the app data once if it shows stale data or rejects
+the stored key after an update. `--dart-define=API_URL` may seed an origin at build
+time; the API key is never a build input.
 
 The origin is an HTTPS origin with an optional trailing slash and no path, query,
 fragment or userinfo. Plain HTTP is allowed only for a loopback development host
@@ -63,10 +62,10 @@ truth for which provider families are refreshed.
 
 Every authenticated request carries:
 
-- `X-Heliolytics-Auth: v2.<kid>.<ts>.<nonce>.<sig>`
+- `X-Heliolytics-Auth: <kid>.<ts>.<nonce>.<sig>`
 - `X-Heliolytics-Content-SHA256: <hex>`
 
-The HMAC-SHA256 key is the raw 32 secret bytes. The signed text is `v2`, kid,
+The HMAC-SHA256 key is the raw 32 secret bytes. The signed text is kid,
 decimal timestamp, nonce, uppercase method, escaped path, raw query, lowercase body
 hash and the exact final Content-Type, joined with `\n` and no extra trailing
 newline. Multipart bodies are finalized once and signed after the boundary is
@@ -124,7 +123,7 @@ There is no separate biometric/PIN app lock in the current source.
 - `lib/providers/onboarding_provider.dart`: onboarding/profile state.
 - `lib/services/network/profile_api_client.dart`: actual profile PUT contract.
 - `lib/services/config/api_config_storage.dart`: origin and API-key storage.
-- `lib/services/network/request_signer.dart`: v2 key grammar and signing.
+- `lib/services/network/request_signer.dart`: phone key grammar and signing.
 - `lib/services/network/metrics_api_transport.dart`: signed request transport.
 - `lib/widgets/settings/settings_menu_list.dart`: destination list.
 - `lib/utils/app_logger.dart`, `lib/utils/log_file_store.dart`: logging.

@@ -38,7 +38,7 @@ class MetricsApiClient {
   final MetricsApiTransport _transport;
 
   Future<List<DayMetric>> fetchDays({int? windowDays}) async {
-    const path = '/api/v1/daily-metrics';
+    const path = '/api/daily-metrics';
     final data = await _transport.getJsonObject(
       path,
       query: windowDays == null ? null : _summaryRange(path, windowDays),
@@ -50,7 +50,7 @@ class MetricsApiClient {
     required String from,
     required String to,
   }) async {
-    const path = '/api/v1/daily-metrics';
+    const path = '/api/daily-metrics';
     _checkRange(path, from: from, to: to, cap: maxSummaryDays);
     final data = await _transport.getJsonObject(
       path,
@@ -60,7 +60,7 @@ class MetricsApiClient {
   }
 
   Future<SleepDay?> fetchSleepForDay(String dayKey) async {
-    const path = '/api/v1/sleep';
+    const path = '/api/sleep';
     final data = await _transport.getJsonObject(path, query: _dayQuery(dayKey));
     final days = _list(data, 'days', path);
     if (days.isEmpty) return null;
@@ -68,7 +68,7 @@ class MetricsApiClient {
   }
 
   Future<List<ActivityMetric>> fetchActivities({int? windowDays}) async {
-    const path = '/api/v1/activities';
+    const path = '/api/activities';
     final data = await _transport.getJsonObject(
       path,
       query: windowDays == null ? null : _summaryRange(path, windowDays),
@@ -77,13 +77,13 @@ class MetricsApiClient {
   }
 
   Future<List<ActivityMetric>> fetchActivitiesForDay(String dayKey) async {
-    const path = '/api/v1/activities';
+    const path = '/api/activities';
     final data = await _transport.getJsonObject(path, query: _dayQuery(dayKey));
     return _activityList(data, path);
   }
 
   Future<List<HealthSample>> fetchSeries({int? windowDays}) async {
-    const path = '/api/v1/metrics/series';
+    const path = '/api/metrics/series';
     final data = await _transport.getJsonObject(
       path,
       query: windowDays == null ? null : _sampleRange(path, windowDays),
@@ -92,13 +92,13 @@ class MetricsApiClient {
   }
 
   Future<List<HealthSample>> fetchSeriesForDay(String dayKey) async {
-    const path = '/api/v1/metrics/series';
+    const path = '/api/metrics/series';
     final data = await _transport.getJsonObject(path, query: _dayQuery(dayKey));
     return _parseSeries(path, data);
   }
 
   Future<List<HeartRateSample>> fetchHeartRate({int? windowDays}) async {
-    const path = '/api/v1/metrics/hr';
+    const path = '/api/metrics/hr';
     final data = await _transport.getJsonObject(
       path,
       query: windowDays == null ? null : _sampleRange(path, windowDays),
@@ -107,13 +107,13 @@ class MetricsApiClient {
   }
 
   Future<List<HeartRateSample>> fetchHeartRateForDay(String dayKey) async {
-    const path = '/api/v1/metrics/hr';
+    const path = '/api/metrics/hr';
     final data = await _transport.getJsonObject(path, query: _dayQuery(dayKey));
     return _parseHeartRate(path, data);
   }
 
   Future<List<TempSample>> fetchTemperature({int? windowDays}) async {
-    const path = '/api/v1/metrics/temperature';
+    const path = '/api/metrics/temperature';
     final data = await _transport.getJsonObject(
       path,
       query: windowDays == null ? null : _sampleRange(path, windowDays),
@@ -122,20 +122,20 @@ class MetricsApiClient {
   }
 
   Future<List<TempSample>> fetchTemperatureForDay(String dayKey) async {
-    const path = '/api/v1/metrics/temperature';
+    const path = '/api/metrics/temperature';
     final data = await _transport.getJsonObject(path, query: _dayQuery(dayKey));
     return _parseTemperature(path, data);
   }
 
   Future<SyncCoverage> fetchCoverage() async {
-    final data = await _transport.getJsonObject('/api/v1/metrics/coverage');
+    final data = await _transport.getJsonObject('/api/metrics/coverage');
     return SyncCoverage.fromJson(data);
   }
 
   Future<bool> testConnection() async {
     await _transport.getJsonObject(
-      '/api/v1/daily-metrics',
-      query: _summaryRange('/api/v1/daily-metrics', 1),
+      '/api/daily-metrics',
+      query: _summaryRange('/api/daily-metrics', 1),
     );
     return true;
   }
@@ -143,17 +143,14 @@ class MetricsApiClient {
   /// Loads exactly the three endpoints the selected day needs.
   Future<DayBundle> fetchDayBundle(String dayKey) async {
     final responses = await Future.wait<Map<String, dynamic>>([
-      _transport.getJsonObject(
-        '/api/v1/daily-metrics',
-        query: _dayQuery(dayKey),
-      ),
-      _transport.getJsonObject('/api/v1/sleep', query: _dayQuery(dayKey)),
-      _transport.getJsonObject('/api/v1/activities', query: _dayQuery(dayKey)),
+      _transport.getJsonObject('/api/daily-metrics', query: _dayQuery(dayKey)),
+      _transport.getJsonObject('/api/sleep', query: _dayQuery(dayKey)),
+      _transport.getJsonObject('/api/activities', query: _dayQuery(dayKey)),
     ], eagerError: true);
 
-    final days = _dayList(responses[0], '/api/v1/daily-metrics');
-    final sleepDays = _list(responses[1], 'days', '/api/v1/sleep');
-    final activities = _activityList(responses[2], '/api/v1/activities');
+    final days = _dayList(responses[0], '/api/daily-metrics');
+    final sleepDays = _list(responses[1], 'days', '/api/sleep');
+    final activities = _activityList(responses[2], '/api/activities');
 
     return DayBundle(
       day: days.isEmpty ? null : days.first,

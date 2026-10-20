@@ -27,33 +27,32 @@ class Session {
   });
 
   Map<String, dynamic> toJson() => {
-        'schemaVersion': 1,
-        'sessionId': sessionId,
-        'startedAt': startedAt.toIso8601String(),
-        if (endedAt != null) 'endedAt': endedAt!.toIso8601String(),
-        if (deviceMac != null) 'deviceMac': deviceMac,
-        'fetchWindowHours': fetchWindowHours,
-        'listenDurationSec': listenDurationSec,
-        'mode': mode.label,
-        if (batteryPercent != null) 'batteryPercent': batteryPercent,
-      };
+    'sessionId': sessionId,
+    'startedAt': startedAt.toIso8601String(),
+    if (endedAt != null) 'endedAt': endedAt!.toIso8601String(),
+    if (deviceMac != null) 'deviceMac': deviceMac,
+    'fetchWindowHours': fetchWindowHours,
+    'listenDurationSec': listenDurationSec,
+    'mode': mode.label,
+    if (batteryPercent != null) 'batteryPercent': batteryPercent,
+  };
 
   factory Session.fromJson(Map<String, dynamic> j) => Session(
-        sessionId: j['sessionId'] as String,
-        startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
-        endedAt: j['endedAt'] != null
-            ? DateTime.parse(j['endedAt'] as String).toLocal()
-            : null,
-        deviceMac: j['deviceMac'] as String?,
-        fetchWindowHours: (j['fetchWindowHours'] as num).toInt(),
-        listenDurationSec: (j['listenDurationSec'] as num).toInt(),
-        mode: SessionModeX.parse(j['mode'] as String),
-        entries: (j['entries'] as List<dynamic>? ?? [])
-            .map((e) => DumpEntry.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        unsolicited: (j['unsolicited'] as List<dynamic>? ?? [])
-            .map((e) => UnsolicitedEntry.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        batteryPercent: (j['batteryPercent'] as num?)?.toInt(),
-      );
+    sessionId: j['sessionId'] as String,
+    startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
+    endedAt: j['endedAt'] != null
+        ? DateTime.parse(j['endedAt'] as String).toLocal()
+        : null,
+    deviceMac: j['deviceMac'] as String?,
+    fetchWindowHours: (j['fetchWindowHours'] as num).toInt(),
+    listenDurationSec: (j['listenDurationSec'] as num).toInt(),
+    mode: SessionModeX.parse(j['mode'] as String),
+    entries: (j['entries'] as List<dynamic>? ?? [])
+        .map((e) => DumpEntry.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    unsolicited: (j['unsolicited'] as List<dynamic>? ?? [])
+        .map((e) => UnsolicitedEntry.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    batteryPercent: (j['batteryPercent'] as num?)?.toInt(),
+  );
 }

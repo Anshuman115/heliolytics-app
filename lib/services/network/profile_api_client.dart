@@ -22,7 +22,7 @@ class ProfileApiClient {
          signer: signer,
        );
 
-  static const String profilePath = '/api/v1/profile';
+  static const String profilePath = '/api/profile';
 
   final MetricsApiTransport _transport;
 

@@ -31,7 +31,7 @@ than zero.
 1. `selectedDayKeyProvider` supplies the selected IST date, otherwise today.
 2. `dayBundleProvider(dayKey)` checks the closed-day Hive cache.
 3. On a miss, `MetricsApiClient.fetchDayBundle` issues exactly three requests for
-   that day: `/api/v1/daily-metrics`, `/api/v1/sleep` and `/api/v1/activities`.
+   that day: `/api/daily-metrics`, `/api/sleep` and `/api/activities`.
 4. The bundle completes as one unit. Auth, timeout, 404, 422, 5xx and decoding
    failures propagate. There is no optional-route swallowing.
 5. A successful closed-day bundle is stored. Today's bundle is not stored on disk.
@@ -50,7 +50,7 @@ series (`hrv`, `stress`, `resp`, `spo2`) and temperature lazily, then keeps them
 memory. Sample windows are capped at 31 days and summary windows at 366; a range
 above the cap is refused locally instead of relying on a 400.
 
-`activityHistoryProvider` makes one `/api/v1/activities` call over a bounded
+`activityHistoryProvider` makes one `/api/activities` call over a bounded
 90-day window and partitions recorded workouts from auto-detected activities
 without hiding request errors. Metric trend providers fetch daily rows over bounded
 IST ranges.
@@ -61,15 +61,14 @@ second health-score request and no separate scores cache.
 ## Refresh and storage
 
 `HealthDataRefreshCoordinator` handles scoped day refresh/retry and the main
-post-sync/configuration invalidations. Sync clears stored day bundles and removes
-the legacy daily-health-scores cache entry, because older days can change.
-Configuration replacement clears caches before saving the new API values.
+post-sync/configuration invalidations. Sync clears stored day bundles, because
+older days can change. Configuration replacement clears caches before saving the
+new API values.
 
-Hive initialization can recover a corrupt disposable cache. A stored schema
-version mismatch clears every cached entry, so data from another shape is a
-cache miss rather than rehydrated data. A corrupt entry is a cache miss; an HTTP
-failure is never written as a successful empty bundle. None of this changes
-server-authoritative coverage.
+Hive initialization can recover a corrupt disposable cache. An entry that fails
+to decode is a cache miss rather than rehydrated data; an HTTP failure is never
+written as a successful empty bundle. None of this changes server-authoritative
+coverage.
 
 ## Related code and behavior
 

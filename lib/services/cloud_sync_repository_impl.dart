@@ -25,7 +25,7 @@ class CloudSyncRepositoryImpl implements CloudSyncRepository {
        ),
        _encoder = encoder ?? IngestRequestEncoder();
 
-  static const String ingestPath = '/api/v1/ingest';
+  static const String ingestPath = '/api/ingest';
 
   final MetricsApiTransport _transport;
   final IngestRequestEncoder _encoder;

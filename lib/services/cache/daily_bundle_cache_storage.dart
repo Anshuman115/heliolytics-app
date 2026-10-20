@@ -8,7 +8,7 @@ import 'package:heliolytics/models/day_metric.dart';
 
 /// Per-day bundle cache in a Hive box opened at startup in main.dart. Each
 /// entry is a JSON-encoded [DayBundle] keyed by dayKey, so the box stays a
-/// plain `Box<String>`. A schema mismatch clears every entry.
+/// plain `Box<String>`. An entry that fails to decode is a cache miss.
 class DailyBundleCacheStorage {
   DailyBundleCacheStorage({Box<String>? box}) : _boxOverride = box;
 
@@ -20,25 +20,9 @@ class DailyBundleCacheStorage {
     return Hive.box<String>(cachedDaysBoxName);
   }
 
-  bool get _hasCurrentSchema =>
-      _box?.get(dailyBundleCacheSchemaKey) ==
-      dailyBundleCacheSchemaVersion.toString();
-
-  /// Removes cached entries whose stored schema marker is not current.
-  /// Returns true after clearing.
-  Future<bool> migrateSchemaIfNeeded() async {
-    final box = _box;
-    if (box == null) return false;
-    if (_hasCurrentSchema) return false;
-    await box.clear();
-    await _markSchemaCurrent();
-    return true;
-  }
-
   Future<DayBundle?> read(String dayKey) async {
     final box = _box;
     if (box == null) return null;
-    if (!_hasCurrentSchema) return null;
     try {
       final raw = box.get(dayKey);
       if (raw == null) return null;
@@ -52,7 +36,6 @@ class DailyBundleCacheStorage {
 
   Future<void> write(String dayKey, DayBundle bundle) async {
     try {
-      await migrateSchemaIfNeeded();
       await _box?.put(dayKey, jsonEncode(bundle.toJson()));
     } catch (_) {
       // Best-effort — a disk failure must never crash the app.
@@ -60,10 +43,7 @@ class DailyBundleCacheStorage {
   }
 
   Future<void> clear() async {
-    final box = _box;
-    if (box == null) return;
-    await box.clear();
-    await _markSchemaCurrent();
+    await _box?.clear();
   }
 
   Future<void> delete(String dayKey) async {
@@ -74,10 +54,8 @@ class DailyBundleCacheStorage {
   Future<List<DayMetric>> readAllCachedDays() async {
     final box = _box;
     if (box == null) return const [];
-    if (!_hasCurrentSchema) return const [];
     final out = <DayMetric>[];
     for (final entry in box.toMap().entries) {
-      if (entry.key == dailyBundleCacheSchemaKey) continue;
       try {
         final map = Map<String, dynamic>.from(jsonDecode(entry.value) as Map);
         final day = DayBundle.fromJson(map).day;
@@ -87,13 +65,6 @@ class DailyBundleCacheStorage {
       }
     }
     return out;
-  }
-
-  Future<void> _markSchemaCurrent() async {
-    await _box?.put(
-      dailyBundleCacheSchemaKey,
-      dailyBundleCacheSchemaVersion.toString(),
-    );
   }
 }
 

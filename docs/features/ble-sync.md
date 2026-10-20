@@ -17,7 +17,7 @@ UI (SettingsHub / HomeScreen)
             ├─ bandSession.tryAcquire(sync)      ← blocked if band alerts is on
             ├─ resolveSyncWindow(ref)            ← asks the server what it already has
             ├─ SyncFetcher → TypeSyncEngine      ← per-type BLE fetch loop
-            └─ SyncCommitter.commit(payload)     ← signed POST /api/v1/ingest
+            └─ SyncCommitter.commit(payload)     ← signed POST /api/ingest
 ```
 
 ## Step 1 : Acquire the band
@@ -30,7 +30,7 @@ Band alerts mode blocks sync outright : the user must toggle it off first.
 
 ## Step 2 : Resolve the sync window (server-driven)
 
-`resolveSyncWindow` (`sync_window_resolver.dart`) calls `GET /api/v1/metrics/coverage`
+`resolveSyncWindow` (`sync_window_resolver.dart`) calls `GET /api/metrics/coverage`
 and hands the result to `SyncWindow.plan(...)` (`sync_window.dart`), which decides a
 `since` timestamp **per type code**.
 

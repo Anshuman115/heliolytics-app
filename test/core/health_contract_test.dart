@@ -65,7 +65,7 @@ void main() {
     expect(round.sleepEfficiencyPct, isNull);
   });
 
-  test('legacy calorie keys never become workout calories', () {
+  test('unknown calorie keys never become workout calories', () {
     final json = _dayJson()
       ..['caloriesTotal'] = 2500
       ..['calories'] = 2400;
@@ -209,7 +209,6 @@ void main() {
 
   test('readiness early states keep nulls, baselines and flags', () {
     final components = ReadinessComponents.fromJson({
-      'version': 1,
       'status': 'calibrating',
       'score': null,
       'raw': null,
@@ -245,11 +244,5 @@ void main() {
     expect(round.components.single.center, 47.0);
     expect(round.components.single.nights, 6);
     expect(round.flags, components.flags);
-
-    final unknown = ReadinessComponents.fromJson({
-      ...components.toJson(),
-      'version': 2,
-    });
-    expect(unknown.isUnsupportedVersion, isTrue);
   });
 }

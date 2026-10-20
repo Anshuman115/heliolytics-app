@@ -11,7 +11,7 @@ chart and time-in-zone breakdown.
 | **workout** | `0x05` summary plus `0x06` per-second detail | User pressed start on the strap |
 | **auto** | Server detection over `0x01` minute steps and HR | Sustained movement with no recorded workout |
 
-`GET /api/v1/activities` returns one unified list. `ActivityMetric`
+`GET /api/activities` returns one unified list. `ActivityMetric`
 (`models/activity_metric.dart`) stores `kind`, `dayKey`, exact start and end,
 `durationSec`, `sportType`, `sportName`, `calories`, `avgHr`, `maxHr`, `minHr`,
 `steps` and `hasDetail`. Null statistics stay null and `hasDetail=false` means no

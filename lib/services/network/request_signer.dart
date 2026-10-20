@@ -85,7 +85,7 @@ typedef EpochSecondsFn = int Function();
 
 typedef NonceHexFn = String Function();
 
-/// Builds the C5 v2 authorization headers for one fixed request.
+/// Builds the authorization headers for one fixed request.
 class RequestSigner {
   RequestSigner({EpochSecondsFn? now, NonceHexFn? nonce})
     : _now = now ?? _utcEpochSeconds,
@@ -119,7 +119,7 @@ class RequestSigner {
       key.secretBytes,
     ).convert(utf8.encode(canonical)).toString();
     return {
-      authHeaderName: 'v2.${key.kid}.$ts.$nonce.$signature',
+      authHeaderName: '${key.kid}.$ts.$nonce.$signature',
       contentShaHeaderName: request.bodySha256Hex,
     };
   }
@@ -133,7 +133,7 @@ String _randomNonceHex() {
   return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 }
 
-/// The exact C5 string to sign. It never has an extra trailing newline.
+/// The exact string to sign. It never has an extra trailing newline.
 String canonicalText({
   required String kid,
   required int ts,
@@ -145,7 +145,6 @@ String canonicalText({
   required String contentType,
 }) {
   return <String>[
-    'v2',
     kid,
     '$ts',
     nonce,

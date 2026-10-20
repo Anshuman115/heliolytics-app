@@ -29,7 +29,7 @@ goals are not implemented.
 
 ## API access
 
-Every data request is signed with the v2 phone API key:
+Every data request is signed with the phone API key:
 
 - Settings stores an HTTPS API origin and a `phone.<64 lowercase hex>` key in
   platform secure storage. Web and unknown kids are rejected before any request.

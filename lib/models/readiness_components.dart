@@ -116,10 +116,9 @@ class ReadinessComponent {
   };
 }
 
-/// Versioned readiness explanation. The client never computes a score.
+/// Readiness explanation. The client never computes a score.
 class ReadinessComponents {
   const ReadinessComponents({
-    required this.version,
     required this.status,
     required this.baselineNights,
     this.score,
@@ -128,7 +127,6 @@ class ReadinessComponents {
     this.flags = const [],
   });
 
-  final int version;
   final ReadinessStatus status;
   final int baselineNights;
   final int? score;
@@ -136,16 +134,7 @@ class ReadinessComponents {
   final List<ReadinessComponent> components;
   final List<String> flags;
 
-  /// True when the stored algorithm version is not the one this app explains.
-  bool get isUnsupportedVersion => version != supportedVersion;
-
-  static const int supportedVersion = 1;
-
   factory ReadinessComponents.fromJson(Map<String, dynamic> j) {
-    final version = j['version'];
-    if (version is! int) {
-      throw const FormatException('ReadinessComponents needs a version');
-    }
     final status = ReadinessStatus.parse(j['status']);
     if (status == null) {
       throw FormatException('Unknown readiness status: ${j['status']}');
@@ -163,7 +152,6 @@ class ReadinessComponents {
       throw const FormatException('ReadinessComponents needs flags');
     }
     return ReadinessComponents(
-      version: version,
       status: status,
       baselineNights: baseline.toInt(),
       score: _int(j['score']),
@@ -180,7 +168,6 @@ class ReadinessComponents {
   }
 
   Map<String, dynamic> toJson() => {
-    'version': version,
     'status': status.wire,
     'score': score,
     'raw': raw,

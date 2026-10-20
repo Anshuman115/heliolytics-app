@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/providers/activity_history_provider.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/day_bundle_provider.dart';
@@ -65,16 +63,7 @@ class HealthDataRefreshCoordinator {
   }
 
   Future<void> _clearDiskCaches() async {
-    await Future.wait([
-      _ref.read(dailyBundleCacheStorageProvider).clear(),
-      _clearLegacyScoresCache(),
-    ]);
-  }
-
-  /// Removes the deleted daily-health-scores blob without touching other prefs.
-  Future<void> _clearLegacyScoresCache() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(legacyDailyHealthScoresCacheKey);
+    await _ref.read(dailyBundleCacheStorageProvider).clear();
   }
 
   void _invalidateAllHealthData() {

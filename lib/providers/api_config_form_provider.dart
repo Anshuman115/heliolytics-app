@@ -6,21 +6,13 @@ import 'package:heliolytics/services/network/api_endpoint_policy.dart';
 import 'package:heliolytics/services/network/request_signer.dart';
 
 class ApiConfigForm {
-  const ApiConfigForm({
-    this.url = '',
-    this.apiKey = '',
-    this.keyError,
-    this.needsKeyReentry = false,
-  });
+  const ApiConfigForm({this.url = '', this.apiKey = '', this.keyError});
 
   final String url;
   final String apiKey;
 
   /// Why the stored key is unusable, or null when it is valid or absent.
   final String? keyError;
-
-  /// True after the v1 secret slots were cleared and no v2 key was entered.
-  final bool needsKeyReentry;
 }
 
 final apiConfigFormProvider =
@@ -35,12 +27,7 @@ class ApiConfigFormNotifier extends AsyncNotifier<ApiConfigForm> {
     final url = await storage.readBaseUrl();
     final key = await storage.readApiKey();
     final keyError = key == null ? null : ApiKey.validatePhone(key);
-    return ApiConfigForm(
-      url: url ?? '',
-      apiKey: key ?? '',
-      keyError: keyError,
-      needsKeyReentry: await storage.needsKeyReentry(),
-    );
+    return ApiConfigForm(url: url ?? '', apiKey: key ?? '', keyError: keyError);
   }
 
   /// Validates and stores both settings, then clears cached API data.

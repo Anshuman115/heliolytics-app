@@ -41,7 +41,7 @@ String friendlyError(Object error) {
   if (error is ApiKeyFormatException) return error.message;
   if (error is ProtocolException) {
     return 'The server returned data this app does not understand. '
-        'Check for an app and server version mismatch.';
+        'Update the app and try again.';
   }
   if (error is DioException) {
     return switch (error.type) {

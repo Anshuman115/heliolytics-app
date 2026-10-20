@@ -22,4 +22,4 @@ adb uninstall "$PKG" >/dev/null 2>&1 || true
 echo "Installing $APK..."
 adb install "$APK"
 
-echo "Done. Open More tab -> About and confirm Build v3-ui2."
+echo "Done."

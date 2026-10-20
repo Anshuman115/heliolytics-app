@@ -26,7 +26,7 @@ class SleepStagePoint {
   };
 }
 
-/// One sleep session from `GET /api/v1/sleep`.
+/// One sleep session from `GET /api/sleep`.
 ///
 /// Stage intervals are half-open: [end] is exclusive.
 class SleepSession {

@@ -41,7 +41,7 @@ void main() {
       'https://user:pass@api.example.com',
       'https://api.example.com/#frag',
       'https://api.example.com?x=1',
-      'https://api.example.com/api/v1',
+      'https://api.example.com/api',
       'ftp://api.example.com',
       'api.example.com',
       '',
@@ -59,14 +59,14 @@ void main() {
     final origin = policy.parseOrigin('https://api.example.com');
     final uri = policy.resolve(
       origin,
-      '/api/v1/metrics/series',
+      '/api/metrics/series',
       query: {'from': '2026-10-01', 'to': '2026-10-19'},
     );
-    expect(uri.path, '/api/v1/metrics/series');
+    expect(uri.path, '/api/metrics/series');
     expect(uri.query, 'from=2026-10-01&to=2026-10-19');
     expect(
       uri.toString(),
-      'https://api.example.com/api/v1/metrics/series?'
+      'https://api.example.com/api/metrics/series?'
       'from=2026-10-01&to=2026-10-19',
     );
   });
@@ -74,7 +74,7 @@ void main() {
   test('encodes a query value exactly once', () {
     const policy = ApiEndpointPolicy.production;
     final origin = policy.parseOrigin('https://api.example.com');
-    final uri = policy.resolve(origin, '/api/v1/sleep', query: {'note': 'a b'});
+    final uri = policy.resolve(origin, '/api/sleep', query: {'note': 'a b'});
     expect(uri.query, 'note=a+b');
   });
 
@@ -82,7 +82,7 @@ void main() {
     const policy = ApiEndpointPolicy.production;
     final origin = policy.parseOrigin('https://api.example.com');
     expect(
-      () => policy.resolve(origin, 'api/v1/sleep'),
+      () => policy.resolve(origin, 'api/sleep'),
       throwsA(isA<ApiEndpointException>()),
     );
   });

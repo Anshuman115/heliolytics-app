@@ -6,33 +6,31 @@ import 'package:heliolytics/services/ble/auth/auth_key_store.dart';
 import 'package:heliolytics/services/config/user_profile_storage.dart';
 
 void main() {
-  test('the cutover clears the profile and asks onboarding again', () async {
-    final store = _MemoryStore({
-      userProfileStorageKey: '{"name":"Old"}',
-      onboardingCompleteStorageKey: '1',
-      userProfileSchemaKey: '1',
-    });
+  test('a profile round-trips through secure storage', () async {
+    final store = _MemoryStore({});
+    final storage = UserProfileStorage(store);
+
+    await storage.saveProfile(const UserProfile(name: 'New', heightCm: 180));
+    await storage.markOnboardingComplete();
+
+    final loaded = await storage.readProfile();
+    expect(loaded?.name, 'New');
+    expect(loaded?.heightCm, 180);
+    expect(await storage.isOnboardingComplete(), isTrue);
+  });
+
+  test('an unparseable stored profile reads as no profile', () async {
+    final store = _MemoryStore({userProfileStorageKey: '{"name":'});
     final storage = UserProfileStorage(store);
 
     expect(await storage.readProfile(), isNull);
     expect(await storage.isOnboardingComplete(), isFalse);
-    expect(store.values[userProfileSchemaKey], '$userProfileSchemaVersion');
   });
 
-  test('a second run keeps the profile saved after the cutover', () async {
-    final store = _MemoryStore({
-      userProfileStorageKey: '{"name":"Old"}',
-      onboardingCompleteStorageKey: '1',
-      userProfileSchemaKey: '1',
-    });
-    final storage = UserProfileStorage(store);
+  test('an absent profile reads as null', () async {
+    final storage = UserProfileStorage(_MemoryStore({}));
 
-    await storage.saveProfile(const UserProfile(name: 'New'));
-    await storage.markOnboardingComplete();
-    await storage.ensureSchema();
-
-    expect((await storage.readProfile())?.name, 'New');
-    expect(await storage.isOnboardingComplete(), isTrue);
+    expect(await storage.readProfile(), isNull);
   });
 }
 

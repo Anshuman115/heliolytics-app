@@ -85,7 +85,7 @@ class RecoveryMetricSection extends ConsumerWidget {
   Widget _componentExplain(ReadinessComponents components) {
     final status = switch (components.status) {
       ReadinessStatus.scored =>
-        'Score from version ${components.version} weights over '
+        'Score from the readiness weights over '
             '${components.baselineNights} baseline nights.',
       ReadinessStatus.calibrating =>
         'Calibrating: ${components.baselineNights} of 14 baseline nights.',

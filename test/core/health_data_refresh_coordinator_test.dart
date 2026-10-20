@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/providers/activity_history_provider.dart';
@@ -24,12 +22,6 @@ DayMetric _day(String key) =>
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  setUp(() {
-    SharedPreferences.setMockInitialValues({
-      legacyDailyHealthScoresCacheKey: '{"2026-08-01":{}}',
-    });
-  });
 
   test('refresh deletes the selected historical cache entry first', () async {
     const dayKey = '2026-08-01';
@@ -61,7 +53,7 @@ void main() {
     void built(String name) => builds[name] = (builds[name] ?? 0) + 1;
     final store = _MemoryAuthKeyStore({
       'api_base_url': 'https://old.example',
-      'api_key_v2': _key,
+      'api_key': _key,
     }, events);
     final container = ProviderContainer(
       overrides: [
@@ -106,20 +98,17 @@ void main() {
     expect(firstWrite, isNonNegative);
     expect(events.take(firstWrite).toSet(), {'bundle-clear'});
     expect(store.values['api_base_url'], 'https://new.example');
-    expect(store.values['api_key_v2'], _key);
+    expect(store.values['api_key'], _key);
 
     await _loadHealthData(container, dayKey);
     expect(builds.values, everyElement(2));
-
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.containsKey(legacyDailyHealthScoresCacheKey), isFalse);
   });
 
   test('saving an invalid key fails before touching caches', () async {
     final events = <String>[];
     final store = _MemoryAuthKeyStore({
       'api_base_url': 'https://old.example',
-      'api_key_v2': _key,
+      'api_key': _key,
     }, events);
     final container = ProviderContainer(
       overrides: [

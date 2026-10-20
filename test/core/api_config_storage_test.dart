@@ -18,7 +18,7 @@ void main() {
     expect(await config.readApiKey(), _key);
     expect(await config.readBaseUrl(), 'https://api.example.com');
     expect(await config.isConfigured(), isTrue);
-    expect(await config.needsKeyReentry(), isFalse);
+    expect(store.values['api_key'], _key);
   });
 
   test('rejects web, unknown and malformed keys without writing', () async {
@@ -41,69 +41,20 @@ void main() {
     expect(await config.isConfigured(), isFalse);
   });
 
-  test(
-    'clears v1 slots once and remembers that a key must be re-entered',
-    () async {
-      final store = _MemoryStore({
-        'api_base_url': 'https://api.example.com',
-        'signing_secret': 'old-v1-secret',
-        'api_key': 'old-v1-key',
-      });
-      final config = ApiConfigStorage(store);
-
-      expect(await config.migrateLegacySlots(), isTrue);
-      expect(store.values.containsKey('signing_secret'), isFalse);
-      expect(store.values.containsKey('api_key'), isFalse);
-      expect(await config.readApiKey(), isNull);
-      expect(await config.needsKeyReentry(), isTrue);
-
-      expect(await config.migrateLegacySlots(), isFalse);
-    },
-  );
-
-  test(
-    'legacy slots are cleared without a notice when a v2 key exists',
-    () async {
-      final store = _MemoryStore({
-        'api_base_url': 'https://api.example.com',
-        'signing_secret': 'old-v1-secret',
-        'api_key_v2': _key,
-      });
-      final config = ApiConfigStorage(store);
-
-      expect(await config.migrateLegacySlots(), isTrue);
-      expect(await config.readApiKey(), _key);
-      expect(await config.needsKeyReentry(), isFalse);
-    },
-  );
-
-  test('a legacy raw secret is never reused as the API key', () async {
-    final store = _MemoryStore({
-      'api_base_url': 'https://api.example.com',
-      'signing_secret': _secret,
-    });
+  test('clear removes the origin and the key', () async {
+    final store = _MemoryStore();
     final config = ApiConfigStorage(store);
-
-    await config.migrateLegacySlots();
-
-    expect(await config.readApiKey(), isNull);
-    expect(await config.isConfigured(), isFalse);
-  });
-
-  test('save clears the re-entry notice', () async {
-    final store = _MemoryStore({'api_key_needs_reentry': '1'});
-    final config = ApiConfigStorage(store);
-
     await config.save(baseUrl: 'https://api.example.com', apiKey: _key);
 
-    expect(await config.needsKeyReentry(), isFalse);
+    await config.clear();
+
+    expect(store.values, isEmpty);
+    expect(await config.isConfigured(), isFalse);
   });
 }
 
 class _MemoryStore implements AuthKeyStore {
-  _MemoryStore([Map<String, String>? initial]) : values = {...?initial};
-
-  final Map<String, String> values;
+  final Map<String, String> values = {};
 
   @override
   Future<void> delete(String key) async => values.remove(key);

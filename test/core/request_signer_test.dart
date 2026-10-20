@@ -8,7 +8,7 @@ import 'package:heliolytics/services/network/request_signer.dart';
 import 'package:heliolytics/services/network/signed_request.dart';
 
 Map<String, dynamic> _loadFixture() {
-  final file = File('test/fixtures/signing-v2.json');
+  final file = File('test/fixtures/signing.json');
   if (!file.existsSync()) {
     throw StateError('signing fixture is required: ${file.path}');
   }
@@ -34,7 +34,13 @@ void main() {
   final vectors = (fixture['vectors'] as List).cast<Map<String, dynamic>>();
 
   test('fixture carries every published vector', () {
-    expect(vectors.map((v) => v['id']), ['V1', 'V2', 'V3', 'V4', 'V5']);
+    expect(vectors.map((v) => v['id']), [
+      'phone-get-daily',
+      'web-put-profile',
+      'phone-post-multipart',
+      'phone-post-binary',
+      'web-get-repeated-query',
+    ]);
   });
 
   for (final vector in vectors) {

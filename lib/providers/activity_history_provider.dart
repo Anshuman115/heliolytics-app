@@ -24,7 +24,7 @@ final activityHistoryProvider = FutureProvider<ActivityHistory>((ref) async {
   if (!configured) {
     throw const MetricsApiException(
       type: MetricsApiFailureType.notConfigured,
-      path: '/api/v1/activities',
+      path: '/api/activities',
       message: cloudApiRequiredBeforeSyncMessage,
     );
   }

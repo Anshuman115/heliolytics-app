@@ -23,15 +23,15 @@ void main() {
     final bundle = await client.fetchDayBundle(_dayKey);
 
     expect(adapter.requests.map((r) => r.options.uri.path).toSet(), {
-      '/api/v1/daily-metrics',
-      '/api/v1/sleep',
-      '/api/v1/activities',
+      '/api/daily-metrics',
+      '/api/sleep',
+      '/api/activities',
     });
     expect(adapter.requests, hasLength(3));
     expect(
       adapter.requests.every(
         (r) => (r.options.headers[RequestSigner.authHeaderName] as String)
-            .startsWith('v2.phone.'),
+            .startsWith('phone.'),
       ),
       isTrue,
     );
@@ -51,7 +51,7 @@ void main() {
       (options) => _json(
         options,
         200,
-        options.uri.path == '/api/v1/activities'
+        options.uri.path == '/api/activities'
             ? <String, dynamic>{'activities': <dynamic>[]}
             : <String, dynamic>{'days': <dynamic>[]},
       ),
@@ -191,7 +191,7 @@ void main() {
 
 ResponseBody _bundleResponse(RequestOptions options) {
   final path = options.uri.path;
-  if (path == '/api/v1/daily-metrics') {
+  if (path == '/api/daily-metrics') {
     return _json(options, 200, {
       'days': [
         {
@@ -227,7 +227,6 @@ ResponseBody _bundleResponse(RequestOptions options) {
           'readinessStatus': 'scored',
           'readinessBand': 'good',
           'readinessComponents': {
-            'version': 1,
             'status': 'scored',
             'score': 68,
             'raw': 0.42,
@@ -258,7 +257,7 @@ ResponseBody _bundleResponse(RequestOptions options) {
       ],
     });
   }
-  if (path == '/api/v1/sleep') {
+  if (path == '/api/sleep') {
     return _json(options, 200, {
       'days': [
         {
@@ -299,7 +298,7 @@ ResponseBody _bundleResponse(RequestOptions options) {
       ],
     });
   }
-  if (path == '/api/v1/activities') {
+  if (path == '/api/activities') {
     return _json(options, 200, {
       'activities': [
         {
@@ -337,10 +336,7 @@ MetricsApiClient _client(HttpClientAdapter adapter) {
   dio.httpClientAdapter = adapter;
   return MetricsApiClient(
     ApiConfigStorage(
-      _MemoryStore({
-        'api_base_url': 'https://example.test',
-        'api_key_v2': _key,
-      }),
+      _MemoryStore({'api_base_url': 'https://example.test', 'api_key': _key}),
     ),
     dio: dio,
     signer: RequestSigner(

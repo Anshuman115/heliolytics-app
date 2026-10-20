@@ -54,7 +54,7 @@ void main() {
   final origin = policy.parseOrigin(_url);
   final transportDio = Dio(BaseOptions(validateStatus: (_) => true));
   final config = ApiConfigStorage(
-    _MemoryStore({'api_base_url': _url, 'api_key_v2': _apiKey}),
+    _MemoryStore({'api_base_url': _url, 'api_key': _apiKey}),
   );
   final client = MetricsApiClient(config, dio: transportDio, policy: policy);
   final key = ApiKey.parsePhone(_apiKey);
@@ -183,7 +183,7 @@ final _signer = RequestSigner();
 
 _Signed _signedGet(ApiEndpointPolicy policy, Uri origin) {
   final request = SignedRequest.get(
-    policy.resolve(origin, '/api/v1/metrics/coverage'),
+    policy.resolve(origin, '/api/metrics/coverage'),
   );
   return _Signed(request, _signer);
 }
@@ -197,7 +197,7 @@ _Signed _signedPut(ApiEndpointPolicy policy, Uri origin) {
     weightKg: 61.5,
   );
   final request = SignedRequest.json(
-    policy.resolve(origin, '/api/v1/profile'),
+    policy.resolve(origin, '/api/profile'),
     utf8.encode(jsonEncode(profile.toWireJson())),
   );
   return _Signed(request, _signer);
@@ -234,7 +234,7 @@ Future<_Signed> _ingestRequest(
   final encoded = await IngestRequestEncoder().encode(payload);
   final request = SignedRequest(
     method: 'POST',
-    uri: policy.resolve(origin, '/api/v1/ingest'),
+    uri: policy.resolve(origin, '/api/ingest'),
     body: encoded.body,
     contentType: encoded.contentType,
   );

@@ -84,7 +84,7 @@ connection (the two coexist; only one can hold the link).
 ## Scope
 
 In: incoming calls + allowlisted app notifications.
-Out (v1): SMS-only, alarms, goals, idle alerts, reminders, strap-initiated actions.
+Out of scope: SMS-only, alarms, goals, idle alerts, reminders, strap-initiated actions.
 
 ## Key files
 

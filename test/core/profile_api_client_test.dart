@@ -34,7 +34,7 @@ void main() {
     expect(adapter.requests, hasLength(1));
     final request = adapter.requests.single;
     expect(request.options.method, 'PUT');
-    expect(request.options.uri.path, '/api/v1/profile');
+    expect(request.options.uri.path, '/api/profile');
     expect(
       request.options.headers[Headers.contentTypeHeader],
       'application/json',
@@ -45,7 +45,7 @@ void main() {
     );
     final auth =
         request.options.headers[RequestSigner.authHeaderName] as String;
-    expect(auth, startsWith('v2.phone.'));
+    expect(auth, startsWith('phone.'));
 
     final decoded =
         jsonDecode(utf8.decode(request.body)) as Map<String, dynamic>;
@@ -130,7 +130,7 @@ ProfileApiClient _client(HttpClientAdapter adapter) {
   final dio = Dio(BaseOptions(validateStatus: (_) => true));
   dio.httpClientAdapter = adapter;
   final config = ApiConfigStorage(
-    _MemoryStore({'api_base_url': 'https://example.test', 'api_key_v2': _key}),
+    _MemoryStore({'api_base_url': 'https://example.test', 'api_key': _key}),
   );
   return ProfileApiClient(
     config,
