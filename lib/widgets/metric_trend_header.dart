@@ -32,7 +32,7 @@ class MetricTrendHeader extends StatelessWidget {
   String _title() => switch (definition.id) {
     'hrv' => 'Heart rate variability',
     'rhr' => 'Resting heart rate',
-    'spo2' || 'spo2_sleep' => 'Blood oxygen',
+    'spo2' => 'Blood oxygen',
     _ => definition.title,
   };
 }

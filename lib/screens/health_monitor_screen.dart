@@ -93,7 +93,9 @@ class _HealthMonitorScreenState extends ConsumerState<HealthMonitorScreen> {
             HeartRateSummary(day: bundle.day, dayKey: widget.dayKey),
             const SizedBox(height: HelioSpacing.md),
             HealthMetricGrid(
-              readings: buildHealthReadings(day: bundle.day, allDays: allDays),
+              readings: bundle.day == null
+                  ? const []
+                  : buildHealthReadings(day: bundle.day!, allDays: allDays),
               dayKey: widget.dayKey,
             ),
             const SizedBox(height: HelioSpacing.xl),

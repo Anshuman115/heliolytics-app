@@ -13,7 +13,7 @@ class SettingsAccountTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = profile?.name.trim();
+    final name = profile?.name?.trim();
     final displayName = name == null || name.isEmpty ? '?' : name;
     final hasName = displayName != '?';
     return HelioSurfaceCard(

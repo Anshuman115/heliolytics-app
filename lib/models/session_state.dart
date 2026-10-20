@@ -1,3 +1,4 @@
+import 'package:heliolytics/models/ingest_result.dart';
 import 'package:heliolytics/models/models.dart';
 
 enum SessionState {
@@ -33,6 +34,9 @@ class SessionSnapshot {
   final List<String> logs;
   final List<TypeCodeResult> typeResults;
 
+  /// Last accepted cloud upload outcome, shown with its warnings and counts.
+  final IngestResult? lastIngestResult;
+
   const SessionSnapshot({
     required this.state,
     required this.error,
@@ -41,6 +45,7 @@ class SessionSnapshot {
     this.lastErrorMessage,
     this.logs = const [],
     this.typeResults = const [],
+    this.lastIngestResult,
   });
 
   // Start in `idle`, not `noAuthKey`: the auth-key check is async, and seeding
@@ -59,16 +64,17 @@ class SessionSnapshot {
     String? lastErrorMessage,
     List<String>? logs,
     List<TypeCodeResult>? typeResults,
-  }) =>
-      SessionSnapshot(
-        state: state ?? this.state,
-        error: error ?? this.error,
-        currentTypeCode: currentTypeCode ?? this.currentTypeCode,
-        lastSession: lastSession ?? this.lastSession,
-        lastErrorMessage: lastErrorMessage ?? this.lastErrorMessage,
-        logs: logs ?? this.logs,
-        typeResults: typeResults ?? this.typeResults,
-      );
+    IngestResult? lastIngestResult,
+  }) => SessionSnapshot(
+    state: state ?? this.state,
+    error: error ?? this.error,
+    currentTypeCode: currentTypeCode ?? this.currentTypeCode,
+    lastSession: lastSession ?? this.lastSession,
+    lastErrorMessage: lastErrorMessage ?? this.lastErrorMessage,
+    logs: logs ?? this.logs,
+    typeResults: typeResults ?? this.typeResults,
+    lastIngestResult: lastIngestResult ?? this.lastIngestResult,
+  );
 }
 
 /// Result of fetching a single type code from the strap.

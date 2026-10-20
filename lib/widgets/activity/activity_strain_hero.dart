@@ -13,13 +13,13 @@ class ActivityStrainHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strain = day.paiScore;
+    final load = day.trainingLoad;
     return Center(
       child: HelioScoreRing(
         size: HelioRingSize.hero,
-        progress: metricProgress(MetricKind.pai, strain),
-        label: 'Strain',
-        value: formatStrainDecimal(strain),
+        progress: metricProgress(MetricKind.load, load),
+        label: 'Training load',
+        value: formatLoad(load),
         color: HelioColors.strainBlue,
         eyebrow: 'HELIOLYTICS',
         showChevron: false,

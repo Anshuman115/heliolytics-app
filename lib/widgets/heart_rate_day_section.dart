@@ -38,7 +38,8 @@ class HeartRateDaySection extends ConsumerWidget {
           HelioSurfaceCard(
             padding: const EdgeInsets.all(HelioSpacing.lg),
             child: Text(
-              'No continuous HR for this day. Enable PPG on the strap and sync again.',
+              'No minute heart rate for this day. Strap type 0x01 records one '
+              'value per measured minute; gaps mean nothing was measured.',
               style: HelioTypography.bodyMuted,
             ),
           )
@@ -64,7 +65,7 @@ class HeartRateDaySection extends ConsumerWidget {
   Widget _sectionHeader() {
     return Row(
       children: [
-        Text('CONTINUOUS HEART RATE', style: HelioTypography.sectionTitle),
+        Text('MINUTE HEART RATE (0x01)', style: HelioTypography.sectionTitle),
         const SizedBox(width: HelioSpacing.sm),
         const Icon(Icons.info_outline, size: 14, color: HelioColors.textMuted),
       ],

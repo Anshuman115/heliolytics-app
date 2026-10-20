@@ -17,7 +17,7 @@ UI (SettingsHub / HomeScreen)
             ├─ bandSession.tryAcquire(sync)      ← blocked if band alerts is on
             ├─ resolveSyncWindow(ref)            ← asks the server what it already has
             ├─ SyncFetcher → TypeSyncEngine      ← per-type BLE fetch loop
-            └─ SyncCommitter.upload(payload)     ← POST /api/v1/ingest
+            └─ SyncCommitter.commit(payload)     ← signed POST /api/v1/ingest
 ```
 
 ## Step 1 : Acquire the band
@@ -37,6 +37,12 @@ and hands the result to `SyncWindow.plan(...)` (`sync_window.dart`), which decid
 This is what makes reinstall safe: the phone keeps no bookmarks. The server is the
 only authority on what's already ingested.
 
+`SyncCoverage` (`models/sync_coverage.dart`) decodes a strict C3 shape: `hasData`,
+`lastIngestAt`, `dataThrough` and `types` with exactly the eleven measured codes
+(`0x01 0x05 0x06 0x0D 0x13 0x25 0x2E 0x38 0x46 0x48 0x49`). Any other key set is a
+protocol error shown as a coverage error with retry. `lastIngestAt` is the only
+confirmed-sync timestamp; `dataThrough` is display-only and never a fetch cursor.
+
 Planning cases (the empty-backend case is checked before per-type coverage):
 
 | Condition | Plan |
@@ -44,11 +50,8 @@ Planning cases (the empty-backend case is checked before per-type coverage):
 | API not configured | Sync action rejects with "configure Cloud API before syncing"; the window planner alone returns a fallback |
 | Coverage fetch failed / null | Backfill `initialSyncBackfillDays` for every type |
 | `coverage.types` non-empty | Per-type `since` from each type's watermark |
-| Only `dataThrough` set | Single cutoff for all types |
+| Only `dataThrough` set | Display-only; it is not used to skip a fetch |
 | `hasData == false` | Full backfill : uses the wizard's chosen day count if set (see below), else `initialSyncBackfillDays` |
-
-`SyncCoverage` (`models/sync_coverage.dart`) parses `dataThrough`, `lastIngestAt`,
-`hasData`, and the per-type map.
 
 ### Wizard-chosen backfill days
 
@@ -79,10 +82,16 @@ Each round yields a `roundStart` from the device. The engine records
 `(byteOffset, roundStart)` pairs into `roundSegments` : **per page, not one global
 anchor**. Server-side parsers depend on these to timestamp rows correctly.
 
-Type codes live in `constants/constants.dart`. The fetched set includes `0x01`
-(HR/steps/activity), `0x05`/`0x06` (workouts), `0x48` (sleep blobs), `0x49` (HRV),
-`0x46` (continuous HR), `0x2E` (temperature), `0x39` (readiness), and others.
-Some codes are deliberately never fetched (`0x07` is a ~20 MB firmware log).
+`productionFetchTypeCodes` (`services/ble/sync_type_catalog.dart`) lists the
+twelve types a normal sync fetches: `0x01 0x05 0x06 0x0D 0x13 0x25 0x26 0x2E 0x38
+0x46 0x48 0x49`. The uploader consumes that list read-only and does not keep a
+second accepted-type list. `0x39` and `0x3A` are not used and `0x3B` is a
+training-load snapshot that is not ingested as activities. Some codes are
+deliberately never fetched (`0x07` is a ~20 MB firmware log).
+
+Measured SpO2 comes only from `0x25`. Type `0x26` contains sleep-breathing
+placeholders and is uploaded as `raw_only`; it is never treated as an oxygen
+measurement. Physical SpO2 verification on hardware is still pending.
 
 Byte-level detail, including the full chunked protocol, per-code record layouts,
 and paging and anchor semantics, lives in protocol notes kept outside this repo.
@@ -90,12 +99,30 @@ and paging and anchor semantics, lives in protocol notes kept outside this repo.
 ## Step 4 : Commit
 
 The fetch flow assembles the raw bytes + anchors into a `SyncPayload`.
-`SyncCommitter` (`sync_committer.dart`) uploads it, then delegates to
-`HealthDataRefreshCoordinator`. The coordinator clears stored day bundles and
-daily health scores before invalidating day bundles, health scores, activity
-history, detail metrics, metric trends, and sync status. Historical entries are
-also cleared because a selected first-sync range or delayed upload can change
-an older day.
+`IngestRequestEncoder` builds exactly one `session` JSON part, one `catalog` JSON
+part and each nonempty raw type part, finalizes the multipart body once and freezes
+its boundary and Content-Type. The request is signed over those exact bytes, so a
+retry reuses the same body with a fresh timestamp and nonce. It enforces the 16 MiB
+and 40-part caps locally and rejects a session without an end time, a bad MAC or an
+empty file set before sending.
+
+`SyncCommitter.commit` returns a typed `IngestResult` and the orchestrator keeps it
+in `SessionSnapshot.lastIngestResult`:
+
+- Per-type `accepted`, `partial` or `raw_only` status with rows, dropped counts,
+  trailing bytes, warnings and the accepted watermark.
+- A `partial` upload is reported as partial, not as a complete measurement.
+- `0x26` raw-only is expected and does not make `complete` false.
+- An atomic 422 (malformed framing, session or catalog) leaves coverage unchanged
+  and surfaces an actionable failure. A 409 `session_conflict` needs a newly
+  fetched immutable session; the app never changes bytes under an old session id.
+- A deterministic 4xx is never retried automatically. Network and 5xx retries reuse
+  the immutable request.
+
+After a confirmed upload the committer delegates to `HealthDataRefreshCoordinator`,
+which clears the stored day bundles and invalidates day bundles, activity history,
+detail metrics, metric trends and sync status. Historical entries are also cleared
+because a selected first-sync range or delayed upload can change an older day.
 
 ## Key files
 
@@ -106,7 +133,9 @@ an older day.
 | `services/ble/sync_window.dart` | Pure window-planning logic (unit-tested) |
 | `services/ble/type_sync_engine.dart` | Huami fetch state machine |
 | `services/ble/sync_fetcher.dart` | Per-type driver over `BandLinkPort` |
-| `services/ble/sync_committer.dart` | Upload + cache invalidation |
+| `services/network/ingest_request_encoder.dart` | One-shot multipart encoding |
+| `services/cloud_sync_repository_impl.dart` | Signed ingest and typed result |
+| `services/ble/sync_committer.dart` | Upload result handling |
 | `services/ble/sync_page_anchor.dart` | `(byteOffset, roundStart)` pairs |
 | `providers/health_data_refresh_coordinator.dart` | Cache clearing and provider invalidation |
 
@@ -120,5 +149,6 @@ an older day.
   can hit the round cap before the timeout.
 - `probeOnly` fetches metadata without pulling data : used to discover which codes
   a strap actually holds.
+- The device-buffer may expire old data. Report missing data; never invent it.
 
 Validation: not run for this revision.

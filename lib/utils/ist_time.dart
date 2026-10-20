@@ -17,20 +17,41 @@ DateTime parseRoundStartIst(String raw) {
   final cleaned = raw.split('.').first.replaceAll('Z', '');
   final dt = DateTime.parse(cleaned);
   return DateTime.fromMillisecondsSinceEpoch(
-    istWallToEpochSec(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second) *
+    istWallToEpochSec(
+          dt.year,
+          dt.month,
+          dt.day,
+          dt.hour,
+          dt.minute,
+          dt.second,
+        ) *
         1000,
     isUtc: true,
   );
 }
 
 int istWallToEpochSec(int y, int mo, int d, int h, int mi, int s) =>
-    DateTime.utc(y, mo, d, h, mi, s)
-        .subtract(const Duration(hours: 5, minutes: 30))
-        .millisecondsSinceEpoch ~/
-        1000;
+    DateTime.utc(
+      y,
+      mo,
+      d,
+      h,
+      mi,
+      s,
+    ).subtract(const Duration(hours: 5, minutes: 30)).millisecondsSinceEpoch ~/
+    1000;
 
 DateTime istCutoffDaysAgo(int days) =>
     DateTime.now().toUtc().subtract(Duration(days: days));
+
+/// Today's IST calendar date with no time component.
+DateTime istToday() {
+  final now = DateTime.now().toUtc().add(const Duration(seconds: istOffsetSec));
+  return DateTime(now.year, now.month, now.day);
+}
+
+/// The IST date [days] before today, ignoring the phone timezone.
+DateTime istDaysAgo(int days) => istToday().subtract(Duration(days: days));
 
 /// IST wall clock for catalog roundStart (device reports IST, not UTC Z).
 String formatRoundStartIst(DateTime utc) {

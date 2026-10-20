@@ -1,20 +1,47 @@
 import 'package:dio/dio.dart';
+
+import 'package:heliolytics/models/protocol_exception.dart';
+import 'package:heliolytics/services/network/api_endpoint_policy.dart';
 import 'package:heliolytics/services/network/metrics_api_transport.dart';
+import 'package:heliolytics/services/network/request_signer.dart';
 
 String friendlyError(Object error) {
   if (error is MetricsApiException) {
     return switch (error.type) {
+      MetricsApiFailureType.notConfigured =>
+        error.message ?? 'Set the API URL and phone API key in Settings.',
       MetricsApiFailureType.unauthorized =>
-        'Unauthorized. Check the API key in Settings.',
+        'Unauthorized. Re-enter the phone API key in Settings, then check '
+            'that this phone\'s clock is correct.',
+      MetricsApiFailureType.forbidden =>
+        'This key cannot write data. Use your phone API key in Settings.',
       MetricsApiFailureType.notFound =>
-        'API endpoint not found. Check the server URL in Settings.',
+        error.message ??
+            'API endpoint not found. Check the server URL in Settings.',
+      MetricsApiFailureType.conflict =>
+        'The server already has different data for this session. Fetch a new '
+            'session and upload it.',
+      MetricsApiFailureType.rateLimited =>
+        'Too many requests. Wait ${error.retryAfter ?? 'a moment'} and retry.',
+      MetricsApiFailureType.serverBusy =>
+        'The server is busy. Wait ${error.retryAfter ?? 'a moment'} and retry.',
+      MetricsApiFailureType.redirect =>
+        'The API endpoint redirected. Check the server URL in Settings.',
+      MetricsApiFailureType.clientError =>
+        error.message ??
+            'The request was rejected (${error.statusCode ?? 'unknown'}).',
       MetricsApiFailureType.malformedResponse =>
         'The server returned invalid data. Try again.',
-      MetricsApiFailureType.clientError ||
       MetricsApiFailureType.serverError ||
       MetricsApiFailureType.unexpectedStatus =>
         'Server error (${error.statusCode ?? 'unknown'}).',
     };
+  }
+  if (error is ApiEndpointException) return error.message;
+  if (error is ApiKeyFormatException) return error.message;
+  if (error is ProtocolException) {
+    return 'The server returned data this app does not understand. '
+        'Check for an app and server version mismatch.';
   }
   if (error is DioException) {
     return switch (error.type) {
@@ -26,7 +53,7 @@ String friendlyError(Object error) {
       DioExceptionType.badCertificate =>
         'SSL certificate error. Use https:// with a valid cert.',
       DioExceptionType.badResponse when error.response?.statusCode == 401 =>
-        'Unauthorized. Check the API key in Settings.',
+        'Unauthorized. Re-enter the phone API key in Settings.',
       DioExceptionType.badResponse when error.response?.statusCode == 404 =>
         'API endpoint not found. Check the server URL in Settings.',
       DioExceptionType.badResponse =>

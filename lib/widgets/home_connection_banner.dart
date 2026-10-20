@@ -15,7 +15,7 @@ class HomeConnectionBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(bandSessionProvider);
     final sync = ref.watch(syncOrchestratorProvider);
-    final name = ref.watch(onboardingProvider).profile?.name.trim();
+    final name = ref.watch(onboardingProvider).profile?.name?.trim();
     final busy = {
       SessionState.connecting,
       SessionState.authenticating,

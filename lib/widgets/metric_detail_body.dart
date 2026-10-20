@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
+import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
@@ -33,12 +35,14 @@ class MetricDetailBody extends StatelessWidget {
         stressSamples: detail.seriesFor(dayKey, 'stress'),
       );
     }
+    final day = bundle.day;
     if (definition.id == 'readiness') {
-      return RecoveryMetricSection(day: bundle.day);
+      if (day == null) return const _NoDayData();
+      return RecoveryMetricSection(day: day);
     }
     if (definition.id == 'continuous_hr') {
       return ContinuousHrMetricSection(
-        day: bundle.day,
+        day: day,
         samples: detail.heartRateFor(dayKey),
       );
     }
@@ -46,23 +50,36 @@ class MetricDetailBody extends StatelessWidget {
       return TemperatureMetricSection(samples: detail.tempFor(dayKey));
     }
     if (definition.id == 'pai') {
+      return ScalarMetricSection(definition: definition, bundle: bundle);
+    }
+    if (definition.id == 'load') {
+      if (day == null) return const _NoDayData();
       return StrainMetricSection(
         definition: definition,
-        day: bundle.day,
+        day: day,
         heartRate: detail.heartRateFor(dayKey),
       );
     }
     if (definition.seriesKey case final key?) {
       return MetricSeriesSection(
         definition: definition,
-        day: bundle.day,
+        day: day,
         samples: detail.seriesFor(dayKey, key),
       );
     }
-    return ScalarMetricSection(
-      definition: definition,
-      bundle: bundle,
-      heartRate: detail.heartRateFor(dayKey),
-    );
+    return ScalarMetricSection(definition: definition, bundle: bundle);
   }
+}
+
+class _NoDayData extends StatelessWidget {
+  const _NoDayData();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: HelioSpacing.xl),
+    child: Text(
+      'No metrics were stored for this day.',
+      style: HelioTypography.bodyMuted,
+    ),
+  );
 }

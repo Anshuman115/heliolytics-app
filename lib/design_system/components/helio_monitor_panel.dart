@@ -39,7 +39,7 @@ class HelioMonitorPanel extends StatelessWidget {
     if (day.hrvRmssd != null) n++;
     if (day.spo2Avg != null) n++;
     if (day.stressAvg != null) n++;
-    if (day.tempAvgC != null) n++;
+    if (day.skinTempNightC != null) n++;
     return n;
   }
 
@@ -53,7 +53,7 @@ class HelioMonitorPanel extends StatelessWidget {
     if (spo2 != null && spo2 >= 95) n++;
     final stress = day.stressAvg;
     if (stress != null && stress <= 40) n++;
-    final temp = day.tempAvgC;
+    final temp = day.skinTempNightC;
     if (temp != null && temp >= 32 && temp <= 37) n++;
     return n;
   }
@@ -80,25 +80,31 @@ class HelioMonitorPanel extends StatelessWidget {
             crossAxisSpacing: HelioSpacing.sm,
             childAspectRatio: 1.4,
             children: [
-              _tile('rhr', day.restingHr?.toString() ?? '—', open),
+              _tile(
+                'rhr',
+                day.restingHr == null ? '—' : day.restingHr!.toStringAsFixed(1),
+                open,
+              ),
               _tile(
                 'hrv',
-                day.hrvRmssd != null ? '${day.hrvRmssd}' : '—',
+                day.hrvRmssd == null ? '—' : day.hrvRmssd!.toStringAsFixed(1),
                 open,
                 unit: 'ms',
               ),
               _tile(
                 'spo2',
-                day.spo2Avg != null ? '${day.spo2Avg}%' : '—',
+                day.spo2Avg == null
+                    ? '—'
+                    : '${day.spo2Avg!.toStringAsFixed(1)}%',
                 open,
               ),
               _tile(
                 'stress',
-                day.stressAvg?.toString() ?? '—',
+                day.stressAvg == null ? '—' : day.stressAvg!.toStringAsFixed(1),
                 open,
                 status: _stressStatus(day.stressAvg),
               ),
-              _respTile(open),
+              _respTile(day, open),
               _tempTile(day, open),
             ],
           ),
@@ -126,11 +132,11 @@ class HelioMonitorPanel extends StatelessWidget {
     );
   }
 
-  Widget _respTile(void Function(String) open) {
+  Widget _respTile(DayMetric day, void Function(String) open) {
     return HelioVitalTile(
       icon: Icons.air,
       label: 'Resp rate',
-      value: '—',
+      value: day.respRate == null ? '—' : day.respRate!.toStringAsFixed(1),
       onTap: () => open('resp_rate'),
     );
   }
@@ -139,12 +145,12 @@ class HelioMonitorPanel extends StatelessWidget {
     return HelioVitalTile(
       icon: Icons.thermostat,
       label: 'Skin temp (°C)',
-      value: day.tempAvgC?.toStringAsFixed(1) ?? '—',
+      value: day.skinTempNightC?.toStringAsFixed(1) ?? '—',
       onTap: () => open('temperature'),
     );
   }
 
-  String? _stressStatus(int? stress) {
+  String? _stressStatus(double? stress) {
     if (stress == null) return null;
     if (stress <= 40) return 'low';
     if (stress <= 65) return 'mid';

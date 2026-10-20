@@ -6,11 +6,9 @@ import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/day_metric.dart';
 
-/// Per-day bundle cache backed by a Hive box (opened once at app startup in
-/// main.dart) — real per-key read/write, unlike the old shared_preferences
-/// version which had to decode/re-encode one ever-growing JSON blob on
-/// every single access. Each entry is a JSON-encoded [DayBundle], keyed by
-/// dayKey, so the box stays a plain `Box&lt;String&gt;` with no TypeAdapter needed.
+/// Per-day bundle cache in a Hive box opened at startup in main.dart. Each
+/// entry is a JSON-encoded [DayBundle] keyed by dayKey, so the box stays a
+/// plain `Box<String>`. A schema mismatch clears every entry.
 class DailyBundleCacheStorage {
   DailyBundleCacheStorage({Box<String>? box}) : _boxOverride = box;
 
@@ -26,8 +24,8 @@ class DailyBundleCacheStorage {
       _box?.get(dailyBundleCacheSchemaKey) ==
       dailyBundleCacheSchemaVersion.toString();
 
-  /// Removes entries produced before cache completeness was enforced.
-  /// Returns true only when a migration was required.
+  /// Removes cached entries whose stored schema marker is not current.
+  /// Returns true after clearing.
   Future<bool> migrateSchemaIfNeeded() async {
     final box = _box;
     if (box == null) return false;
@@ -72,10 +70,7 @@ class DailyBundleCacheStorage {
     await _box?.delete(dayKey);
   }
 
-  /// All cached days' DayMetric only (no sleep/workouts) — used to seed
-  /// baseline assessments without a dedicated bulk fetch. Grows naturally
-  /// as the user visits more days; empty on a fresh install. Skips any
-  /// individually corrupt entry rather than discarding the whole cache.
+  /// Cached DayMetric values, skipping days with no metric or corrupt entry.
   Future<List<DayMetric>> readAllCachedDays() async {
     final box = _box;
     if (box == null) return const [];
@@ -85,7 +80,8 @@ class DailyBundleCacheStorage {
       if (entry.key == dailyBundleCacheSchemaKey) continue;
       try {
         final map = Map<String, dynamic>.from(jsonDecode(entry.value) as Map);
-        out.add(DayBundle.fromJson(map).day);
+        final day = DayBundle.fromJson(map).day;
+        if (day != null) out.add(day);
       } catch (_) {
         // Skip this one entry, keep the rest.
       }

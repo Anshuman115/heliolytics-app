@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:heliolytics/models/readiness_components.dart';
+
 abstract final class HelioColors {
   static const canvas = Color(0xFF10171B);
   static const surface = Color(0xFF282E32);
@@ -62,12 +64,14 @@ Color qualityTierColor(num pct) {
   return HelioColors.optimalGreen;
 }
 
-Color recoveryColorFor(int? score) {
-  if (score == null) return HelioColors.textMuted;
-  if (score <= 33) return HelioColors.recoveryLow;
-  if (score <= 66) return HelioColors.recoveryMid;
-  return HelioColors.recoveryHigh;
-}
+/// Colour for the server-reported readiness band. The client never bands a
+/// score itself.
+Color recoveryColorForBand(ReadinessBand? band) => switch (band) {
+  ReadinessBand.good => HelioColors.recoveryHigh,
+  ReadinessBand.fair => HelioColors.recoveryMid,
+  ReadinessBand.low => HelioColors.recoveryLow,
+  null => HelioColors.textMuted,
+};
 
 Color hrZoneColor(int zone) => switch (zone) {
   0 => HelioColors.hrZone0,

@@ -70,7 +70,10 @@ class StressMonitorScreen extends ConsumerWidget {
                     Expanded(
                       child: StressDayBody(
                         samples: d.seriesFor(dayKey, 'stress'),
-                        sleepEntries: bundle.sleep,
+                        sleepEntries: [
+                          if (bundle.mainSleep != null) bundle.mainSleep!,
+                          ...bundle.naps,
+                        ],
                       ),
                     ),
                   ],

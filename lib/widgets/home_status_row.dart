@@ -91,7 +91,7 @@ class HomeStatusRow extends StatelessWidget {
                 const SizedBox(height: HelioSpacing.xs),
                 Text(
                   stress != null
-                      ? '${(stress / 10).toStringAsFixed(1)} stress level'
+                      ? '${stress.toStringAsFixed(1)} daily mean'
                       : 'No data yet',
                   style: HelioTypography.bodyMuted.copyWith(fontSize: 12),
                 ),
@@ -146,14 +146,14 @@ class HomeStatusRow extends StatelessWidget {
     child: Icon(icon, size: 17, color: color),
   );
 
-  Color _stressColor(int? stress) {
+  Color _stressColor(double? stress) {
     if (stress == null) return HelioColors.textMuted;
     if (stress <= 40) return HelioColors.optimalGreen;
     if (stress <= 65) return HelioColors.recoveryMid;
     return HelioColors.recoveryLow;
   }
 
-  String _stressLabel(int? stress) {
+  String _stressLabel(double? stress) {
     if (stress == null) return 'NO DATA';
     if (stress <= 40) return 'LOW';
     if (stress <= 65) return 'MEDIUM';
@@ -166,7 +166,7 @@ class HomeStatusRow extends StatelessWidget {
     if (day.hrvRmssd != null) n++;
     if (day.spo2Avg != null) n++;
     if (day.stressAvg != null) n++;
-    if (day.tempAvgC != null) n++;
+    if (day.skinTempNightC != null) n++;
     return n;
   }
 
@@ -180,7 +180,7 @@ class HomeStatusRow extends StatelessWidget {
     if (spo2 != null && spo2 >= 95) n++;
     final stress = day.stressAvg;
     if (stress != null && stress <= 40) n++;
-    final temp = day.tempAvgC;
+    final temp = day.skinTempNightC;
     if (temp != null && temp >= 32 && temp <= 37) n++;
     return n;
   }

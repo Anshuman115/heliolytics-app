@@ -46,7 +46,7 @@ class SleepHypnogramPainter extends CustomPainter {
     for (final stage in stages) {
       final y = yFor(stage.kind.bandIndex);
       final x0 = xFor(stage.start);
-      final x1 = xFor(stage.end.add(const Duration(minutes: 1)));
+      final x1 = xFor(stage.end);
       final path = Path()
         ..moveTo(x0, baseline)
         ..lineTo(x0, y)

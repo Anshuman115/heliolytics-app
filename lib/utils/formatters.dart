@@ -83,9 +83,10 @@ String formatSleepDurationShort(int? mins) {
   return '$h:${m.toString().padLeft(2, '0')}';
 }
 
-String formatStrainDecimal(int? strain) {
-  if (strain == null) return '—';
-  return (strain / 10).toStringAsFixed(1);
+/// One decimal for TRIMP training load.
+String formatLoad(double? load) {
+  if (load == null) return '—';
+  return load.toStringAsFixed(1);
 }
 
 String formatSyncAgo(DateTime? at) {

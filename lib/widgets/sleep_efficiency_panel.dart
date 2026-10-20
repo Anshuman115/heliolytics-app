@@ -16,6 +16,7 @@ class SleepEfficiencyPanel extends StatelessWidget {
     required this.remMinutes,
     required this.lightMinutes,
     required this.stages,
+    this.efficiencyPct,
   });
 
   final int totalMinutes;
@@ -25,10 +26,12 @@ class SleepEfficiencyPanel extends StatelessWidget {
   final int lightMinutes;
   final List<SleepStagePoint> stages;
 
+  /// Server-computed efficiency. The client never recomputes the score.
+  final int? efficiencyPct;
+
   @override
   Widget build(BuildContext context) {
     final inBed = totalMinutes + awakeMinutes;
-    final efficiency = inBed == 0 ? null : (totalMinutes * 100 / inBed).round();
     final wakeEvents = stages
         .where((stage) => stage.kind == SleepStageKind.awake)
         .length;
@@ -48,7 +51,7 @@ class SleepEfficiencyPanel extends StatelessWidget {
         ),
         const SizedBox(height: HelioSpacing.md),
         Text(
-          efficiency == null ? 'N/A' : '$efficiency%',
+          efficiencyPct == null ? 'N/A' : '$efficiencyPct%',
           style: HelioTypography.scoreLarge.copyWith(fontSize: 40),
         ),
         const SizedBox(height: HelioSpacing.lg),

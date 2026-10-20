@@ -39,7 +39,7 @@ class HomeScreen extends ConsumerWidget {
           child: RefreshIndicator(
             onRefresh: () => ref
                 .read(healthDataRefreshCoordinatorProvider)
-                .refreshDay(dayKey, healthScores: true),
+                .refreshDay(dayKey),
             child: bundleAsync.when(
               loading: () => ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -55,7 +55,7 @@ class HomeScreen extends ConsumerWidget {
                     error: e,
                     onRetry: () => ref
                         .read(healthDataRefreshCoordinatorProvider)
-                        .retryDay(dayKey, healthScores: true),
+                        .retryDay(dayKey),
                   ),
                 ],
               ),
@@ -75,7 +75,7 @@ class HomeScreen extends ConsumerWidget {
     String dayKey,
   ) {
     final day = bundle.day;
-    if (day.steps == 0 && day.readiness == null && day.sleepScore == null) {
+    if (day == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(HelioSpacing.lg),

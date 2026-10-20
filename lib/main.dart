@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,13 +37,8 @@ Future<void> main() async {
 
   final store = SecureKeyStore();
 
-  //To get signing key and api url from env vars
-  final seedApiConfig =
-      kDebugMode ||
-      (defaultApiUrl.isNotEmpty && defaultApiSigningSecret.isNotEmpty);
-  if (seedApiConfig) {
-    await ApiConfigStorage(store).ensureDevDefaults();
-  }
+  // Clears v1 key slots once and seeds an optional build-time API origin.
+  await ApiConfigStorage(store).ensureDevDefaults();
 
   // Seed strap auth key and MAC from dart-define if provided
   if (defaultStrapAuthKey.isNotEmpty) {

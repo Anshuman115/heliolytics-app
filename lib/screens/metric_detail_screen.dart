@@ -73,6 +73,7 @@ class MetricDetailScreen extends ConsumerWidget {
       'readiness',
       'sleep',
       'pai',
+      'load',
     }.contains(definition.id);
     return Scaffold(
       appBar: HelioTopBar(
@@ -118,7 +119,7 @@ class MetricDetailScreen extends ConsumerWidget {
               stressSamples: detail.seriesFor(dayKey, 'stress'),
             ),
             const SizedBox(height: HelioSpacing.xxl),
-          ] else if (showRing) ...[
+          ] else if (showRing && day != null) ...[
             MetricDetailHero(definition: definition, day: day),
             const SizedBox(height: HelioSpacing.lg),
           ],
@@ -178,6 +179,7 @@ class MetricDetailScreen extends ConsumerWidget {
         'continuous_hr',
         'temperature',
         'pai',
+        'load',
         'avg_hr',
       }.contains(definition.id);
 
@@ -186,7 +188,6 @@ class MetricDetailScreen extends ConsumerWidget {
     'rhr',
     'resp_rate',
     'spo2',
-    'spo2_sleep',
     'temperature',
     'calories',
   }.contains(id);
@@ -198,10 +199,10 @@ class MetricDetailScreen extends ConsumerWidget {
     'hrv',
     'rhr',
     'spo2',
-    'spo2_sleep',
     'resp_rate',
     'temperature',
     'pai',
+    'load',
     'steps',
     'calories',
   }.contains(id);

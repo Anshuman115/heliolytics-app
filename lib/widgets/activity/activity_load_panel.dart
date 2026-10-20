@@ -27,7 +27,9 @@ class ActivityLoadPanel extends StatelessWidget {
           _row(
             icon: Icons.directions_walk_outlined,
             label: 'STEPS',
-            value: day.steps > 0 ? formatStepCount(day.steps) : 'No data',
+            value: day.steps == null || day.steps == 0
+                ? 'No data'
+                : formatStepCount(day.steps!),
             color: HelioColors.strainBlue,
           ),
           _divider(),
@@ -83,9 +85,6 @@ class ActivityLoadPanel extends StatelessWidget {
     );
   }
 
-  Widget _divider() => const Divider(
-    height: 1,
-    thickness: 1,
-    color: HelioColors.border,
-  );
+  Widget _divider() =>
+      const Divider(height: 1, thickness: 1, color: HelioColors.border);
 }

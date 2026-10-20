@@ -7,7 +7,13 @@ import 'package:talker/talker.dart';
 import 'package:talker_dio_logger/talker_dio_logger.dart';
 import 'package:heliolytics/utils/log_file_store.dart';
 
-const _hiddenHeaders = {'X-Heliolytics-Token', 'Authorization', 'Cookie'};
+const _hiddenHeaders = {
+  'X-Heliolytics-Auth',
+  'X-Heliolytics-Content-SHA256',
+  'Authorization',
+  'Cookie',
+  'api_key',
+};
 
 /// Process-wide logging: logcat via [log], HTTP via Talker on [createApiDio],
 /// persisted to disk (see [LogFileStore]) and replayed into [talker]'s
@@ -121,10 +127,12 @@ class _PersistingObserver extends TalkerObserver {
   @override
   void onLog(TalkerData log) {
     if (isReplaying()) return;
-    store.append(jsonEncode({
-      'ts': log.time.toIso8601String(),
-      'level': log.logLevel?.name ?? 'info',
-      'message': log.generateTextMessage(),
-    }));
+    store.append(
+      jsonEncode({
+        'ts': log.time.toIso8601String(),
+        'level': log.logLevel?.name ?? 'info',
+        'message': log.generateTextMessage(),
+      }),
+    );
   }
 }

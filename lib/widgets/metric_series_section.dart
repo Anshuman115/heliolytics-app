@@ -10,7 +10,7 @@ import 'package:heliolytics/widgets/minute_series_chart.dart';
 
 class MetricSeriesSection extends StatelessWidget {
   final MetricDef definition;
-  final DayMetric day;
+  final DayMetric? day;
   final List<HealthSample> samples;
 
   const MetricSeriesSection({
@@ -78,7 +78,9 @@ class MetricSeriesSection extends StatelessWidget {
   }
 
   String? _dailyValue() {
-    final value = definition.summaryValue(day);
+    final metric = day;
+    if (metric == null) return null;
+    final value = definition.summaryValue(metric);
     if (value == '—') return null;
     return definition.unit.isEmpty ? value : '$value ${definition.unit}';
   }

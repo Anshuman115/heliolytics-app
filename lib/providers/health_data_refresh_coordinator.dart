@@ -1,13 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/providers/activity_history_provider.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
-import 'package:heliolytics/providers/daily_health_scores_provider.dart';
 import 'package:heliolytics/providers/day_bundle_provider.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/providers/metric_trend_provider.dart';
 import 'package:heliolytics/providers/sync_status_provider.dart';
 import 'package:heliolytics/services/cache/daily_bundle_cache_storage.dart';
-import 'package:heliolytics/services/cache/daily_health_scores_cache_storage.dart';
 
 final healthDataRefreshCoordinatorProvider =
     Provider<HealthDataRefreshCoordinator>((ref) {
@@ -19,34 +20,20 @@ class HealthDataRefreshCoordinator {
 
   final Ref _ref;
 
-  void retryDay(
-    String dayKey, {
-    bool healthScores = false,
-    bool details = false,
-    bool trends = false,
-  }) {
+  void retryDay(String dayKey, {bool details = false, bool trends = false}) {
     _ref.invalidate(dayBundleProvider(dayKey));
-    if (healthScores) {
-      _ref.invalidate(dailyHealthScoresProvider(dayKey));
-    }
     if (details) _ref.invalidate(detailMetricsProvider(dayKey));
     if (trends) _ref.invalidate(metricTrendProvider);
   }
 
   Future<void> refreshDay(
     String dayKey, {
-    bool healthScores = false,
     bool details = false,
     bool trends = false,
   }) async {
     await _ref.read(dailyBundleCacheStorageProvider).delete(dayKey);
-    if (healthScores) {
-      await _ref.read(dailyHealthScoresCacheStorageProvider).delete(dayKey);
-    }
     final loads = <Future<void>>[
       _ref.refresh(dayBundleProvider(dayKey).future).then((_) {}),
-      if (healthScores)
-        _ref.refresh(dailyHealthScoresProvider(dayKey).future).then((_) {}),
       if (details)
         _ref.refresh(detailMetricsProvider(dayKey).future).then((_) {}),
     ];
@@ -59,6 +46,7 @@ class HealthDataRefreshCoordinator {
     await _ref.read(activityHistoryProvider.future);
   }
 
+  /// Runs after a confirmed upload or profile recomputation.
   Future<void> afterSync() async {
     try {
       await _clearDiskCaches();
@@ -76,14 +64,21 @@ class HealthDataRefreshCoordinator {
     _invalidateAllHealthData();
   }
 
-  Future<void> _clearDiskCaches() => Future.wait([
-    _ref.read(dailyBundleCacheStorageProvider).clear(),
-    _ref.read(dailyHealthScoresCacheStorageProvider).clear(),
-  ]);
+  Future<void> _clearDiskCaches() async {
+    await Future.wait([
+      _ref.read(dailyBundleCacheStorageProvider).clear(),
+      _clearLegacyScoresCache(),
+    ]);
+  }
+
+  /// Removes the deleted daily-health-scores blob without touching other prefs.
+  Future<void> _clearLegacyScoresCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(legacyDailyHealthScoresCacheKey);
+  }
 
   void _invalidateAllHealthData() {
     _ref.invalidate(dayBundleProvider);
-    _ref.invalidate(dailyHealthScoresProvider);
     _ref.invalidate(activityHistoryProvider);
     _ref.invalidate(detailMetricsProvider);
     _ref.invalidate(metricTrendProvider);

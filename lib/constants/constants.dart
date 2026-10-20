@@ -21,11 +21,11 @@ const Map<String, String> typeCodeLabels = {
   '0x12': 'Stress manual — not fetched',
   '0x13': 'Stress auto',
   '0x25': 'SpO2',
-  '0x26': 'SpO2 sleep',
+  '0x26': 'Sleep-breathing placeholders - raw only',
   '0x2C': 'Device metadata — not fetched (rejected)',
   '0x2E': 'Temperature',
   '0x38': 'Sleep resp rate',
-  '0x3A': 'Resting HR',
+  '0x3A': 'Not used - resting HR',
   '0x3D': 'Max HR — unparsed',
   '0x48': 'Sleep session',
   '0x49': 'HRV',
@@ -72,8 +72,8 @@ const Map<String, String> typeCodeLabels = {
   '0x35': 'probe-35',
   '0x36': 'probe-36',
   '0x37': 'probe-37',
-  '0x39': 'Daily readiness',
-  '0x3B': 'Daily summary — unparsed',
+  '0x39': 'Not used - daily readiness',
+  '0x3B': 'Training-load snapshot - not ingested',
   '0x3C': 'probe-3C',
   '0x3E': 'probe-3E',
   '0x3F': 'probe-3F',
@@ -269,15 +269,10 @@ const Map<String, String> typeCodeLabels = {
   '0xFF': 'probe-FF',
 };
 
-/// Build-time defaults — injected via `tool/build_apk.sh` / `--dart-define`.
-/// When both are set at build time, release installs seed secure storage on
-/// first launch (no manual Settings entry). Leave empty to configure in UI.
+/// Optional API origin seed from `--dart-define=API_URL=...` at build time.
+/// The API key is never seeded: it is entered through secure settings.
 const String defaultApiUrl = String.fromEnvironment(
   'API_URL',
-  defaultValue: '',
-);
-const String defaultApiSigningSecret = String.fromEnvironment(
-  'API_SIGNING_SECRET',
   defaultValue: '',
 );
 
@@ -299,14 +294,23 @@ const String strapMacStorageKey = 'heliolytics.strap_mac';
 const String strapSetupPendingStorageKey = 'heliolytics.strap_setup_pending';
 const String strapBatteryStorageKey = 'heliolytics.strap_battery';
 const String userProfileStorageKey = 'heliolytics.user_profile';
+const String userProfileSchemaKey = 'heliolytics.user_profile_schema';
+const int userProfileSchemaVersion = 2;
 const String onboardingCompleteStorageKey = 'heliolytics.onboarding_complete';
+
+/// Secure-storage slots for the API origin, phone key and key re-entry flag.
+const String apiBaseUrlStorageKey = 'api_base_url';
+const String apiKeyStorageKey = 'api_key_v2';
+const String apiKeyReentryStorageKey = 'api_key_needs_reentry';
 
 /// Hive box name for the per-day bundle cache (see DailyBundleCacheStorage).
 /// Opened once at app startup in main.dart.
 const String cachedDaysBoxName = 'cached_days_box';
 const String dailyBundleCacheSchemaKey = '__bundle_schema_version__';
-const int dailyBundleCacheSchemaVersion = 2;
-const String dailyHealthScoresCacheKey =
+
+/// Cache schema version. A stored mismatch clears every cached day bundle.
+const int dailyBundleCacheSchemaVersion = 3;
+const String legacyDailyHealthScoresCacheKey =
     'heliolytics.daily_health_scores_cache';
 
 /// Shown when strap sync is blocked until Cloud API is configured.
@@ -483,7 +487,6 @@ const int bandAlertsForegroundNotificationId = 41001;
 
 const int spo2HeaderByte = 0x02;
 const int spo2RecordSize = 65;
-const int readinessRecordSize = 569;
 const int napRecordStride = 9;
 const int napMinDurationSec = 45 * 60;
 const int napMinStartHourIst = 11;

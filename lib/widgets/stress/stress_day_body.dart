@@ -4,8 +4,8 @@ import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/health_sample.dart';
+import 'package:heliolytics/models/sleep_stage.dart';
 import 'package:heliolytics/utils/stress_zones.dart';
 import 'package:heliolytics/widgets/stress/stress_day_chart.dart';
 import 'package:heliolytics/widgets/stress/stress_gauge.dart';
@@ -16,7 +16,7 @@ import 'package:heliolytics/widgets/stress/stress_zone_split.dart';
 /// the time-in-band breakdown.
 class StressDayBody extends StatelessWidget {
   final List<HealthSample> samples;
-  final List<SleepMetric> sleepEntries;
+  final List<SleepSession> sleepEntries;
 
   const StressDayBody({
     super.key,
@@ -67,19 +67,14 @@ class StressDayBody extends StatelessWidget {
   List<HealthSample> _sleepSamples() {
     final windows = [
       for (final sleep in sleepEntries)
-        (
-          start: sleep.startedAt,
-          end: sleep.startedAt.add(
-            Duration(minutes: sleep.totalMins + sleep.wakeMins),
-          ),
-        ),
+        (start: sleep.startedAt, end: sleep.endedAt),
     ];
     return samples
         .where(
           (sample) => windows.any(
             (window) =>
                 !sample.sampledAt.isBefore(window.start) &&
-                !sample.sampledAt.isAfter(window.end),
+                sample.sampledAt.isBefore(window.end),
           ),
         )
         .toList();
@@ -89,10 +84,7 @@ class StressDayBody extends StatelessWidget {
   List<StressSpan> _sleepSpans() {
     return [
       for (final s in sleepEntries)
-        StressSpan(
-          start: s.startedAt,
-          end: s.startedAt.add(Duration(minutes: s.totalMins)),
-        ),
+        StressSpan(start: s.startedAt, end: s.endedAt),
     ];
   }
 

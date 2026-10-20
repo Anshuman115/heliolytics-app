@@ -2,24 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:heliolytics/utils/hr_chart_samples.dart';
+
 import 'package:heliolytics/constants/constants.dart';
-import 'package:heliolytics/utils/hr_zones.dart';
-import 'package:heliolytics/utils/sport_icons.dart';
-import 'package:heliolytics/utils/sport_labels.dart';
-import 'package:heliolytics/design_system/components/helio_surface_card.dart';
+import 'package:heliolytics/design_system/components/helio_bottom_nav.dart';
 import 'package:heliolytics/design_system/components/helio_empty_state.dart';
 import 'package:heliolytics/design_system/components/helio_loading.dart';
-import 'package:heliolytics/design_system/components/helio_bottom_nav.dart';
+import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/design_system/components/helio_top_bar.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/models/day_metric.dart';
-import 'package:heliolytics/models/hr_sample.dart';
 import 'package:heliolytics/models/activity_detail_payload.dart';
+import 'package:heliolytics/models/activity_metric.dart';
+import 'package:heliolytics/models/hr_sample.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/providers/health_data_refresh_coordinator.dart';
+import 'package:heliolytics/utils/hr_chart_samples.dart';
+import 'package:heliolytics/utils/hr_zones.dart';
+import 'package:heliolytics/utils/sport_icons.dart';
+import 'package:heliolytics/utils/sport_labels.dart';
 import 'package:heliolytics/widgets/hr_zone_bars.dart';
 import 'package:heliolytics/widgets/minute_series_chart.dart';
 
@@ -38,31 +39,20 @@ class ActivityDetailScreen extends ConsumerWidget {
         const Center(child: Text('Activity data unavailable')),
       );
     }
-    final w = payload.workout;
-    final s = payload.session;
-    final view = w != null
-        ? _WorkoutView(w)
-        : s != null
-        ? _SessionView(s)
-        : null;
-    if (view == null) {
-      return _shell(
-        context,
-        null,
-        const Center(child: Text('Activity not found')),
-      );
-    }
-
-    final detail = ref.watch(detailMetricsProvider(view.dayKey));
+    final activity = payload.activity;
+    final title = activity.sportName.isEmpty
+        ? sportLabel(activity.sportType)
+        : activity.sportName;
+    final detail = ref.watch(detailMetricsProvider(activity.dayKey));
     return _shell(
       context,
-      view.title,
+      title,
       _content(
-        view,
+        activity,
         detail,
         onRetry: () => ref
             .read(healthDataRefreshCoordinatorProvider)
-            .retryDay(view.dayKey, details: true),
+            .retryDay(activity.dayKey, details: true),
       ),
     );
   }
@@ -86,18 +76,18 @@ class ActivityDetailScreen extends ConsumerWidget {
   }
 
   Widget _content(
-    _ActivityView view,
+    ActivityMetric activity,
     AsyncValue<DetailMetrics> detail, {
     required VoidCallback onRetry,
   }) {
     final hr = detail.valueOrNull == null
         ? const <HeartRateSample>[]
         : _inWindow(
-            detail.valueOrNull!.heartRateFor(view.dayKey),
-            view.start,
-            view.durationSec,
+            detail.valueOrNull!.heartRateFor(activity.dayKey),
+            activity.startedAt,
+            activity.endedAt,
           );
-    final zones = computeHrZones(hr, maxHr: view.maxHr);
+    final zones = computeHrZones(hr, maxHr: activity.maxHr);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         HelioSpacing.lg,
@@ -106,9 +96,16 @@ class ActivityDetailScreen extends ConsumerWidget {
         shellContentBottomPadding,
       ),
       children: [
-        _header(view),
+        _header(activity),
         const SizedBox(height: HelioSpacing.xl),
-        _heroStats(view),
+        _heroStats(activity),
+        if (!activity.hasDetail) ...[
+          const SizedBox(height: HelioSpacing.lg),
+          Text(
+            'No recorded workout detail for this activity.',
+            style: HelioTypography.bodyMuted,
+          ),
+        ],
         if (detail.isLoading) ...[
           const SizedBox(height: HelioSpacing.xl),
           const HelioLoading(message: 'Loading heart-rate readings…'),
@@ -154,7 +151,7 @@ class ActivityDetailScreen extends ConsumerWidget {
             child: HrZoneBars(breakdown: zones),
           ),
         ],
-        if (view.keyStats.isNotEmpty) ...[
+        if (_keyStats(activity).isNotEmpty) ...[
           const SizedBox(height: HelioSpacing.xl),
           Text('KEY STATISTICS', style: HelioTypography.sectionTitle),
           const SizedBox(height: HelioSpacing.md),
@@ -162,12 +159,12 @@ class ActivityDetailScreen extends ConsumerWidget {
             height: 128,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: view.keyStats.length,
+              itemCount: _keyStats(activity).length,
               separatorBuilder: (_, __) =>
                   const SizedBox(width: HelioSpacing.sm),
               itemBuilder: (_, index) => SizedBox(
                 width: 205,
-                child: _StatCard(stat: view.keyStats[index]),
+                child: _StatCard(stat: _keyStats(activity)[index]),
               ),
             ),
           ),
@@ -176,7 +173,10 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _header(_ActivityView view) {
+  Widget _header(ActivityMetric activity) {
+    final title = activity.sportName.isEmpty
+        ? sportLabel(activity.sportType)
+        : activity.sportName;
     return Row(
       children: [
         Container(
@@ -190,38 +190,38 @@ class ActivityDetailScreen extends ConsumerWidget {
               width: 1.5,
             ),
           ),
-          child: Icon(view.icon, size: 26, color: HelioColors.strainBlue),
+          child: Icon(
+            sportIcon(activity.sportType, name: title),
+            size: 26,
+            color: HelioColors.strainBlue,
+          ),
         ),
         const SizedBox(width: HelioSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [Text(view.subtitle, style: HelioTypography.bodyMuted)],
+            children: [
+              Text(
+                '${activity.kind.label} · ${_timeRange(activity)}',
+                style: HelioTypography.bodyMuted,
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _heroStats(_ActivityView view) {
+  Widget _heroStats(ActivityMetric activity) {
     final stats = <_ActivityStat>[
-      if (view.avgHr != null)
-        _ActivityStat(Icons.favorite, 'Avg HR', '${view.avgHr}', 'bpm'),
+      if (activity.avgHr != null)
+        _ActivityStat(Icons.favorite, 'Avg HR', '${activity.avgHr}', 'bpm'),
       _ActivityStat(
         Icons.timer_outlined,
         'Duration',
-        _formatActivityDuration(view.durationSec),
+        _formatActivityDuration(activity.durationSec),
         '',
       ),
-      if (view.avgHr == null && view.calories != null)
-        _ActivityStat(
-          Icons.local_fire_department,
-          'Calories',
-          '${view.calories}',
-          'cal',
-        ),
-      if (view.avgHr == null && view.calories == null && view.maxHr != null)
-        _ActivityStat(Icons.trending_up, 'Max HR', '${view.maxHr}', 'bpm'),
     ];
     return Row(
       children: [
@@ -232,6 +232,22 @@ class ActivityDetailScreen extends ConsumerWidget {
       ],
     );
   }
+
+  List<_ActivityStat> _keyStats(ActivityMetric activity) => [
+    if (activity.maxHr != null)
+      _ActivityStat(Icons.trending_up, 'Max HR', '${activity.maxHr}', 'bpm'),
+    if (activity.minHr != null)
+      _ActivityStat(Icons.trending_down, 'Min HR', '${activity.minHr}', 'bpm'),
+    if (activity.calories != null)
+      _ActivityStat(
+        Icons.local_fire_department,
+        'Calories',
+        '${activity.calories}',
+        'cal',
+      ),
+    if (activity.steps != null)
+      _ActivityStat(Icons.directions_walk, 'Steps', '${activity.steps}', ''),
+  ];
 }
 
 String _formatActivityDuration(int seconds) {
@@ -239,20 +255,25 @@ String _formatActivityDuration(int seconds) {
   final minutes = (seconds % 3600) ~/ 60;
   final remaining = seconds % 60;
   if (hours > 0) {
-    return '$hours:${minutes.toString().padLeft(2, '0')}:${remaining.toString().padLeft(2, '0')}';
+    return '$hours:${minutes.toString().padLeft(2, '0')}:'
+        '${remaining.toString().padLeft(2, '0')}';
   }
   return '$minutes:${remaining.toString().padLeft(2, '0')}';
 }
 
+/// Half-open window: the start is included, the end is not.
 List<HeartRateSample> _inWindow(
   List<HeartRateSample> hr,
   DateTime start,
-  int durationSec,
-) {
-  final end = start.add(Duration(seconds: durationSec));
-  return hr
-      .where((h) => !h.sampledAt.isBefore(start) && !h.sampledAt.isAfter(end))
-      .toList();
+  DateTime end,
+) => hr
+    .where((h) => !h.sampledAt.isBefore(start) && h.sampledAt.isBefore(end))
+    .toList();
+
+String _timeRange(ActivityMetric activity) {
+  final fmt = DateFormat.jm();
+  return '${fmt.format(activity.startedAt.toLocal())} to '
+      '${fmt.format(activity.endedAt.toLocal())}';
 }
 
 class _ActivityStat {
@@ -341,97 +362,4 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
-}
-
-abstract class _ActivityView {
-  String get title;
-  String get subtitle;
-  String get dayKey;
-  DateTime get start;
-  int get durationSec;
-  int? get avgHr;
-  int? get maxHr;
-  int? get calories;
-  IconData get icon;
-  List<_ActivityStat> get keyStats;
-}
-
-String _timeRange(DateTime start, int durationSec) {
-  final fmt = DateFormat.jm();
-  final end = start.add(Duration(seconds: durationSec));
-  return '${fmt.format(start.toLocal())} – ${fmt.format(end.toLocal())}';
-}
-
-class _WorkoutView implements _ActivityView {
-  _WorkoutView(this.w);
-  final WorkoutMetric w;
-
-  @override
-  String get title =>
-      w.sportName.isNotEmpty ? w.sportName : sportLabel(w.sportType);
-  @override
-  String get subtitle => _timeRange(w.startedAt, w.durationSec);
-  @override
-  String get dayKey => w.dayKey;
-  @override
-  DateTime get start => w.startedAt;
-  @override
-  int get durationSec => w.durationSec;
-  @override
-  int? get avgHr => w.avgHr;
-  @override
-  int? get maxHr => w.maxHr;
-  @override
-  int? get calories => w.calories;
-  @override
-  IconData get icon => sportIcon(w.sportType, name: title);
-  @override
-  List<_ActivityStat> get keyStats => [
-    if (w.calories != null)
-      _ActivityStat(
-        Icons.local_fire_department,
-        'Calories',
-        '${w.calories}',
-        'cal',
-      ),
-    if (w.maxHr != null)
-      _ActivityStat(Icons.trending_up, 'Max HR', '${w.maxHr}', 'bpm'),
-  ];
-}
-
-class _SessionView implements _ActivityView {
-  _SessionView(this.s);
-  final ActivitySessionMetric s;
-
-  @override
-  String get title =>
-      s.sportName.isNotEmpty ? s.sportName : sportLabel(s.sportType);
-  @override
-  String get subtitle => _timeRange(s.startedAt, s.durationSec);
-  @override
-  String get dayKey => s.dayKey;
-  @override
-  DateTime get start => s.startedAt;
-  @override
-  int get durationSec => s.durationSec;
-  @override
-  int? get avgHr => s.avgHr;
-  @override
-  int? get maxHr => s.maxHr;
-  @override
-  int? get calories => s.calories;
-  @override
-  IconData get icon => sportIcon(s.sportType, name: title);
-  @override
-  List<_ActivityStat> get keyStats => [
-    if (s.calories != null)
-      _ActivityStat(
-        Icons.local_fire_department,
-        'Calories',
-        '${s.calories}',
-        'cal',
-      ),
-    if (s.maxHr != null)
-      _ActivityStat(Icons.trending_up, 'Max HR', '${s.maxHr}', 'bpm'),
-  ];
 }
