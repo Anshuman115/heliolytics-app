@@ -59,7 +59,6 @@ UI.md
 docs/*
 !docs/features/
 !docs/features/**
-.github/
 log.txt
 
 # Local-only dump / export folders (raw strap data, never commit)
