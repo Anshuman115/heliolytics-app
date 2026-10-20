@@ -6,7 +6,7 @@ ENV_FILE="${1:-build.env}"
 DEVICE_ID="${2:-}"
 
 if [[ ! -f "$ENV_FILE" ]]; then
-  echo "Missing $ENV_FILE. Copy build.env.example and fill secrets."
+  echo "Missing $ENV_FILE. Copy build.env.example and set the API origin."
   exit 1
 fi
 
@@ -16,13 +16,11 @@ source "$ENV_FILE"
 set +a
 
 : "${API_URL:?API_URL missing in $ENV_FILE}"
-: "${API_SIGNING_SECRET:?API_SIGNING_SECRET missing in $ENV_FILE}"
 
 args=(
   flutter run
   --no-pub
   --dart-define="API_URL=${API_URL}"
-  --dart-define="API_SIGNING_SECRET=${API_SIGNING_SECRET}"
 )
 
 if [[ -n "$DEVICE_ID" ]]; then

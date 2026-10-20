@@ -19,7 +19,7 @@ class MetricDetailHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = definition.id == 'readiness'
-        ? recoveryColorFor(day.readiness)
+        ? recoveryColorForBand(day.readinessBand)
         : definition.color;
     return Padding(
       padding: const EdgeInsets.only(bottom: HelioSpacing.xl),
@@ -41,6 +41,7 @@ class MetricDetailHero extends StatelessWidget {
     'readiness' => metricProgress(MetricKind.readiness, day.readiness),
     'sleep' => metricProgress(MetricKind.sleep, day.sleepScore),
     'pai' => metricProgress(MetricKind.pai, day.paiScore),
+    'load' => metricProgress(MetricKind.load, day.trainingLoad),
     _ => null,
   };
 }

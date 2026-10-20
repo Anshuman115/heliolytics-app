@@ -17,9 +17,9 @@ class ProfileHistorySection extends ConsumerWidget {
 
     final sleep = _max(history, (day) => day.sleepScore);
     final recovery = _max(history, (day) => day.readiness);
-    final strain = _max(history, (day) => day.paiScore);
+    final load = _maxDouble(history, (day) => day.trainingLoad);
     final activeDays = history.where(_hasActivity).length;
-    final steps = history.fold<int>(0, (sum, day) => sum + day.steps);
+    final steps = history.fold<int>(0, (sum, day) => sum + (day.steps ?? 0));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -50,10 +50,8 @@ class ProfileHistorySection extends ConsumerWidget {
                   ),
                   Expanded(
                     child: _Record(
-                      label: 'MAX STRAIN',
-                      value: strain == null
-                          ? '—'
-                          : (strain / 10).toStringAsFixed(1),
+                      label: 'MAX LOAD',
+                      value: load == null ? '—' : load.toStringAsFixed(1),
                       color: HelioColors.strainBlue,
                     ),
                   ),
@@ -110,8 +108,14 @@ class ProfileHistorySection extends ConsumerWidget {
     return values.reduce((a, b) => a > b ? a : b);
   }
 
+  double? _maxDouble(List<DayMetric> days, double? Function(DayMetric) read) {
+    final values = days.map(read).whereType<double>().toList();
+    if (values.isEmpty) return null;
+    return values.reduce((a, b) => a > b ? a : b);
+  }
+
   bool _hasActivity(DayMetric day) =>
-      day.steps > 0 || day.workoutCount > 0 || day.activitySessionCount > 0;
+      (day.steps ?? 0) > 0 || day.workoutCount > 0 || day.autoActivityCount > 0;
 
   String _formatSteps(int steps) {
     final value = steps.toString();

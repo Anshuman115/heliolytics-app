@@ -30,7 +30,23 @@ class ActivityOverviewBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = _items();
-    final dayKey = bundle.day.dayKey;
+    final day = bundle.day;
+    final dayKey = day?.dayKey ?? '';
+    if (day == null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          HelioSpacing.lg,
+          HelioSpacing.md,
+          HelioSpacing.lg,
+          shellContentBottomPadding,
+        ),
+        children: [
+          const SizedBox(height: HelioSpacing.sm),
+          _empty(),
+        ],
+      );
+    }
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
@@ -42,13 +58,13 @@ class ActivityOverviewBody extends StatelessWidget {
       children: [
         const SizedBox(height: HelioSpacing.sm),
         ActivityStrainHero(
-          day: bundle.day,
-          onTap: () => context.push('/metric/$dayKey/pai'),
+          day: day,
+          onTap: () => context.push('/metric/$dayKey/load'),
         ),
         const SizedBox(height: HelioSpacing.xl),
         StrainMetricSection(
-          definition: MetricCatalog.byId('pai')!,
-          day: bundle.day,
+          definition: MetricCatalog.byId('load')!,
+          day: day,
           heartRate: heartRate,
         ),
         const SizedBox(height: HelioSpacing.xxl),
@@ -65,7 +81,7 @@ class ActivityOverviewBody extends StatelessWidget {
         Text('WEEKLY TRENDS', style: HelioTypography.sectionTitle),
         const SizedBox(height: HelioSpacing.md),
         MetricTrendSection(
-          definition: MetricCatalog.byId('pai')!,
+          definition: MetricCatalog.byId('load')!,
           anchorDayKey: dayKey,
         ),
       ],
@@ -73,12 +89,8 @@ class ActivityOverviewBody extends StatelessWidget {
   }
 
   List<ActivityFeedItem> _items() {
-    final items = <ActivityFeedItem>[
-      for (final workout in bundle.workouts) ActivityFeedItem.workout(workout),
-      for (final session in bundle.activitySessions)
-        ActivityFeedItem.session(session),
-    ];
-    items.sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    final items = bundle.activities.map(ActivityFeedItem.new).toList()
+      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
     return items;
   }
 

@@ -6,6 +6,7 @@ import 'package:heliolytics/services/ble/sync_orchestrator_refetch.dart';
 import 'package:heliolytics/services/ble/sync_session_log.dart';
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/services/session_store.dart';
+import 'package:heliolytics/utils/error_messages.dart';
 import 'package:heliolytics/models/sync_payload.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/models/band_session_state.dart';
@@ -87,7 +88,6 @@ Future<void> orchestratorRefetch({
   required SyncSessionLog sessionLog,
   required bool connecting,
   required SessionSnapshot Function() readState,
-  required SyncPayload? lastPayload,
   required void Function(SessionSnapshot) emit,
   required void Function(SyncPayload?) setPayload,
   required void Function(bool) setConnecting,
@@ -139,7 +139,6 @@ Future<void> orchestratorRefetch({
       store: store,
       sessionLog: sessionLog,
       codeStr: codeStr,
-      lastPayload: lastPayload,
       setPayload: setPayload,
       emit: emit,
     );
@@ -167,18 +166,18 @@ Future<void> orchestratorRetryUpload({
   final p = lastPayload;
   if (p == null) throw StateError('No session in memory — sync first');
   try {
-    await SyncCommitter.fromRef(ref, sessionLog.log).commit(p);
+    final result = await SyncCommitter.fromRef(ref, sessionLog.log).commit(p);
+    emit(state.copyWith(logs: sessionLog.logs, lastIngestResult: result));
   } catch (e) {
     emit(
       state.copyWith(
         state: SessionState.error,
-        lastErrorMessage: 'Cloud upload failed: $e',
+        lastErrorMessage: 'Cloud upload failed: ${friendlyError(e)}',
         logs: sessionLog.logs,
       ),
     );
     rethrow;
   }
-  emit(state.copyWith(logs: sessionLog.logs));
 }
 
 Future<void> orchestratorAutoConnect({

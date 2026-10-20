@@ -22,14 +22,13 @@ class HomeTopBar extends ConsumerWidget {
     final battery = ref.watch(syncStatusProvider).valueOrNull?.batteryPercent;
     final day = ref.watch(dayBundleProvider(dayKey)).valueOrNull?.day;
     final connected = ref.watch(bandSessionProvider).isConnected;
+    final load = day?.trainingLoad;
 
     return HelioTopBar(
       safeTop: false,
       showProfile: true,
       profileLabel: _initials(name),
-      profileMetricLabel: day?.paiScore == null
-          ? null
-          : (day!.paiScore! / 10).toStringAsFixed(1),
+      profileMetricLabel: load?.toStringAsFixed(1),
       onProfile: () => context.push('/profile/view'),
       dayLabel: formatNavDayLabel(dayKey),
       onPrevDay: () => shiftSelectedDay(ref, -1),

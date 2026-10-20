@@ -28,7 +28,7 @@ class HomeActivitiesSection extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                bundle.day.dayKey == todayDayKey()
+                bundle.day?.dayKey == todayDayKey()
                     ? "TODAY'S ACTIVITIES"
                     : 'ACTIVITIES',
                 style: HelioTypography.capsLabel.copyWith(fontSize: 11),
@@ -64,10 +64,8 @@ class HomeActivitiesSection extends StatelessWidget {
   }
 
   List<ActivityFeedItem> _activities() {
-    final items = [
-      ...bundle.workouts.map(ActivityFeedItem.workout),
-      ...bundle.activitySessions.map(ActivityFeedItem.session),
-    ]..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    final items = bundle.activities.map(ActivityFeedItem.new).toList()
+      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
     return items.take(2).toList();
   }
 }

@@ -9,6 +9,7 @@ import 'package:heliolytics/services/ble/auth/auth_key_store.dart';
 import 'package:heliolytics/services/cache/daily_bundle_cache_storage.dart';
 import 'package:heliolytics/services/config/api_config_storage.dart';
 import 'package:heliolytics/services/metrics_api_client.dart';
+import 'package:heliolytics/utils/day_key.dart';
 
 void main() {
   test('a failed bundle fetch never writes the historical cache', () async {
@@ -31,6 +32,27 @@ void main() {
     );
     expect(cache.writeCount, 0);
   });
+
+  test('today bypasses the cache and a closed day does not', () async {
+    final cache = _RecordingBundleCache();
+    final container = ProviderContainer(
+      overrides: [
+        apiConfiguredProvider.overrideWith((ref) async => true),
+        dailyBundleCacheStorageProvider.overrideWithValue(cache),
+        metricsApiClientProvider.overrideWithValue(_EmptyMetricsApiClient()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final today = todayDayKey();
+    await container.read(dayBundleProvider(today).future);
+    expect(cache.readCount, 0);
+    expect(cache.writeCount, 0);
+
+    await container.read(dayBundleProvider(shiftDayKey(today, -1)).future);
+    expect(cache.readCount, 1);
+    expect(cache.writeCount, 1);
+  });
 }
 
 class _ThrowingMetricsApiClient extends MetricsApiClient {
@@ -45,14 +67,26 @@ class _ThrowingMetricsApiClient extends MetricsApiClient {
 
 class _RecordingBundleCache extends DailyBundleCacheStorage {
   int writeCount = 0;
+  int readCount = 0;
 
   @override
-  Future<DayBundle?> read(String dayKey) async => null;
+  Future<DayBundle?> read(String dayKey) async {
+    readCount++;
+    return null;
+  }
 
   @override
   Future<void> write(String dayKey, DayBundle bundle) async {
     writeCount++;
   }
+}
+
+class _EmptyMetricsApiClient extends MetricsApiClient {
+  _EmptyMetricsApiClient()
+    : super(ApiConfigStorage(_EmptyAuthKeyStore()), dio: Dio());
+
+  @override
+  Future<DayBundle> fetchDayBundle(String dayKey) async => const DayBundle();
 }
 
 class _EmptyAuthKeyStore implements AuthKeyStore {

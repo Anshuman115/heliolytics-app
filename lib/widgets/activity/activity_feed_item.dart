@@ -1,42 +1,21 @@
 import 'package:heliolytics/models/activity_detail_payload.dart';
-import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/activity_metric.dart';
 import 'package:heliolytics/utils/sport_labels.dart';
 
+/// Feed row for either activity kind.
 class ActivityFeedItem {
-  const ActivityFeedItem({
-    required this.title,
-    required this.startedAt,
-    required this.durationSec,
-    required this.sportType,
-    required this.isWorkout,
-    required this.payload,
-  });
+  const ActivityFeedItem(this.activity);
 
-  factory ActivityFeedItem.workout(WorkoutMetric item) => ActivityFeedItem(
-    title: item.sportName.isEmpty ? sportLabel(item.sportType) : item.sportName,
-    startedAt: item.startedAt,
-    durationSec: item.durationSec,
-    sportType: item.sportType,
-    isWorkout: true,
-    payload: ActivityDetailPayload.workout(item),
-  );
+  final ActivityMetric activity;
 
-  factory ActivityFeedItem.session(ActivitySessionMetric item) =>
-      ActivityFeedItem(
-        title: item.sportName.isEmpty
-            ? sportLabel(item.sportType)
-            : item.sportName,
-        startedAt: item.startedAt,
-        durationSec: item.durationSec,
-        sportType: item.sportType,
-        isWorkout: false,
-        payload: ActivityDetailPayload.session(item),
-      );
+  String get title => activity.sportName.isEmpty
+      ? sportLabel(activity.sportType)
+      : activity.sportName;
+  DateTime get startedAt => activity.startedAt;
+  int get durationSec => activity.durationSec;
+  int get sportType => activity.sportType;
+  bool get isWorkout => activity.isWorkout;
+  ActivityDetailPayload get payload => ActivityDetailPayload(activity);
 
-  final String title;
-  final DateTime startedAt;
-  final int durationSec;
-  final int sportType;
-  final bool isWorkout;
-  final ActivityDetailPayload payload;
+  String get kindLabel => isWorkout ? 'WORKOUT' : 'AUTO DETECTED';
 }

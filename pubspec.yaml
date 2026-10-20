@@ -43,13 +43,6 @@ dependencies:
   # Auth (secure storage)
   flutter_secure_storage: ^9.0.0
 
-  # Local cache for parsed backend responses (non-sensitive display data —
-  # see CLAUDE.md "on-device persistence" note). shared_preferences for
-  # small single-blob caches (daily health scores); hive for the day-bundle
-  # cache, which needs real per-key read/write instead of decoding one
-  # ever-growing JSON blob on every access.
-  shared_preferences: ^2.3.0
-
   # Networking
   dio: ^5.7.0
   fl_chart: ^0.69.0

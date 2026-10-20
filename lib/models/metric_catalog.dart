@@ -16,6 +16,7 @@ class MetricCatalog {
     'spo2',
     'temperature',
     'pai',
+    'load',
     'steps',
   ];
 
@@ -71,13 +72,15 @@ class MetricCatalog {
     'rhr': MetricDef(
       id: 'rhr',
       title: 'Resting HR',
-      seriesKey: 'rhr',
+      seriesKey: null,
       color: HelioMetricColors.restingHr,
       icon: Icons.monitor_heart,
       unit: 'bpm',
-      note: 'Resting heart-rate readings through the day.',
+      note: 'Lowest five-minute mean heart rate during main sleep.',
       detail:
-          'Elevated RHR vs your baseline can signal illness, poor sleep, or accumulated fatigue.',
+          'Compared with your own nights, a sustained rise can accompany '
+          'illness, poor sleep, or accumulated fatigue. '
+          'It is not a diagnosis.',
     ),
     'continuous_hr': MetricDef(
       id: 'continuous_hr',
@@ -86,10 +89,10 @@ class MetricCatalog {
       color: HelioMetricColors.restingHr,
       icon: Icons.favorite,
       unit: 'bpm',
-      note:
-          'Continuous PPG heart rate (~1/sec) when the strap records a session.',
+      note: 'Minute heart rate from strap type 0x01.',
       detail:
-          'Synced from strap type 0x46. Gaps are normal when continuous monitoring was off.',
+          'The backend stores one heart-rate value per measured minute. '
+          'Gaps mean the strap measured nothing in those minutes.',
     ),
     'spo2': MetricDef(
       id: 'spo2',
@@ -102,21 +105,10 @@ class MetricCatalog {
       detail:
           'Typical healthy range is 95–100%. Sustained dips warrant medical follow-up.',
     ),
-    'spo2_sleep': MetricDef(
-      id: 'spo2_sleep',
-      title: 'SpO₂ sleep',
-      seriesKey: 'spo2_sleep',
-      color: HelioMetricColors.spo2,
-      icon: Icons.nights_stay,
-      unit: '%',
-      note: 'Overnight blood oxygen during sleep.',
-      detail:
-          'Useful for spotting breathing disturbances. Compare night-to-night trends.',
-    ),
     'resp_rate': MetricDef(
       id: 'resp_rate',
       title: 'Respiratory rate',
-      seriesKey: 'resp_rate',
+      seriesKey: 'resp',
       color: HelioMetricColors.spo2,
       icon: Icons.air,
       unit: 'br/min',
@@ -137,14 +129,28 @@ class MetricCatalog {
     ),
     'pai': MetricDef(
       id: 'pai',
-      title: 'Strain',
+      title: 'PAI',
       seriesKey: null,
       color: HelioMetricColors.pai,
       icon: Icons.local_fire_department,
       unit: '',
-      note: 'Personal Activity Intelligence — weekly cardio load score.',
+      note: 'Personal Activity Intelligence score from the strap.',
       detail:
-          'Strain reflects elevated heart rate and daily movement. Use the 7-day trend to balance activity and recovery.',
+          'PAI is the device score for cardiovascular activity. '
+          'It is separate from the Banister TRIMP training load.',
+    ),
+    'load': const MetricDef(
+      id: 'load',
+      title: 'Training load',
+      seriesKey: null,
+      color: HelioMetricColors.pai,
+      icon: Icons.fitness_center,
+      unit: '',
+      note: 'Banister TRIMP from measured minute heart rate.',
+      detail:
+          'TRIMP weights each minute by heart-rate reserve relative to your '
+          'estimated maximum and resting heart rate. '
+          'Missing birth date or sex leaves load unavailable.',
     ),
     'steps': MetricDef(
       id: 'steps',
@@ -157,26 +163,17 @@ class MetricCatalog {
       detail:
           'Includes walking and general movement from the strap accelerometer pipeline.',
     ),
-    'vo2max': MetricDef(
-      id: 'vo2max',
-      title: 'VO2 Max',
-      seriesKey: null,
-      color: HelioMetricColors.pai,
-      icon: Icons.speed,
-      unit: '',
-      note: 'Estimated aerobic fitness.',
-      detail: 'VO2 Max estimation is not yet available from the backend.',
-    ),
     'calories': MetricDef(
       id: 'calories',
-      title: 'Calories',
+      title: 'Workout calories',
       seriesKey: null,
       color: HelioMetricColors.pai,
       icon: Icons.local_fire_department,
       unit: 'kcal',
-      note: 'Total calories burned for the day.',
+      note: 'Calories recorded by strap workouts for the day.',
       detail:
-          'Calories are the total workout calories recorded for the calendar day.',
+          'Only recorded workouts report calories. '
+          'This is not total daily energy expenditure.',
     ),
     'avg_hr': MetricDef(
       id: 'avg_hr',
@@ -197,7 +194,8 @@ class MetricCatalog {
       icon: Icons.percent,
       unit: '%',
       note: 'Share of time in bed spent asleep.',
-      detail: 'Sleep efficiency is not yet available from the backend.',
+      detail:
+          'Computed by the backend as sleep minutes divided by time in bed.',
     ),
     'sleep_debt': MetricDef(
       id: 'sleep_debt',
@@ -256,22 +254,25 @@ class MetricDef {
   String summaryValue(DayMetric day) => switch (id) {
     'readiness' => day.readiness != null ? '${day.readiness}%' : '—',
     'sleep' => _i(day.sleepScore),
-    'stress' => _i(day.stressAvg),
-    'hrv' => day.hrvRmssd != null ? '${day.hrvRmssd}' : '—',
-    'rhr' => day.restingHr != null ? '${day.restingHr}' : '—',
-    'resp_rate' => day.respRateAvg != null ? '${day.respRateAvg}' : '—',
-    'continuous_hr' => '—',
-    'spo2' => day.spo2Avg != null ? '${day.spo2Avg}' : '—',
-    'spo2_sleep' => day.spo2Avg != null ? '${day.spo2Avg}' : '—',
-    'pai' =>
-      day.paiScore != null ? (day.paiScore! / 10).toStringAsFixed(1) : '—',
-    'steps' => '${day.steps}',
-    'temperature' =>
-      day.tempAvgC != null ? day.tempAvgC!.toStringAsFixed(1) : '—',
+    'stress' => _d(day.stressAvg, 1),
+    'hrv' => _d(day.hrvRmssd, 1),
+    'rhr' => _d(day.restingHr, 1),
+    'resp_rate' => _d(day.respRate, 1),
+    'continuous_hr' => _d(day.avgHr, 1),
+    'spo2' => _d(day.spo2Avg, 1),
+    'pai' => _i(day.paiScore),
+    'load' => _d(day.trainingLoad, 1),
+    'steps' => _i(day.steps),
+    'temperature' => _d(day.skinTempNightC, 2),
+    'calories' => _i(day.workoutCalories),
+    'avg_hr' => _d(day.avgHr, 1),
     _ => '—',
   };
 
   String _i(int? v) => v?.toString() ?? '—';
+
+  String _d(double? v, int decimals) =>
+      v == null ? '—' : v.toStringAsFixed(decimals);
 }
 
 class MetricStats {

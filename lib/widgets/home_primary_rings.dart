@@ -20,8 +20,8 @@ class HomePrimaryRings extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strain = day.paiScore;
-    final recoveryColor = recoveryColorFor(day.readiness);
+    final load = day.trainingLoad;
+    final recoveryColor = recoveryColorForBand(day.readinessBand);
 
     return Padding(
       padding: const EdgeInsets.only(
@@ -55,11 +55,11 @@ class HomePrimaryRings extends StatelessWidget {
               ),
               Expanded(
                 child: _ring(
-                  progress: metricProgress(MetricKind.pai, strain),
-                  label: 'Strain',
-                  value: formatStrainDecimal(strain),
+                  progress: metricProgress(MetricKind.load, load),
+                  label: 'Load',
+                  value: formatLoad(load),
                   color: HelioColors.strainBlue,
-                  onTap: () => onRingTap('pai'),
+                  onTap: () => onRingTap('load'),
                 ),
               ),
             ],

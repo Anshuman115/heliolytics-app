@@ -113,9 +113,9 @@ class HomeMyDaySection extends StatelessWidget {
   String get _summary {
     final sleep = day.sleepScore == null ? '--' : '${day.sleepScore}%';
     final recovery = day.readiness == null ? '--' : '${day.readiness}%';
-    final strain = day.paiScore == null
+    final load = day.trainingLoad == null
         ? '--'
-        : (day.paiScore! / 10).toStringAsFixed(1);
-    return 'Sleep $sleep  |  Recovery $recovery  |  Strain $strain';
+        : day.trainingLoad!.toStringAsFixed(1);
+    return 'Sleep $sleep  |  Recovery $recovery  |  Load $load';
   }
 }

@@ -1,9 +1,8 @@
-import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/activity_metric.dart';
 
+/// One complete activity, used by the activity detail route.
 class ActivityDetailPayload {
-  const ActivityDetailPayload.workout(this.workout) : session = null;
-  const ActivityDetailPayload.session(this.session) : workout = null;
+  const ActivityDetailPayload(this.activity);
 
-  final WorkoutMetric? workout;
-  final ActivitySessionMetric? session;
+  final ActivityMetric activity;
 }

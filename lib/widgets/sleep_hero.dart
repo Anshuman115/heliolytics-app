@@ -4,7 +4,7 @@ import 'package:heliolytics/design_system/components/helio_notched_card.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/models/health_sample.dart';
-import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/sleep_stage.dart';
 import 'package:heliolytics/widgets/sleep_performance_bars.dart';
 import 'package:heliolytics/models/day_bundle.dart';
 
@@ -22,10 +22,9 @@ class SleepHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final day = bundle.day;
     final sleep = bundle.mainSleep;
-    final score = day.sleepScore ?? sleep?.score;
-    final mins = day.sleepMins ?? sleep?.totalMins;
+    final score = day?.sleepScore ?? sleep?.score;
+    final mins = day?.sleepMins ?? sleep?.totalMins;
     final progress = score != null ? score / 100.0 : null;
-    final sleepEfficiency = _sleepEfficiency(sleep?.totalMins, sleep?.wakeMins);
     final highSleepStress = _highSleepStress(sleep);
 
     return Column(
@@ -50,7 +49,7 @@ class SleepHero extends StatelessWidget {
             children: [
               SleepPerformanceBars(
                 sleepMins: mins,
-                sleepEfficiency: sleepEfficiency,
+                sleepEfficiency: day?.sleepEfficiencyPct,
                 highSleepStress: highSleepStress,
               ),
             ],
@@ -60,23 +59,14 @@ class SleepHero extends StatelessWidget {
     );
   }
 
-  int? _sleepEfficiency(int? asleepMins, int? wakeMins) {
-    if (asleepMins == null || wakeMins == null) return null;
-    final timeInBed = asleepMins + wakeMins;
-    if (timeInBed <= 0) return null;
-    return ((asleepMins / timeInBed) * 100).round().clamp(0, 100);
-  }
-
-  int? _highSleepStress(SleepMetric? sleep) {
+  /// Share of overnight stress samples at or above 80, from real 0x13 points.
+  int? _highSleepStress(SleepSession? sleep) {
     if (sleep == null || stressSamples.isEmpty) return null;
-    final end = sleep.startedAt.add(
-      Duration(minutes: sleep.totalMins + sleep.wakeMins),
-    );
     final overnight = stressSamples
         .where(
           (sample) =>
               !sample.sampledAt.isBefore(sleep.startedAt) &&
-              !sample.sampledAt.isAfter(end),
+              sample.sampledAt.isBefore(sleep.endedAt),
         )
         .toList();
     if (overnight.isEmpty) return null;

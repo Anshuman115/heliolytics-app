@@ -1,54 +1,49 @@
+import 'package:heliolytics/models/activity_metric.dart';
 import 'package:heliolytics/models/day_metric.dart';
-import 'package:heliolytics/utils/day_key.dart';
+import 'package:heliolytics/models/sleep_stage.dart';
 
+/// Everything the selected day shows, from three C3 endpoints.
 class DayBundle {
-  final DayMetric day;
-  final List<SleepMetric> sleep;
-  final List<WorkoutMetric> workouts;
-  final List<ActivitySessionMetric> activitySessions;
+  const DayBundle({this.day, this.sleep, this.activities = const []});
 
-  const DayBundle({
-    required this.day,
-    this.sleep = const [],
-    this.workouts = const [],
-    this.activitySessions = const [],
-  });
+  /// Null when the server has no supported metrics for the day.
+  final DayMetric? day;
+  final SleepDay? sleep;
+  final List<ActivityMetric> activities;
 
-  bool get isFinal => isFinalDayKey(day.dayKey);
+  bool get hasData =>
+      day != null || (sleep?.hasAnySession ?? false) || activities.isNotEmpty;
 
-  /// The main overnight sleep for the day (not a nap), if any.
-  SleepMetric? get mainSleep {
-    SleepMetric? best;
-    for (final s in sleep) {
-      if (s.isNap) continue;
-      if (best == null || s.score > best.score) best = s;
-    }
-    return best;
-  }
+  SleepSession? get mainSleep => sleep?.main;
 
-  List<SleepMetric> get naps => sleep.where((s) => s.isNap).toList();
+  List<SleepSession> get naps => sleep?.naps ?? const [];
 
   Map<String, dynamic> toJson() => {
-    'day': day.toJson(),
-    'sleep': sleep.map((s) => s.toJson()).toList(),
-    'workouts': workouts.map((w) => w.toJson()).toList(),
-    'activitySessions': activitySessions.map((a) => a.toJson()).toList(),
+    'day': day?.toJson(),
+    'sleep': sleep?.toJson(),
+    'activities': activities.map((a) => a.toJson()).toList(),
   };
 
-  factory DayBundle.fromJson(Map<String, dynamic> j) => DayBundle(
-    day: DayMetric.fromJson(Map<String, dynamic>.from(j['day'] as Map)),
-    sleep: (j['sleep'] as List<dynamic>? ?? [])
-        .map((e) => SleepMetric.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList(),
-    workouts: (j['workouts'] as List<dynamic>? ?? [])
-        .map((e) => WorkoutMetric.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList(),
-    activitySessions: (j['activitySessions'] as List<dynamic>? ?? [])
-        .map(
-          (e) => ActivitySessionMetric.fromJson(
-            Map<String, dynamic>.from(e as Map),
-          ),
-        )
-        .toList(),
-  );
+  factory DayBundle.fromJson(Map<String, dynamic> j) {
+    final rawDay = j['day'];
+    final rawSleep = j['sleep'];
+    final rawActivities = j['activities'];
+    return DayBundle(
+      day: rawDay is Map
+          ? DayMetric.fromJson(Map<String, dynamic>.from(rawDay))
+          : null,
+      sleep: rawSleep is Map
+          ? SleepDay.fromJson(Map<String, dynamic>.from(rawSleep))
+          : null,
+      activities: rawActivities is List
+          ? rawActivities
+                .map(
+                  (e) => ActivityMetric.fromJson(
+                    Map<String, dynamic>.from(e as Map),
+                  ),
+                )
+                .toList()
+          : const [],
+    );
+  }
 }

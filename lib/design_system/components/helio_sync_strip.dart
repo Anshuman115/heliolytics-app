@@ -4,6 +4,7 @@ import 'package:heliolytics/models/session_state.dart';
 import 'package:heliolytics/providers/backfill_days_provider.dart';
 import 'package:heliolytics/providers/sync_orchestrator.dart';
 import 'package:heliolytics/constants/constants.dart';
+import 'package:heliolytics/services/ble/sync_type_catalog.dart';
 import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
@@ -82,7 +83,7 @@ class HelioSyncStrip extends ConsumerWidget {
   String _fetchLabel(SessionSnapshot snap, int? backfillDays) {
     final code = snap.currentTypeCode;
     final done = snap.typeResults.length;
-    final total = fetchTypeCodes.length;
+    final total = productionFetchTypeCodes.length;
     final typeName = code != null ? (typeCodeLabels[code] ?? 'data') : 'data';
     final base = 'Syncing strap · $typeName ($done/$total)';
     if (done == 0 && backfillDays != null) {

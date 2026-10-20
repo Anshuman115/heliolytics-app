@@ -1,11 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:heliolytics/models/daily_health_scores.dart';
+
 import 'package:heliolytics/models/day_bundle.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/providers/activity_history_provider.dart';
 import 'package:heliolytics/providers/api_config_form_provider.dart';
-import 'package:heliolytics/providers/daily_health_scores_provider.dart';
 import 'package:heliolytics/providers/day_bundle_provider.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/providers/health_data_refresh_coordinator.dart';
@@ -14,10 +13,17 @@ import 'package:heliolytics/providers/sync_status_provider.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_store.dart';
 import 'package:heliolytics/services/cache/daily_bundle_cache_storage.dart';
-import 'package:heliolytics/services/cache/daily_health_scores_cache_storage.dart';
+
+const _key =
+    'phone.000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f';
+
+DayMetric _day(String key) =>
+    DayMetric(dayKey: key, updatedAt: DateTime.utc(2026, 8, 2));
 
 void main() {
-  test('refresh deletes the selected historical cache entries first', () async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('refresh deletes the selected historical cache entry first', () async {
     const dayKey = '2026-08-01';
     final events = <String>[];
     final container = ProviderContainer(
@@ -25,16 +31,9 @@ void main() {
         dailyBundleCacheStorageProvider.overrideWithValue(
           _RecordingBundleCache(events),
         ),
-        dailyHealthScoresCacheStorageProvider.overrideWithValue(
-          _RecordingScoresCache(events),
-        ),
         dayBundleProvider.overrideWith((ref, key) async {
           events.add('bundle-load:$key');
-          return DayBundle(day: DayMetric(dayKey: key, steps: 0));
-        }),
-        dailyHealthScoresProvider.overrideWith((ref, key) async {
-          events.add('scores-load:$key');
-          return DailyHealthScores.empty(key);
+          return DayBundle(day: _day(key));
         }),
       ],
     );
@@ -42,14 +41,9 @@ void main() {
 
     await container
         .read(healthDataRefreshCoordinatorProvider)
-        .refreshDay(dayKey, healthScores: true);
+        .refreshDay(dayKey);
 
-    expect(events, [
-      'bundle-delete:$dayKey',
-      'scores-delete:$dayKey',
-      'bundle-load:$dayKey',
-      'scores-load:$dayKey',
-    ]);
+    expect(events, ['bundle-delete:$dayKey', 'bundle-load:$dayKey']);
   });
 
   test('config change clears caches before invalidating health data', () async {
@@ -59,7 +53,7 @@ void main() {
     void built(String name) => builds[name] = (builds[name] ?? 0) + 1;
     final store = _MemoryAuthKeyStore({
       'api_base_url': 'https://old.example',
-      'signing_secret': 'old-secret',
+      'api_key': _key,
     }, events);
     final container = ProviderContainer(
       overrides: [
@@ -67,16 +61,9 @@ void main() {
         dailyBundleCacheStorageProvider.overrideWithValue(
           _RecordingBundleCache(events),
         ),
-        dailyHealthScoresCacheStorageProvider.overrideWithValue(
-          _RecordingScoresCache(events),
-        ),
         dayBundleProvider.overrideWith((ref, key) async {
           built('bundle');
-          return DayBundle(day: DayMetric(dayKey: key, steps: 0));
-        }),
-        dailyHealthScoresProvider.overrideWith((ref, key) async {
-          built('scores');
-          return DailyHealthScores.empty(key);
+          return DayBundle(day: _day(key));
         }),
         activityHistoryProvider.overrideWith((ref) async {
           built('history');
@@ -105,22 +92,47 @@ void main() {
 
     await container
         .read(apiConfigFormProvider.notifier)
-        .save('https://new.example', 'new-secret');
+        .save('https://new.example', _key);
 
     final firstWrite = events.indexWhere((event) => event.startsWith('write:'));
-    expect(events.take(firstWrite).toSet(), {'bundle-clear', 'scores-clear'});
+    expect(firstWrite, isNonNegative);
+    expect(events.take(firstWrite).toSet(), {'bundle-clear'});
     expect(store.values['api_base_url'], 'https://new.example');
-    expect(store.values['signing_secret'], 'new-secret');
+    expect(store.values['api_key'], _key);
 
     await _loadHealthData(container, dayKey);
     expect(builds.values, everyElement(2));
+  });
+
+  test('saving an invalid key fails before touching caches', () async {
+    final events = <String>[];
+    final store = _MemoryAuthKeyStore({
+      'api_base_url': 'https://old.example',
+      'api_key': _key,
+    }, events);
+    final container = ProviderContainer(
+      overrides: [
+        authKeyStoreProvider.overrideWithValue(store),
+        dailyBundleCacheStorageProvider.overrideWithValue(
+          _RecordingBundleCache(events),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await expectLater(
+      container
+          .read(apiConfigFormProvider.notifier)
+          .save('https://new.example', _key.replaceFirst('phone', 'web')),
+      throwsA(anything),
+    );
+    expect(events, isEmpty);
   });
 }
 
 Future<void> _loadHealthData(ProviderContainer container, String dayKey) async {
   await Future.wait<dynamic>([
     container.read(dayBundleProvider(dayKey).future),
-    container.read(dailyHealthScoresProvider(dayKey).future),
     container.read(activityHistoryProvider.future),
     container.read(detailMetricsProvider(dayKey).future),
     container.read(metricTrendProvider(7).future),
@@ -138,18 +150,6 @@ class _RecordingBundleCache extends DailyBundleCacheStorage {
   @override
   Future<void> delete(String dayKey) async =>
       events.add('bundle-delete:$dayKey');
-}
-
-class _RecordingScoresCache extends DailyHealthScoresCacheStorage {
-  _RecordingScoresCache(this.events);
-  final List<String> events;
-
-  @override
-  Future<void> clear() async => events.add('scores-clear');
-
-  @override
-  Future<void> delete(String dayKey) async =>
-      events.add('scores-delete:$dayKey');
 }
 
 class _MemoryAuthKeyStore implements AuthKeyStore {

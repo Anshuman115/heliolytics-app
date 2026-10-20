@@ -12,7 +12,7 @@ import 'package:heliolytics/widgets/metric_stats_row.dart';
 import 'package:heliolytics/widgets/minute_series_chart.dart';
 
 class ContinuousHrMetricSection extends StatelessWidget {
-  final DayMetric day;
+  final DayMetric? day;
   final List<HeartRateSample> samples;
 
   const ContinuousHrMetricSection({
@@ -25,7 +25,8 @@ class ContinuousHrMetricSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final stats = MetricStats.fromHeartRate(samples);
     final latest = samples.isEmpty ? null : samples.last;
-    final value = latest?.bpm.toString() ?? day.restingHr?.toString() ?? '—';
+    final resting = day?.restingHr?.round().toString();
+    final value = latest?.bpm.toString() ?? resting ?? '—';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

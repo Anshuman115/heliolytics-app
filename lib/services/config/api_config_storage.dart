@@ -1,57 +1,59 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_store.dart';
-import 'package:heliolytics/constants/constants.dart';
+import 'package:heliolytics/services/network/request_signer.dart';
 
-const _baseUrlKey = 'api_base_url';
-const _signingSecretKey = 'signing_secret';
-const _legacyApiKeyKey = 'api_key';
-
+/// Cloud API origin and phone API key, both kept in secure storage.
 class ApiConfigStorage {
-  final AuthKeyStore _store;
   ApiConfigStorage(this._store);
 
-  Future<String?> readBaseUrl() => _store.read(_baseUrlKey);
+  final AuthKeyStore _store;
 
-  Future<String?> readSigningSecret() async {
-    final secret = await _store.read(_signingSecretKey);
-    if (secret != null && secret.isNotEmpty) return secret;
-    final legacy = await _store.read(_legacyApiKeyKey);
-    if (legacy != null && legacy.isNotEmpty) {
-      await _store.write(_signingSecretKey, legacy);
-      await _store.delete(_legacyApiKeyKey);
-      return legacy;
-    }
-    return null;
+  Future<String?> readBaseUrl() async {
+    final value = await _store.read(apiBaseUrlStorageKey);
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
+  Future<String?> readApiKey() async {
+    final value = await _store.read(apiKeyStorageKey);
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
+  /// Why the stored key cannot be used, or null when it is valid.
+  Future<String?> apiKeyError() async {
+    final key = await readApiKey();
+    if (key == null) return 'Enter your phone API key in Settings.';
+    return ApiKey.validatePhone(key);
   }
 
   Future<bool> isConfigured() async {
-    final u = await readBaseUrl();
-    final s = await readSigningSecret();
-    return u != null && u.isNotEmpty && s != null && s.isNotEmpty;
+    final base = await readBaseUrl();
+    if (base == null) return false;
+    final key = await readApiKey();
+    return key != null && ApiKey.validatePhone(key) == null;
   }
 
-  Future<void> save({required String baseUrl, required String signingSecret}) async {
-    await _store.write(_baseUrlKey, baseUrl.trim());
-    await _store.write(_signingSecretKey, signingSecret.trim());
-    await _store.delete(_legacyApiKeyKey);
+  /// Stores validated settings. Throws [ApiKeyFormatException] before writing.
+  Future<void> save({required String baseUrl, required String apiKey}) async {
+    final nextKey = apiKey.trim();
+    final error = ApiKey.validatePhone(nextKey);
+    if (error != null) throw ApiKeyFormatException(error);
+    await _store.write(apiBaseUrlStorageKey, baseUrl.trim());
+    await _store.write(apiKeyStorageKey, nextKey);
   }
 
   Future<void> clear() async {
-    await _store.delete(_baseUrlKey);
-    await _store.delete(_signingSecretKey);
-    await _store.delete(_legacyApiKeyKey);
+    await _store.delete(apiBaseUrlStorageKey);
+    await _store.delete(apiKeyStorageKey);
   }
 
-  /// Seeds defaults (env-injected at build time) when missing (e.g. after reinstall).
+  /// Seeds the optional build-time origin when nothing is stored yet.
   Future<void> ensureDevDefaults() async {
     final url = await readBaseUrl();
-    final secret = await readSigningSecret();
-    final nextUrl = (url == null || url.isEmpty) ? defaultApiUrl : url;
-    final nextSecret =
-        (secret == null || secret.isEmpty) ? defaultApiSigningSecret : secret;
-    if (nextUrl != url || nextSecret != secret) {
-      await save(baseUrl: nextUrl, signingSecret: nextSecret);
+    if (url == null && defaultApiUrl.isNotEmpty) {
+      await _store.write(apiBaseUrlStorageKey, defaultApiUrl);
     }
   }
 }

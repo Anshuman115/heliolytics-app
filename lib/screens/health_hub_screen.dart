@@ -13,6 +13,7 @@ import 'package:heliolytics/providers/health_data_refresh_coordinator.dart';
 import 'package:heliolytics/providers/live_hr_provider.dart';
 import 'package:heliolytics/providers/selected_day_provider.dart';
 import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/readiness_components.dart';
 import 'package:heliolytics/widgets/error_view.dart';
 import 'package:heliolytics/widgets/health_baseline_card.dart';
 import 'package:heliolytics/utils/day_key.dart';
@@ -65,7 +66,7 @@ class _HealthHubScreenState extends ConsumerState<HealthHubScreen> {
               error: error,
               onRetry: () => ref
                   .read(healthDataRefreshCoordinatorProvider)
-                  .retryDay(dayKey, healthScores: true),
+                  .retryDay(dayKey),
             ),
             data: (data) => ListView(
               padding: const EdgeInsets.fromLTRB(
@@ -75,65 +76,69 @@ class _HealthHubScreenState extends ConsumerState<HealthHubScreen> {
                 shellContentBottomPadding,
               ),
               children: [
-                if (_hasBaseline(data.day))
-                  HealthBaselineCard(
-                    hrv: data.day.hrvRmssd,
-                    restingHr: data.day.restingHr,
-                    onTap: () => context.push('/health/$dayKey'),
-                  )
-                else
-                  _emptyHealthCard(context, dayKey),
-                const SizedBox(height: HelioSpacing.xl),
-                _recoverySection(data.day),
-                const SizedBox(height: HelioSpacing.xl),
-                HealthMonitorRow(
-                  title: 'Stress monitor',
-                  subtitle: data.day.stressAvg == null
-                      ? 'No stress reading yet'
-                      : 'Average ${data.day.stressAvg!.toStringAsFixed(1)} today',
-                  icon: Icons.psychology_outlined,
-                  color: HelioColors.strainBlue,
-                  onTap: () => context.push('/stress/$dayKey'),
-                ),
-                const SizedBox(height: HelioSpacing.xl),
-                Text('TODAY\'S SIGNALS', style: HelioTypography.sectionTitle),
-                const SizedBox(height: HelioSpacing.sm),
-                HelioSurfaceCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      HealthSignalRow(
-                        dayKey: dayKey,
-                        label: 'HRV',
-                        value: data.day.hrvRmssd,
-                        unit: 'ms',
-                        metricId: 'hrv',
-                      ),
-                      HealthSignalRow(
-                        dayKey: dayKey,
-                        label: 'Resting heart rate',
-                        value: data.day.restingHr,
-                        unit: 'bpm',
-                        metricId: 'rhr',
-                      ),
-                      HealthSignalRow(
-                        dayKey: dayKey,
-                        label: 'Respiratory rate',
-                        value: data.day.respRateAvg,
-                        unit: 'br/min',
-                        metricId: 'resp_rate',
-                      ),
-                      HealthSignalRow(
-                        dayKey: dayKey,
-                        label: 'Blood oxygen',
-                        value: data.day.spo2Avg,
-                        unit: '%',
-                        metricId: 'spo2',
-                        last: true,
-                      ),
-                    ],
+                if (data.day == null)
+                  _emptyHealthCard(context, dayKey)
+                else ...[
+                  if (_hasBaseline(data.day!))
+                    HealthBaselineCard(
+                      hrv: data.day!.hrvRmssd,
+                      restingHr: data.day!.restingHr,
+                      onTap: () => context.push('/health/$dayKey'),
+                    )
+                  else
+                    _emptyHealthCard(context, dayKey),
+                  const SizedBox(height: HelioSpacing.xl),
+                  _recoverySection(data.day!),
+                  const SizedBox(height: HelioSpacing.xl),
+                  HealthMonitorRow(
+                    title: 'Stress monitor',
+                    subtitle: data.day!.stressAvg == null
+                        ? 'No stress reading yet'
+                        : 'Average ${data.day!.stressAvg!.toStringAsFixed(1)} today',
+                    icon: Icons.psychology_outlined,
+                    color: HelioColors.strainBlue,
+                    onTap: () => context.push('/stress/$dayKey'),
                   ),
-                ),
+                  const SizedBox(height: HelioSpacing.xl),
+                  Text('TODAY\'S SIGNALS', style: HelioTypography.sectionTitle),
+                  const SizedBox(height: HelioSpacing.sm),
+                  HelioSurfaceCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        HealthSignalRow(
+                          dayKey: dayKey,
+                          label: 'HRV',
+                          value: data.day!.hrvRmssd,
+                          unit: 'ms',
+                          metricId: 'hrv',
+                        ),
+                        HealthSignalRow(
+                          dayKey: dayKey,
+                          label: 'Resting heart rate',
+                          value: data.day!.restingHr,
+                          unit: 'bpm',
+                          metricId: 'rhr',
+                        ),
+                        HealthSignalRow(
+                          dayKey: dayKey,
+                          label: 'Respiratory rate',
+                          value: data.day!.respRate,
+                          unit: 'br/min',
+                          metricId: 'resp_rate',
+                        ),
+                        HealthSignalRow(
+                          dayKey: dayKey,
+                          label: 'Blood oxygen',
+                          value: data.day!.spo2Avg,
+                          unit: '%',
+                          metricId: 'spo2',
+                          last: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: HelioSpacing.xl),
                 HomeHealthScoresSection(dayKey: dayKey),
               ],
@@ -191,7 +196,7 @@ class _HealthHubScreenState extends ConsumerState<HealthHubScreen> {
           Row(
             children: [
               _recoveryValue(
-                day.respRateAvg,
+                day.respRate,
                 'RR',
                 'br/min',
                 Icons.remove,
@@ -256,27 +261,17 @@ class _HealthHubScreenState extends ConsumerState<HealthHubScreen> {
   }
 
   Widget _recoveryStatus(DayMetric day) {
-    final recovery = day.readiness;
-    if (recovery == null) return Text('—', style: HelioTypography.bodyMuted);
-    if (recovery >= 67) {
-      return Text(
-        'HIGH',
-        style: HelioTypography.capsLabel.copyWith(
-          color: HelioColors.recoveryHigh,
-        ),
-      );
-    }
-    if (recovery >= 34) {
-      return Text(
-        'MODERATE',
-        style: HelioTypography.capsLabel.copyWith(
-          color: HelioColors.recoveryMid,
-        ),
-      );
-    }
+    final band = day.readinessBand;
+    if (band == null) return Text('—', style: HelioTypography.bodyMuted);
     return Text(
-      'LOW',
-      style: HelioTypography.capsLabel.copyWith(color: HelioColors.recoveryLow),
+      switch (band) {
+        ReadinessBand.good => 'HIGH',
+        ReadinessBand.fair => 'MODERATE',
+        ReadinessBand.low => 'LOW',
+      },
+      style: HelioTypography.capsLabel.copyWith(
+        color: recoveryColorForBand(band),
+      ),
     );
   }
 
@@ -318,28 +313,20 @@ class _HealthHubScreenState extends ConsumerState<HealthHubScreen> {
   );
 
   Widget _recoveryExplanation(DayMetric day) {
-    final recovery = day.readiness;
-    if (recovery == null) {
+    final band = day.readinessBand;
+    if (band == null) {
       return const Text(
-        'Sync your strap to see recovery insights.',
+        'Recovery has no scored band for this day.',
         style: TextStyle(color: HelioColors.textMuted, fontSize: 13),
       );
     }
-    if (recovery >= 67) {
-      return const Text(
-        'Strong overnight baseline – ideal for a hard training session today.',
-        style: TextStyle(color: HelioColors.recoveryHigh, fontSize: 13),
-      );
-    }
-    if (recovery >= 34) {
-      return const Text(
-        'Recovery is moderate – keep training intensity steady and prioritize sleep tonight.',
-        style: TextStyle(color: HelioColors.recoveryMid, fontSize: 13),
-      );
-    }
-    return const Text(
-      'Recovery is low – keep training easy and make sleep the main focus tonight.',
-      style: TextStyle(color: HelioColors.recoveryLow, fontSize: 13),
-    );
+    return Text(switch (band) {
+      ReadinessBand.good =>
+        'Strong overnight baseline, ideal for a hard training session today.',
+      ReadinessBand.fair =>
+        'Recovery is moderate, keep training intensity steady and prioritize sleep tonight.',
+      ReadinessBand.low =>
+        'Recovery is low, keep training easy and make sleep the main focus tonight.',
+    }, style: TextStyle(color: recoveryColorForBand(band), fontSize: 13));
   }
 }

@@ -1,11 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:heliolytics/services/config/api_config_storage.dart';
+
 import 'package:heliolytics/providers/health_data_refresh_coordinator.dart';
+import 'package:heliolytics/services/config/api_config_storage.dart';
+import 'package:heliolytics/services/network/api_endpoint_policy.dart';
+import 'package:heliolytics/services/network/request_signer.dart';
 
 class ApiConfigForm {
+  const ApiConfigForm({this.url = '', this.apiKey = '', this.keyError});
+
   final String url;
-  final String signingSecret;
-  const ApiConfigForm({this.url = '', this.signingSecret = ''});
+  final String apiKey;
+
+  /// Why the stored key is unusable, or null when it is valid or absent.
+  final String? keyError;
 }
 
 final apiConfigFormProvider =
@@ -17,30 +24,32 @@ class ApiConfigFormNotifier extends AsyncNotifier<ApiConfigForm> {
   @override
   Future<ApiConfigForm> build() async {
     final storage = ref.read(apiConfigStorageProvider);
-    final data = await Future.wait([
-      storage.readBaseUrl(),
-      storage.readSigningSecret(),
-    ]);
-    return ApiConfigForm(url: data[0] ?? '', signingSecret: data[1] ?? '');
+    final url = await storage.readBaseUrl();
+    final key = await storage.readApiKey();
+    final keyError = key == null ? null : ApiKey.validatePhone(key);
+    return ApiConfigForm(url: url ?? '', apiKey: key ?? '', keyError: keyError);
   }
 
-  Future<void> save(String url, String signingSecret) async {
+  /// Validates and stores both settings, then clears cached API data.
+  ///
+  /// Throws [ApiEndpointException] or [ApiKeyFormatException] on bad input.
+  Future<void> save(String url, String apiKey) async {
     final storage = ref.read(apiConfigStorageProvider);
     final nextUrl = url.trim();
-    final nextSecret = signingSecret.trim();
-    final current = await Future.wait([
-      storage.readBaseUrl(),
-      storage.readSigningSecret(),
-    ]);
+    final nextKey = apiKey.trim();
+    ApiEndpointPolicy.current.parseOrigin(nextUrl);
+    final keyError = ApiKey.validatePhone(nextKey);
+    if (keyError != null) throw ApiKeyFormatException(keyError);
+
+    final currentUrl = (await storage.readBaseUrl()) ?? '';
+    final currentKey = (await storage.readApiKey()) ?? '';
     final changed =
-        nextUrl != (current[0] ?? '').trim() ||
-        nextSecret != (current[1] ?? '').trim();
+        nextUrl != currentUrl.trim() || nextKey != currentKey.trim();
     if (changed) {
       await ref
           .read(healthDataRefreshCoordinatorProvider)
           .replaceApiConfiguration(
-            save: () =>
-                storage.save(baseUrl: nextUrl, signingSecret: nextSecret),
+            save: () => storage.save(baseUrl: nextUrl, apiKey: nextKey),
           );
     }
     ref.invalidateSelf();

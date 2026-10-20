@@ -12,6 +12,7 @@ import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/sync_status_provider.dart';
 import 'package:heliolytics/providers/onboarding_provider.dart';
 import 'package:heliolytics/widgets/settings/settings_account_tile.dart';
+import 'package:heliolytics/widgets/settings/strap_health_card.dart';
 import 'package:heliolytics/widgets/settings/device_status_card.dart';
 import 'package:heliolytics/widgets/settings/settings_menu_list.dart';
 
@@ -22,7 +23,8 @@ class SettingsHubScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final snap = ref.watch(syncOrchestratorProvider);
     final apiReady = ref.watch(apiConfiguredProvider);
-    final status = ref.watch(syncStatusProvider).valueOrNull;
+    final statusAsync = ref.watch(syncStatusProvider);
+    final status = statusAsync.valueOrNull;
     final profile = ref.watch(onboardingProvider).profile;
     final busy = _isBusy(snap.state);
     final battery = status?.batteryPercent;
@@ -54,6 +56,15 @@ class SettingsHubScreen extends ConsumerWidget {
                 onUpload: () => _upload(ref, context),
                 onScan: () => context.push('/setup/bluetooth'),
               ),
+              if (statusAsync.hasError) ...[
+                const SizedBox(height: HelioSpacing.xs),
+                Text(
+                  'Sync status unavailable: ${statusAsync.error}',
+                  style: const TextStyle(color: Colors.orange),
+                ),
+              ],
+              const SizedBox(height: HelioSpacing.md),
+              const StrapHealthCard(),
               const SizedBox(height: HelioSpacing.md),
               SettingsAccountTile(
                 profile: profile,

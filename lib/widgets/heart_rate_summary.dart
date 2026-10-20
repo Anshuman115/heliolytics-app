@@ -9,7 +9,7 @@ import 'package:heliolytics/widgets/heart_rate_bpm_hero.dart';
 class HeartRateSummary extends ConsumerWidget {
   const HeartRateSummary({super.key, required this.day, required this.dayKey});
 
-  final DayMetric day;
+  final DayMetric? day;
   final String dayKey;
 
   @override
@@ -19,7 +19,8 @@ class HeartRateSummary extends ConsumerWidget {
     final heartRate = detail?.heartRateFor(dayKey) ?? const [];
     final latest = heartRate.isEmpty ? null : heartRate.last;
     final isLive = live.isLive && live.bpm != null;
-    final bpm = isLive ? live.bpm : (latest?.bpm ?? day.restingHr);
+    final resting = day?.restingHr?.round();
+    final bpm = isLive ? live.bpm : (latest?.bpm ?? resting);
 
     return GestureDetector(
       onTap: () => context.push('/metric/$dayKey/continuous_hr'),
@@ -29,7 +30,7 @@ class HeartRateSummary extends ConsumerWidget {
             ? 'LIVE BPM'
             : latest != null
             ? 'LATEST BPM'
-            : day.restingHr != null
+            : resting != null
             ? 'RESTING BPM'
             : 'NO DATA',
         at: isLive ? live.sampledAt : latest?.sampledAt,

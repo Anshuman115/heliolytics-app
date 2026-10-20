@@ -1,14 +1,17 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/models/user_profile.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_store.dart';
 
+/// Local profile storage. An unreadable profile reads as no profile.
 class UserProfileStorage {
-  final AuthKeyStore _store;
   UserProfileStorage(this._store);
+
+  final AuthKeyStore _store;
 
   Future<UserProfile?> readProfile() async {
     final raw = await _store.read(userProfileStorageKey);
@@ -22,8 +25,9 @@ class UserProfileStorage {
     }
   }
 
-  Future<void> saveProfile(UserProfile profile) =>
-      _store.write(userProfileStorageKey, jsonEncode(profile.toJson()));
+  Future<void> saveProfile(UserProfile profile) async {
+    await _store.write(userProfileStorageKey, jsonEncode(profile.toJson()));
+  }
 
   Future<bool> isOnboardingComplete() async {
     final v = await _store.read(onboardingCompleteStorageKey);

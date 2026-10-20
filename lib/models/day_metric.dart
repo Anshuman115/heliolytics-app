@@ -1,245 +1,167 @@
-import 'sleep_stage.dart';
+import 'package:heliolytics/models/readiness_components.dart';
 
+/// One day of consolidated C3 daily metrics. Missing measurements stay null.
 class DayMetric {
-  final String dayKey;
-  final int steps;
-  final int? paiScore;
-  final int? readiness;
-  final int? spo2Avg;
-  final int? hrvRmssd;
-  final int? restingHr;
-  final int? respRateAvg;
-  final int? stressAvg;
-  final int? sleepScore;
-  final int? sleepMins;
-  final int? sleepDeepMins;
-  final int? sleepRemMins;
-  final int? sleepLightMins;
-  final double? tempAvgC;
-  final int workoutCount;
-  final int activitySessionCount;
-  final int? calories;
-  final int napCount;
-  final DateTime? updatedAt;
-
   const DayMetric({
     required this.dayKey,
-    required this.steps,
-    this.paiScore,
-    this.readiness,
-    this.spo2Avg,
-    this.hrvRmssd,
+    required this.updatedAt,
+    this.steps,
+    this.avgHr,
     this.restingHr,
-    this.respRateAvg,
+    this.hrvRmssd,
+    this.respRate,
+    this.spo2Avg,
+    this.spo2Min,
+    this.spo2SleepAvg,
+    this.spo2SleepMin,
+    this.spo2Samples = 0,
     this.stressAvg,
+    this.skinTempNightC,
+    this.skinTempDeviationC,
     this.sleepScore,
     this.sleepMins,
     this.sleepDeepMins,
     this.sleepRemMins,
     this.sleepLightMins,
-    this.tempAvgC,
-    this.workoutCount = 0,
-    this.activitySessionCount = 0,
-    this.calories,
+    this.sleepWakeMins,
+    this.timeInBedMins,
+    this.sleepEfficiencyPct,
     this.napCount = 0,
-    this.updatedAt,
+    this.workoutCount = 0,
+    this.autoActivityCount = 0,
+    this.workoutCalories,
+    this.trainingLoad,
+    this.paiScore,
+    this.readiness,
+    this.readinessStatus,
+    this.readinessBand,
+    this.readinessComponents,
   });
 
-  factory DayMetric.fromJson(Map<String, dynamic> j) => DayMetric(
-    dayKey: j['dayKey'] as String,
-    steps: (j['steps'] as num?)?.toInt() ?? 0,
-    paiScore: (j['paiScore'] as num?)?.toInt(),
-    readiness: (j['readiness'] as num?)?.toInt(),
-    spo2Avg: (j['spo2Avg'] as num?)?.toInt(),
-    hrvRmssd: (j['hrvRmssd'] as num?)?.toInt(),
-    restingHr: (j['restingHr'] as num?)?.toInt(),
-    respRateAvg: (j['respRateAvg'] as num?)?.toInt(),
-    stressAvg: (j['stressAvg'] as num?)?.toInt(),
-    sleepScore: (j['sleepScore'] as num?)?.toInt(),
-    sleepMins: (j['sleepMins'] as num?)?.toInt(),
-    sleepDeepMins: (j['sleepDeepMins'] as num?)?.toInt(),
-    sleepRemMins: (j['sleepRemMins'] as num?)?.toInt(),
-    sleepLightMins: (j['sleepLightMins'] as num?)?.toInt(),
-    tempAvgC: (j['tempAvgC'] as num?)?.toDouble(),
-    workoutCount: (j['workoutCount'] as num?)?.toInt() ?? 0,
-    activitySessionCount: (j['activitySessionCount'] as num?)?.toInt() ?? 0,
-    calories: ((j['caloriesTotal'] ?? j['calories']) as num?)?.toInt(),
-    napCount: (j['napCount'] as num?)?.toInt() ?? 0,
-    updatedAt: j['updatedAt'] != null
-        ? DateTime.parse(j['updatedAt'] as String).toLocal()
-        : null,
-  );
-
-  Map<String, dynamic> toJson() => {
-    'dayKey': dayKey,
-    'steps': steps,
-    'paiScore': paiScore,
-    'readiness': readiness,
-    'spo2Avg': spo2Avg,
-    'hrvRmssd': hrvRmssd,
-    'restingHr': restingHr,
-    'respRateAvg': respRateAvg,
-    'stressAvg': stressAvg,
-    'sleepScore': sleepScore,
-    'sleepMins': sleepMins,
-    'sleepDeepMins': sleepDeepMins,
-    'sleepRemMins': sleepRemMins,
-    'sleepLightMins': sleepLightMins,
-    'tempAvgC': tempAvgC,
-    'workoutCount': workoutCount,
-    'activitySessionCount': activitySessionCount,
-    'caloriesTotal': calories,
-    'napCount': napCount,
-    'updatedAt': updatedAt?.toUtc().toIso8601String(),
-  };
-}
-
-class SleepMetric {
   final String dayKey;
-  final DateTime startedAt;
-  final int score;
-  final int totalMins;
-  final int deepMins;
-  final int remMins;
-  final int lightMins;
-  final int wakeMins;
-  final bool isNap;
-  final List<SleepStagePoint> stages;
+  final DateTime updatedAt;
+  final int? steps;
+  final double? avgHr;
+  final double? restingHr;
+  final double? hrvRmssd;
+  final double? respRate;
+  final double? spo2Avg;
+  final int? spo2Min;
+  final double? spo2SleepAvg;
+  final int? spo2SleepMin;
+  final int spo2Samples;
+  final double? stressAvg;
+  final double? skinTempNightC;
+  final double? skinTempDeviationC;
+  final int? sleepScore;
+  final int? sleepMins;
+  final int? sleepDeepMins;
+  final int? sleepRemMins;
+  final int? sleepLightMins;
+  final int? sleepWakeMins;
+  final int? timeInBedMins;
+  final int? sleepEfficiencyPct;
+  final int napCount;
+  final int workoutCount;
+  final int autoActivityCount;
+  final int? workoutCalories;
+  final double? trainingLoad;
+  final int? paiScore;
+  final int? readiness;
+  final ReadinessStatus? readinessStatus;
+  final ReadinessBand? readinessBand;
+  final ReadinessComponents? readinessComponents;
 
-  const SleepMetric({
-    required this.dayKey,
-    required this.startedAt,
-    required this.score,
-    required this.totalMins,
-    required this.deepMins,
-    required this.remMins,
-    required this.lightMins,
-    this.wakeMins = 0,
-    this.isNap = false,
-    this.stages = const [],
-  });
+  /// Measured SpO2 needs at least three samples before a mean is shown.
+  bool get hasMeasuredSpo2 => spo2Samples > 0 && spo2Avg != null;
 
-  factory SleepMetric.fromJson(Map<String, dynamic> j) {
-    final rawStages = j['stages'] as List<dynamic>? ?? [];
-    return SleepMetric(
-      dayKey: j['dayKey'] as String,
-      startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
-      score: (j['score'] as num).toInt(),
-      totalMins: (j['totalMins'] as num).toInt(),
-      deepMins: (j['deepMins'] as num).toInt(),
-      remMins: (j['remMins'] as num).toInt(),
-      lightMins: (j['lightMins'] as num).toInt(),
-      wakeMins: (j['wakeMins'] as num?)?.toInt() ?? 0,
-      isNap: j['isNap'] as bool? ?? false,
-      stages: rawStages
-          .map(
-            (e) =>
-                SleepStagePoint.fromJson(Map<String, dynamic>.from(e as Map)),
-          )
-          .toList(),
+  factory DayMetric.fromJson(Map<String, dynamic> j) {
+    final dayKey = j['dayKey'];
+    if (dayKey is! String) {
+      throw const FormatException('Daily metric has no dayKey');
+    }
+    final updatedAt = j['updatedAt'];
+    if (updatedAt is! String) {
+      throw FormatException('Daily metric $dayKey has no updatedAt');
+    }
+    return DayMetric(
+      dayKey: dayKey,
+      updatedAt: DateTime.parse(updatedAt).toUtc(),
+      steps: _int(j['steps']),
+      avgHr: _double(j['avgHr']),
+      restingHr: _double(j['restingHr']),
+      hrvRmssd: _double(j['hrvRmssd']),
+      respRate: _double(j['respRate']),
+      spo2Avg: _double(j['spo2Avg']),
+      spo2Min: _int(j['spo2Min']),
+      spo2SleepAvg: _double(j['spo2SleepAvg']),
+      spo2SleepMin: _int(j['spo2SleepMin']),
+      spo2Samples: _int(j['spo2Samples']) ?? 0,
+      stressAvg: _double(j['stressAvg']),
+      skinTempNightC: _double(j['skinTempNightC']),
+      skinTempDeviationC: _double(j['skinTempDeviationC']),
+      sleepScore: _int(j['sleepScore']),
+      sleepMins: _int(j['sleepMins']),
+      sleepDeepMins: _int(j['sleepDeepMins']),
+      sleepRemMins: _int(j['sleepRemMins']),
+      sleepLightMins: _int(j['sleepLightMins']),
+      sleepWakeMins: _int(j['sleepWakeMins']),
+      timeInBedMins: _int(j['timeInBedMins']),
+      sleepEfficiencyPct: _int(j['sleepEfficiencyPct']),
+      napCount: _int(j['napCount']) ?? 0,
+      workoutCount: _int(j['workoutCount']) ?? 0,
+      autoActivityCount: _int(j['autoActivityCount']) ?? 0,
+      workoutCalories: _int(j['workoutCalories']),
+      trainingLoad: _double(j['trainingLoad']),
+      paiScore: _int(j['paiScore']),
+      readiness: _int(j['readiness']),
+      readinessStatus: ReadinessStatus.parse(j['readinessStatus']),
+      readinessBand: ReadinessBand.parse(j['readinessBand']),
+      readinessComponents: j['readinessComponents'] is Map
+          ? ReadinessComponents.fromJson(
+              Map<String, dynamic>.from(j['readinessComponents'] as Map),
+            )
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'dayKey': dayKey,
-    'startedAt': startedAt.toUtc().toIso8601String(),
-    'score': score,
-    'totalMins': totalMins,
-    'deepMins': deepMins,
-    'remMins': remMins,
-    'lightMins': lightMins,
-    'wakeMins': wakeMins,
-    'isNap': isNap,
-    'stages': stages.map((s) => s.toJson()).toList(),
-  };
-}
-
-/// Server-detected activity session, with the same shape as a manual workout.
-class ActivitySessionMetric {
-  final String dayKey;
-  final DateTime startedAt;
-  final int sportType;
-  final String sportName;
-  final int durationSec;
-  final int? calories;
-  final int? avgHr;
-  final int? maxHr;
-
-  const ActivitySessionMetric({
-    required this.dayKey,
-    required this.startedAt,
-    required this.sportType,
-    this.sportName = '',
-    required this.durationSec,
-    this.calories,
-    this.avgHr,
-    this.maxHr,
-  });
-
-  factory ActivitySessionMetric.fromJson(Map<String, dynamic> j) =>
-      ActivitySessionMetric(
-        dayKey: j['dayKey'] as String,
-        startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
-        sportType: (j['sportType'] as num).toInt(),
-        sportName: j['sportName'] as String? ?? '',
-        durationSec: (j['durationSec'] as num).toInt(),
-        calories: (j['calories'] as num?)?.toInt(),
-        avgHr: (j['avgHr'] as num?)?.toInt(),
-        maxHr: (j['maxHr'] as num?)?.toInt(),
-      );
-
-  Map<String, dynamic> toJson() => {
-    'dayKey': dayKey,
-    'startedAt': startedAt.toUtc().toIso8601String(),
-    'sportType': sportType,
-    'sportName': sportName,
-    'durationSec': durationSec,
-    'calories': calories,
+    'updatedAt': updatedAt.toUtc().toIso8601String(),
+    'steps': steps,
     'avgHr': avgHr,
-    'maxHr': maxHr,
+    'restingHr': restingHr,
+    'hrvRmssd': hrvRmssd,
+    'respRate': respRate,
+    'spo2Avg': spo2Avg,
+    'spo2Min': spo2Min,
+    'spo2SleepAvg': spo2SleepAvg,
+    'spo2SleepMin': spo2SleepMin,
+    'spo2Samples': spo2Samples,
+    'stressAvg': stressAvg,
+    'skinTempNightC': skinTempNightC,
+    'skinTempDeviationC': skinTempDeviationC,
+    'sleepScore': sleepScore,
+    'sleepMins': sleepMins,
+    'sleepDeepMins': sleepDeepMins,
+    'sleepRemMins': sleepRemMins,
+    'sleepLightMins': sleepLightMins,
+    'sleepWakeMins': sleepWakeMins,
+    'timeInBedMins': timeInBedMins,
+    'sleepEfficiencyPct': sleepEfficiencyPct,
+    'napCount': napCount,
+    'workoutCount': workoutCount,
+    'autoActivityCount': autoActivityCount,
+    'workoutCalories': workoutCalories,
+    'trainingLoad': trainingLoad,
+    'paiScore': paiScore,
+    'readiness': readiness,
+    'readinessStatus': readinessStatus?.wire,
+    'readinessBand': readinessBand?.name,
+    'readinessComponents': readinessComponents?.toJson(),
   };
 }
 
-class WorkoutMetric {
-  final String dayKey;
-  final DateTime startedAt;
-  final int sportType;
-  final String sportName;
-  final int durationSec;
-  final int? calories;
-  final int? avgHr;
-  final int? maxHr;
+double? _double(Object? raw) => raw is num ? raw.toDouble() : null;
 
-  const WorkoutMetric({
-    required this.dayKey,
-    required this.startedAt,
-    required this.sportType,
-    this.sportName = '',
-    required this.durationSec,
-    this.calories,
-    this.avgHr,
-    this.maxHr,
-  });
-
-  factory WorkoutMetric.fromJson(Map<String, dynamic> j) => WorkoutMetric(
-    dayKey: j['dayKey'] as String,
-    startedAt: DateTime.parse(j['startedAt'] as String).toLocal(),
-    sportType: (j['sportType'] as num).toInt(),
-    sportName: j['sportName'] as String? ?? '',
-    durationSec: (j['durationSec'] as num).toInt(),
-    calories: (j['calories'] as num?)?.toInt(),
-    avgHr: (j['avgHr'] as num?)?.toInt(),
-    maxHr: (j['maxHr'] as num?)?.toInt(),
-  );
-
-  Map<String, dynamic> toJson() => {
-    'dayKey': dayKey,
-    'startedAt': startedAt.toUtc().toIso8601String(),
-    'sportType': sportType,
-    'sportName': sportName,
-    'durationSec': durationSec,
-    'calories': calories,
-    'avgHr': avgHr,
-    'maxHr': maxHr,
-  };
-}
+int? _int(Object? raw) => raw is num ? raw.toInt() : null;

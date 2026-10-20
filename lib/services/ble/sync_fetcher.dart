@@ -1,19 +1,21 @@
 import 'dart:typed_data';
 
+import 'package:heliolytics/constants/constants.dart';
+import 'package:heliolytics/models/dump_entry.dart';
+import 'package:heliolytics/models/session_mode.dart';
+import 'package:heliolytics/models/session_state.dart';
+import 'package:heliolytics/models/strap_health_config.dart';
+import 'package:heliolytics/models/sync_payload.dart';
 import 'package:heliolytics/services/ble/auth/auth_key_storage.dart';
 import 'package:heliolytics/services/ble/band_link.dart';
 import 'package:heliolytics/services/ble/band_link_port.dart';
 import 'package:heliolytics/services/ble/sync_fetch_outcome.dart';
 import 'package:heliolytics/services/ble/sync_fetcher_session.dart';
-import 'package:heliolytics/services/ble/sync_session_port.dart';
+import 'package:heliolytics/services/ble/sync_type_catalog.dart';
 import 'package:heliolytics/services/ble/sync_type_fetch.dart';
 import 'package:heliolytics/services/ble/sync_window.dart';
 import 'package:heliolytics/services/ble/sync_window_plan.dart';
-import 'package:heliolytics/constants/constants.dart';
-import 'package:heliolytics/models/session_state.dart';
-import 'package:heliolytics/models/dump_entry.dart';
-import 'package:heliolytics/models/session_mode.dart';
-import 'package:heliolytics/models/sync_payload.dart';
+import 'package:heliolytics/services/ble/sync_session_port.dart';
 
 typedef TypeProgressFn = void Function(String code, TypeCodeResult result);
 typedef BandLinkFactory = BandLinkPort Function(void Function(String) log);
@@ -36,12 +38,16 @@ class SyncFetcher {
     required Uint8List authKey,
     required SyncWindowPlan plan,
     String? singleTypeCode,
-    SyncPayload? mergeBase,
+    HealthConfigSnapshot? strapConfig,
     BandLinkPort? client,
     bool disconnectAfter = true,
     void Function(String code)? onTypeStart,
     TypeProgressFn? onTypeProgress,
   }) async {
+    if (singleTypeCode != null && !isProductionFetchType(singleTypeCode)) {
+      log('✗ forbidden production refetch $singleTypeCode');
+      return null;
+    }
     final owned = client == null;
     final link = client ?? linkFactory(log);
     if (owned) {
@@ -59,7 +65,7 @@ class SyncFetcher {
         mac: mac,
         plan: plan,
         singleTypeCode: singleTypeCode,
-        mergeBase: mergeBase,
+        strapConfig: strapConfig,
         onTypeStart: onTypeStart,
         onTypeProgress: onTypeProgress,
       );
@@ -73,26 +79,26 @@ class SyncFetcher {
     required String mac,
     required SyncWindowPlan plan,
     String? singleTypeCode,
-    SyncPayload? mergeBase,
+    HealthConfigSnapshot? strapConfig,
     void Function(String code)? onTypeStart,
     TypeProgressFn? onTypeProgress,
   }) async {
-    final codes = singleTypeCode != null ? [singleTypeCode] : fetchTypeCodes;
-    if (singleTypeCode != null && mergeBase == null) return null;
-
-    String? sessionId;
-    if (singleTypeCode == null) {
-      final requestedHours = DateTime.now()
-          .difference(plan.anchorSince)
-          .inHours;
-      final hours = requestedHours < 1 ? 1 : requestedHours;
-      sessionId = await store.createSession(
-        deviceMac: mac,
-        fetchWindowHours: hours,
-        listenDurationSec: 0,
-        mode: SessionMode.fetchAndListen,
-      );
+    if (singleTypeCode != null && !isProductionFetchType(singleTypeCode)) {
+      log('✗ forbidden production refetch $singleTypeCode');
+      return null;
     }
+    final codes = singleTypeCode == null
+        ? productionFetchTypeCodes
+        : <String>[singleTypeCode];
+
+    final requestedHours = DateTime.now().difference(plan.anchorSince).inHours;
+    final hours = requestedHours < 1 ? 1 : requestedHours;
+    final sessionId = await store.createSession(
+      deviceMac: mac,
+      fetchWindowHours: hours,
+      listenDurationSec: 0,
+      mode: SessionMode.fetchAndListen,
+    );
 
     final entries = <DumpEntry>[];
     final rawByCode = <String, Uint8List>{};
@@ -133,17 +139,7 @@ class SyncFetcher {
       }
     }
 
-    if (singleTypeCode != null) {
-      return _singleOutcome(
-        mergeBase!,
-        singleTypeCode,
-        entries,
-        results,
-        rawByCode,
-      );
-    }
-
-    final catalog = buildCatalog(sessionId!, entries);
+    final catalog = buildCatalog(sessionId, entries, strapConfig: strapConfig);
     final session = await finalizeFetchSession(
       store: store,
       sessionId: sessionId,
@@ -155,27 +151,7 @@ class SyncFetcher {
       payload: SyncPayload(
         session: session,
         catalog: catalog,
-        rawByCode: rawByCode,
-      ),
-      typeResults: results,
-    );
-  }
-
-  SyncFetchOutcome _singleOutcome(
-    SyncPayload base,
-    String code,
-    List<DumpEntry> entries,
-    List<TypeCodeResult> results,
-    Map<String, Uint8List> rawByCode,
-  ) {
-    if (rawByCode.isEmpty) {
-      return SyncFetchOutcome(payload: base, typeResults: results);
-    }
-    return SyncFetchOutcome(
-      payload: SyncPayload(
-        session: base.session,
-        catalog: buildCatalog(base.session.sessionId, [entries.single]),
-        rawByCode: {code: rawByCode[code]!},
+        rawByCode: Map.unmodifiable(rawByCode),
       ),
       typeResults: results,
     );

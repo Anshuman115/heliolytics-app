@@ -32,7 +32,8 @@ class StrainMetricSection extends ConsumerWidget {
     final upper = _seconds(zones, 4, 5);
     final history =
         ref.watch(metricComparisonProvider(day.dayKey)).valueOrNull ?? const [];
-    final baseline = _average(history, (item) => item.paiScore);
+    final baseline = _average(history, (item) => item.trainingLoad);
+    final load = day.trainingLoad;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -47,29 +48,29 @@ class StrainMetricSection extends ConsumerWidget {
               _divider(),
               _row(
                 Icons.fitness_center_outlined,
-                'STRENGTH ACTIVITY TIME',
-                '—',
+                'TRAINING LOAD (BANISTER TRIMP)',
+                load == null ? '—' : formatLoad(load),
               ),
               _divider(),
               _row(
                 Icons.directions_walk_outlined,
                 'STEPS',
-                day.steps > 0 ? formatStepCount(day.steps) : '—',
+                day.steps == null ? '—' : formatStepCount(day.steps!),
               ),
             ],
           ),
         ),
-        if (day.paiScore != null) ...[
+        if (load != null) ...[
           const SizedBox(height: HelioSpacing.lg),
           RecoveryComparisonBar(
             dayKey: day.dayKey,
-            value: day.paiScore,
+            value: load,
             baseline: baseline,
             higherIsBetter: true,
           ),
         ],
         const SizedBox(height: HelioSpacing.lg),
-        _insight(),
+        _insight(load),
       ],
     );
   }
@@ -91,7 +92,7 @@ class StrainMetricSection extends ConsumerWidget {
 
   Widget _divider() => const Divider(height: 1, color: HelioColors.border);
 
-  Widget _insight() => HelioSurfaceCard(
+  Widget _insight(double? load) => HelioSurfaceCard(
     color: HelioColors.surface,
     padding: const EdgeInsets.all(HelioSpacing.lg),
     child: Column(
@@ -105,19 +106,18 @@ class StrainMetricSection extends ConsumerWidget {
             ),
             const SizedBox(width: HelioSpacing.sm),
             Expanded(
-              child: Text(
-                'STRAIN INSIGHT',
-                style: HelioTypography.sectionTitle,
-              ),
+              child: Text('TRAINING LOAD', style: HelioTypography.sectionTitle),
             ),
             const Icon(Icons.chevron_right, color: HelioColors.textMuted),
           ],
         ),
         const SizedBox(height: HelioSpacing.md),
         Text(
-          day.paiScore == null || day.paiScore == 0
-              ? 'Your accumulated cardiovascular load is low so far today.'
-              : 'Your strain reflects the recorded cardiovascular load across the day.',
+          load == null
+              ? 'Load needs a birth date and sex in your profile. The model '
+                    'uses an estimated maximum heart rate and your resting rate.'
+              : 'Banister TRIMP weights each measured minute by heart-rate '
+                    'reserve. It is a workload estimate, not a readiness score.',
           style: HelioTypography.body.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
@@ -133,8 +133,8 @@ class StrainMetricSection extends ConsumerWidget {
     return '${mins ~/ 60}:${(mins % 60).toString().padLeft(2, '0')}';
   }
 
-  double? _average(List<DayMetric> days, int? Function(DayMetric) select) {
-    final values = days.map(select).whereType<int>().toList();
+  double? _average(List<DayMetric> days, double? Function(DayMetric) select) {
+    final values = days.map(select).whereType<double>().toList();
     if (values.isEmpty) return null;
     return values.reduce((a, b) => a + b) / values.length;
   }

@@ -15,4 +15,13 @@ void main() {
     lock.release(BandSessionOp.liveHr);
     expect(lock.tryAcquire(BandSessionOp.bandAlerts), isNull);
   });
+
+  test('same strap-config operation cannot be admitted twice', () {
+    final lock = BandSessionLock();
+
+    expect(lock.tryAcquire(BandSessionOp.strapConfig), isNull);
+    expect(lock.tryAcquire(BandSessionOp.strapConfig), isNotNull);
+    lock.release(BandSessionOp.strapConfig);
+    expect(lock.tryAcquire(BandSessionOp.strapConfig), isNull);
+  });
 }

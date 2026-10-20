@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heliolytics/utils/day_key.dart';
+import 'package:heliolytics/utils/ist_time.dart';
 
 Future<String?> pickDay(BuildContext context, {required String dayKey}) async {
   final current = DateTime.parse(dayKey);
@@ -7,7 +8,7 @@ Future<String?> pickDay(BuildContext context, {required String dayKey}) async {
     context: context,
     initialDate: current,
     firstDate: DateTime(2020),
-    lastDate: DateTime.now(),
+    lastDate: istToday(),
   );
   return picked == null ? null : dayKeyFor(picked);
 }

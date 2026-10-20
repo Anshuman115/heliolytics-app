@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:intl/intl.dart';
+import 'package:heliolytics/utils/formatters.dart';
 
 class HomeActivityRow extends StatelessWidget {
   const HomeActivityRow({
@@ -68,20 +68,11 @@ class HomeActivityRow extends StatelessWidget {
     ),
   );
 
-  Widget _times() {
-    final formatter = DateFormat.jm();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          formatter.format(start.toLocal()),
-          style: HelioTypography.bodyMuted,
-        ),
-        Text(
-          formatter.format((end ?? start).toLocal()),
-          style: HelioTypography.bodyMuted,
-        ),
-      ],
-    );
-  }
+  Widget _times() => Column(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      Text(formatTimeOfDay(start), style: HelioTypography.bodyMuted),
+      Text(formatTimeOfDay(end ?? start), style: HelioTypography.bodyMuted),
+    ],
+  );
 }

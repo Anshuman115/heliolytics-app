@@ -4,7 +4,7 @@ import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_radii.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
-import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/sleep_stage.dart';
 import 'package:heliolytics/utils/formatters.dart';
 
 class HomeSleepSummaryCard extends StatelessWidget {
@@ -14,7 +14,7 @@ class HomeSleepSummaryCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final SleepMetric sleep;
+  final SleepSession sleep;
   final VoidCallback onTap;
 
   @override
@@ -40,7 +40,7 @@ class HomeSleepSummaryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              '${sleep.score}%',
+              sleep.score == null ? '—' : '${sleep.score}%',
               style: HelioTypography.scoreLarge.copyWith(
                 color: HelioColors.sleepBlue,
                 fontSize: 34,

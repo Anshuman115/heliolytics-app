@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' hide TextDirection;
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/models/health_sample.dart';
 import 'package:heliolytics/utils/canvas_text.dart';
+import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/utils/stress_zones.dart';
 import 'package:heliolytics/widgets/stress/stress_zone_color.dart';
 
@@ -80,10 +80,7 @@ class _StressChartPainter extends CustomPainter {
       final l = xOf(s.start).clamp(plotLeft, plotRight).toDouble();
       final r = xOf(s.end).clamp(plotLeft, plotRight).toDouble();
       if (r <= l) continue;
-      canvas.drawRect(
-        Rect.fromLTRB(l, _padT, r, size.height - _padB),
-        paint,
-      );
+      canvas.drawRect(Rect.fromLTRB(l, _padT, r, size.height - _padB), paint);
     }
   }
 
@@ -98,8 +95,14 @@ class _StressChartPainter extends CustomPainter {
     for (final v in [0.0, stressMediumMin, stressHighMin, stressGaugeMax]) {
       final y = yOf(v);
       canvas.drawLine(Offset(_padL, y), Offset(size.width - _padR, y), grid);
-      paintCanvasText(canvas, v.toStringAsFixed(0), Offset(0, y - 6), style,
-          width: _padL - 6, align: TextAlign.right);
+      paintCanvasText(
+        canvas,
+        v.toStringAsFixed(0),
+        Offset(0, y - 6),
+        style,
+        width: _padL - 6,
+        align: TextAlign.right,
+      );
     }
   }
 
@@ -132,10 +135,20 @@ class _StressChartPainter extends CustomPainter {
       color: Colors.white.withValues(alpha: 0.45),
       fontSize: 10,
     );
-    final f = DateFormat.jm();
-    paintCanvasText(canvas, f.format(a), Offset(_padL, size.height - 13), style);
-    paintCanvasText(canvas, f.format(b), Offset(size.width - _padR - 60, size.height - 13),
-        style, width: 60, align: TextAlign.right);
+    paintCanvasText(
+      canvas,
+      formatTimeOfDay(a),
+      Offset(_padL, size.height - 13),
+      style,
+    );
+    paintCanvasText(
+      canvas,
+      formatTimeOfDay(b),
+      Offset(size.width - _padR - 60, size.height - 13),
+      style,
+      width: 60,
+      align: TextAlign.right,
+    );
   }
 
   @override

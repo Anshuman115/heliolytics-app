@@ -4,6 +4,7 @@ import 'package:heliolytics/design_system/tokens/helio_colors.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/models/day_metric.dart';
+import 'package:heliolytics/models/readiness_components.dart';
 
 class HomeDailyInsight extends StatelessWidget {
   const HomeDailyInsight({super.key, required this.day, required this.onTap});
@@ -57,16 +58,19 @@ class HomeDailyInsight extends StatelessWidget {
 
   (IconData, Color, String, String) _insight() {
     final recovery = day.readiness;
+    final band = day.readinessBand;
     final hrv = day.hrvRmssd;
-    if (recovery != null && recovery >= 67 && hrv != null) {
+    if (band == ReadinessBand.good && hrv != null) {
       return (
         Icons.favorite_outline,
         HelioColors.recoveryHigh,
         'Strong overnight baseline',
-        'Recovery is $recovery% with an overnight HRV of $hrv ms. Use that capacity well and check strain as the day builds.',
+        '${recovery == null ? 'Recovery is high' : 'Recovery is $recovery%'} '
+            'with an overnight HRV of ${hrv.toStringAsFixed(1)} ms. Use that '
+            'capacity well and check strain as the day builds.',
       );
     }
-    if (recovery != null && recovery >= 67) {
+    if (band == ReadinessBand.good) {
       return (
         Icons.bolt_outlined,
         HelioColors.recoveryHigh,
@@ -74,7 +78,7 @@ class HomeDailyInsight extends StatelessWidget {
         'Recovery is high. Use your current energy well, then check strain as the day builds.',
       );
     }
-    if (recovery != null && recovery <= 33) {
+    if (band == ReadinessBand.low) {
       return (
         Icons.self_improvement_outlined,
         HelioColors.recoveryLow,

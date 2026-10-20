@@ -1,47 +1,50 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:heliolytics/models/day_metric.dart';
+
+import 'package:heliolytics/constants/constants.dart';
+import 'package:heliolytics/models/activity_metric.dart';
 import 'package:heliolytics/providers/cloud_sync_provider.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
+import 'package:heliolytics/services/network/metrics_api_transport.dart';
 
+/// One `/activities` call, partitioned by kind without hiding failures.
 class ActivityHistory {
-  final List<WorkoutMetric> workouts;
-  final List<ActivitySessionMetric> activitySessions;
-  const ActivityHistory({this.workouts = const [], this.activitySessions = const []});
+  const ActivityHistory({this.activities = const []});
+
+  final List<ActivityMetric> activities;
+
+  List<ActivityMetric> get workouts =>
+      activities.where((a) => a.isWorkout).toList();
+
+  List<ActivityMetric> get autoActivities =>
+      activities.where((a) => !a.isWorkout).toList();
 }
 
 final activityHistoryProvider = FutureProvider<ActivityHistory>((ref) async {
   final configured = await ref.watch(apiConfiguredProvider.future);
-  if (!configured) return const ActivityHistory();
-  final client = ref.read(metricsApiClientProvider);
-  final (workouts, sessions) = await (
-    client.fetchWorkouts(),
-    client.fetchActivitySessions(),
-  ).wait;
-  return ActivityHistory(workouts: workouts, activitySessions: sessions);
+  if (!configured) {
+    throw const MetricsApiException(
+      type: MetricsApiFailureType.notConfigured,
+      path: '/api/activities',
+      message: cloudApiRequiredBeforeSyncMessage,
+    );
+  }
+  final activities = await ref
+      .read(metricsApiClientProvider)
+      .fetchActivities(windowDays: devWorkoutFetchDays);
+  return ActivityHistory(activities: activities);
 });
 
-final workoutsByDayProvider = Provider<Map<String, List<WorkoutMetric>>>((ref) {
+final activitiesByDayProvider = Provider<Map<String, List<ActivityMetric>>>((
+  ref,
+) {
   final history = ref.watch(activityHistoryProvider).valueOrNull;
   if (history == null) return {};
-  final out = <String, List<WorkoutMetric>>{};
-  for (final w in history.workouts) {
-    out.putIfAbsent(w.dayKey, () => []).add(w);
+  final out = <String, List<ActivityMetric>>{};
+  for (final activity in history.activities) {
+    out.putIfAbsent(activity.dayKey, () => []).add(activity);
   }
   for (final list in out.values) {
-    list.sort((a, b) => b.startedAt.compareTo(a.startedAt));
-  }
-  return out;
-});
-
-final activitySessionsByDayProvider = Provider<Map<String, List<ActivitySessionMetric>>>((ref) {
-  final history = ref.watch(activityHistoryProvider).valueOrNull;
-  if (history == null) return {};
-  final out = <String, List<ActivitySessionMetric>>{};
-  for (final s in history.activitySessions) {
-    out.putIfAbsent(s.dayKey, () => []).add(s);
-  }
-  for (final list in out.values) {
-    list.sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    list.sort((a, b) => a.startedAt.compareTo(b.startedAt));
   }
   return out;
 });

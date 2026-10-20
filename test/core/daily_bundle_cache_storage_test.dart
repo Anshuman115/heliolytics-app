@@ -1,7 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:heliolytics/constants/constants.dart';
+import 'package:heliolytics/models/day_bundle.dart';
+import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/services/cache/daily_bundle_cache_storage.dart';
 import 'package:hive/hive.dart';
 
@@ -24,28 +25,30 @@ void main() {
     await directory.delete(recursive: true);
   });
 
-  test('old bundle cache is purged once and then preserved', () async {
-    await box.put('2026-08-01', '{"partial":true}');
-
-    expect(await storage.migrateSchemaIfNeeded(), isTrue);
-    expect(box.get('2026-08-01'), isNull);
-    expect(
-      box.get(dailyBundleCacheSchemaKey),
-      dailyBundleCacheSchemaVersion.toString(),
+  test('a written bundle reads back', () async {
+    final bundle = DayBundle(
+      day: DayMetric(dayKey: '2026-08-01', updatedAt: DateTime.utc(2026, 8, 2)),
     );
 
-    await box.put('2026-08-02', '{"current":true}');
-    expect(await storage.migrateSchemaIfNeeded(), isFalse);
-    expect(box.get('2026-08-02'), '{"current":true}');
+    await storage.write('2026-08-01', bundle);
+
+    final loaded = await storage.read('2026-08-01');
+    expect(loaded?.day?.dayKey, '2026-08-01');
+    expect((await storage.readAllCachedDays()).single.dayKey, '2026-08-01');
   });
 
-  test('routine cache clearing preserves the schema marker', () async {
-    await storage.migrateSchemaIfNeeded();
-    await box.put('2026-08-01', '{"cached":true}');
+  test('an undecodable entry is a cache miss', () async {
+    await box.put('2026-08-01', 'not json');
+
+    expect(await storage.read('2026-08-01'), isNull);
+    expect(await storage.readAllCachedDays(), isEmpty);
+  });
+
+  test('clear drops every entry', () async {
+    await box.put('2026-08-01', 'not json');
 
     await storage.clear();
 
-    expect(box.get('2026-08-01'), isNull);
-    expect(await storage.migrateSchemaIfNeeded(), isFalse);
+    expect(box.isEmpty, isTrue);
   });
 }

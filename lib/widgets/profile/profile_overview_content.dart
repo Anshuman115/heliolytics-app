@@ -50,7 +50,7 @@ class ProfileIdentity extends StatelessWidget {
 
 class ProfileTodaySummary extends StatelessWidget {
   const ProfileTodaySummary({super.key, required this.day});
-  final DayMetric day;
+  final DayMetric? day;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -58,7 +58,7 @@ class ProfileTodaySummary extends StatelessWidget {
       Expanded(
         child: _Score(
           label: 'RECOVERY',
-          value: day.readiness,
+          value: day?.readiness,
           color: HelioColors.recoveryHigh,
         ),
       ),
@@ -66,7 +66,7 @@ class ProfileTodaySummary extends StatelessWidget {
       Expanded(
         child: _Score(
           label: 'SLEEP',
-          value: day.sleepScore,
+          value: day?.sleepScore,
           color: HelioColors.sleepBlue,
         ),
       ),
@@ -110,9 +110,36 @@ class ProfileDataSection extends StatelessWidget {
       Text('PROFILE DATA', style: HelioTypography.sectionTitle),
       const SizedBox(height: HelioSpacing.md),
       _row(Icons.person_outline, 'Name', profile?.name ?? 'Not set'),
-      _row(Icons.cake_outlined, 'Age', profile == null ? 'Not set' : '${profile!.age} years'),
-      _row(Icons.height, 'Height', profile == null ? 'Not set' : '${profile!.heightCm.round()} cm'),
-      _row(Icons.monitor_weight_outlined, 'Weight', profile == null ? 'Not set' : '${profile!.weightKg.toStringAsFixed(1)} kg'),
+      _row(
+        Icons.cake_outlined,
+        'Birth date',
+        profile?.birthDate == null
+            ? 'Not set'
+            : formatDateOnly(profile!.birthDate!),
+      ),
+      _row(
+        Icons.wc_outlined,
+        'Sex for training-load formula',
+        switch (profile?.sex) {
+          UserProfile.male => 'Male',
+          UserProfile.female => 'Female',
+          _ => 'Not set',
+        },
+      ),
+      _row(
+        Icons.height,
+        'Height',
+        profile?.heightCm == null
+            ? 'Not set'
+            : '${profile!.heightCm!.toStringAsFixed(1)} cm',
+      ),
+      _row(
+        Icons.monitor_weight_outlined,
+        'Weight',
+        profile?.weightKg == null
+            ? 'Not set'
+            : '${profile!.weightKg!.toStringAsFixed(1)} kg',
+      ),
     ],
   );
 

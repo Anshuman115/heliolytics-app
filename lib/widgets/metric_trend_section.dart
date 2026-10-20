@@ -8,6 +8,7 @@ import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/models/day_metric.dart';
 import 'package:heliolytics/models/metric_catalog.dart';
 import 'package:heliolytics/providers/metric_trend_provider.dart';
+import 'package:heliolytics/utils/ist_time.dart';
 import 'package:heliolytics/widgets/daily_metric_trend_chart.dart';
 import 'package:heliolytics/widgets/metric_trend_controls.dart';
 
@@ -103,20 +104,21 @@ class _MetricTrendSectionState extends ConsumerState<MetricTrendSection> {
     'stress' => day.stressAvg?.toDouble(),
     'hrv' => day.hrvRmssd?.toDouble(),
     'rhr' => day.restingHr?.toDouble(),
-    'spo2' || 'spo2_sleep' => day.spo2Avg?.toDouble(),
-    'resp_rate' => day.respRateAvg?.toDouble(),
-    'temperature' => day.tempAvgC,
-    'pai' => day.paiScore == null ? null : day.paiScore! / 10,
-    'steps' => day.steps.toDouble(),
-    'calories' => day.calories?.toDouble(),
+    'spo2' => day.spo2Avg,
+    'resp_rate' => day.respRate?.toDouble(),
+    'temperature' => day.skinTempNightC,
+    'pai' => day.paiScore?.toDouble(),
+    'load' => day.trainingLoad,
+    'steps' => day.steps?.toDouble(),
+    'calories' => day.workoutCalories?.toDouble(),
     _ => null,
   };
 
   (DateTime, DateTime) _periodBounds() {
     final anchor = widget.anchorDayKey == null
-        ? DateTime.now()
+        ? istToday()
         : DateTime.parse(widget.anchorDayKey!);
-    final today = DateTime(anchor.year, anchor.month, anchor.day);
+    final today = DateTime.utc(anchor.year, anchor.month, anchor.day);
     final to = today.subtract(Duration(days: days * periodOffset));
     return (to.subtract(Duration(days: days - 1)), to);
   }

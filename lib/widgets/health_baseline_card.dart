@@ -11,8 +11,8 @@ class HealthBaselineCard extends StatelessWidget {
     required this.restingHr,
     required this.onTap,
   });
-  final int? hrv;
-  final int? restingHr;
+  final num? hrv;
+  final num? restingHr;
   final VoidCallback onTap;
 
   @override
@@ -56,7 +56,7 @@ class _BaselineValue extends StatelessWidget {
     required this.unit,
   });
   final String label;
-  final int? value;
+  final num? value;
   final String unit;
 
   @override
@@ -65,7 +65,7 @@ class _BaselineValue extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          value?.toString() ?? '—',
+          _format(value),
           style: HelioTypography.scoreLarge.copyWith(fontSize: 34),
         ),
         const SizedBox(height: 3),
@@ -73,6 +73,12 @@ class _BaselineValue extends StatelessWidget {
       ],
     ),
   );
+
+  String _format(num? value) {
+    if (value == null) return '—';
+    if (value is int) return '$value';
+    return value.toStringAsFixed(1);
+  }
 }
 
 class HealthMonitorRow extends StatelessWidget {
