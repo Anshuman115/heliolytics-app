@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import 'package:heliolytics/utils/ist_time.dart';
+
 final _stepsFmt = NumberFormat.decimalPattern();
 final _dayFmt = DateFormat.MMMEd();
 final _timeFmt = DateFormat.MMMEd().add_jm();
@@ -9,36 +11,39 @@ String formatSteps(int steps) => '${_stepsFmt.format(steps)} steps';
 /// Exact step count with thousands separators (e.g. "3,708") — no "k" rounding.
 String formatStepCount(int steps) => _stepsFmt.format(steps);
 
-String formatDayLabel(String dayKey) {
+int _daysBeforeIstToday(DateTime date, DateTime? now) {
+  final today = istToday(now: now);
+  return DateTime.utc(
+    today.year,
+    today.month,
+    today.day,
+  ).difference(DateTime.utc(date.year, date.month, date.day)).inDays;
+}
+
+String formatDayLabel(String dayKey, {DateTime? now}) {
   final parts = dayKey.split('-');
   if (parts.length != 3) return dayKey;
-  final d = DateTime(
+  final d = DateTime.utc(
     int.parse(parts[0]),
     int.parse(parts[1]),
     int.parse(parts[2]),
   );
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final target = DateTime(d.year, d.month, d.day);
-  final diff = today.difference(target).inDays;
+  final diff = _daysBeforeIstToday(d, now);
   if (diff == 0) return 'Today';
   if (diff == 1) return 'Yesterday';
   return _dayFmt.format(d);
 }
 
 /// Compact label for top-bar date navigation.
-String formatNavDayLabel(String dayKey) {
+String formatNavDayLabel(String dayKey, {DateTime? now}) {
   final parts = dayKey.split('-');
   if (parts.length != 3) return dayKey.toUpperCase();
-  final d = DateTime(
+  final d = DateTime.utc(
     int.parse(parts[0]),
     int.parse(parts[1]),
     int.parse(parts[2]),
   );
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final target = DateTime(d.year, d.month, d.day);
-  final diff = today.difference(target).inDays;
+  final diff = _daysBeforeIstToday(d, now);
   if (diff == 0) return 'TODAY';
   if (diff == 1) return 'YESTERDAY';
   return DateFormat('EEE, MMM d').format(d).toUpperCase();
@@ -55,11 +60,15 @@ String formatSleepComparisonDay(String dayKey) {
   return DateFormat('EEE, MMM d').format(date);
 }
 
-String formatWorkoutTime(DateTime dt) => _timeFmt.format(dt.toLocal());
+String formatWorkoutTime(DateTime dt) => _timeFmt.format(istWallClock(dt));
 
 final _hmFmt = DateFormat.Hm();
+final _jmFmt = DateFormat.jm();
 
-String formatChartTime(DateTime dt) => _hmFmt.format(dt.toLocal());
+String formatChartTime(DateTime dt) => _hmFmt.format(istWallClock(dt));
+
+/// Clock time on the IST wall clock, for activity and stress labels.
+String formatTimeOfDay(DateTime dt) => _jmFmt.format(istWallClock(dt));
 
 String formatDurationSec(int sec) {
   if (sec >= 3600) {

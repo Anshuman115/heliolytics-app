@@ -36,6 +36,11 @@ than zero.
    failures propagate. There is no optional-route swallowing.
 5. A successful closed-day bundle is stored. Today's bundle is not stored on disk.
 
+All day keys are IST calendar days. `todayDayKey`, the closed-day check, the date
+picker limit, day stepping and the day labels use the IST clock, never the phone
+timezone. Sample times display on the IST wall clock; stored and wire instants
+stay UTC.
+
 A day the server does not support has a null `DayMetric`, which the UI shows as no
 data. The app never synthesizes `steps: 0`.
 

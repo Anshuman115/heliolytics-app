@@ -15,7 +15,8 @@ chart and time-in-zone breakdown.
 (`models/activity_metric.dart`) stores `kind`, `dayKey`, exact start and end,
 `durationSec`, `sportType`, `sportName`, `calories`, `avgHr`, `maxHr`, `minHr`,
 `steps` and `hasDetail`. Null statistics stay null and `hasDetail=false` means no
-recorded workout detail, not that the activity is missing.
+recorded workout detail, not that the activity is missing. Start and end stay UTC
+instants and display on the IST wall clock.
 
 Auto activities use `sportType=0` and the server label `Walk` or `Run`. They are
 explicitly heuristic, not vendor-recorded sports and not a diagnosis. The app does

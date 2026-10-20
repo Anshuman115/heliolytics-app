@@ -93,7 +93,6 @@ class StressMonitorScreen extends ConsumerWidget {
   }
 
   Widget _dateNavigator(BuildContext context) {
-    final date = DateTime.parse(dayKey);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: HelioSpacing.lg),
       child: Row(
@@ -101,14 +100,10 @@ class StressMonitorScreen extends ConsumerWidget {
         children: [
           HelioDateNav(
             label: formatNavDayLabel(dayKey),
-            onPrev: () => context.replace(
-              '/stress/${dayKeyFor(date.subtract(const Duration(days: 1)))}',
-            ),
+            onPrev: () => context.replace('/stress/${shiftDayKey(dayKey, -1)}'),
             onNext: dayKey == todayDayKey()
                 ? null
-                : () => context.replace(
-                    '/stress/${dayKeyFor(date.add(const Duration(days: 1)))}',
-                  ),
+                : () => context.replace('/stress/${shiftDayKey(dayKey, 1)}'),
             canGoNext: dayKey != todayDayKey(),
             onDateTap: () async {
               final selected = await pickDay(context, dayKey: dayKey);

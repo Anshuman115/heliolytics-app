@@ -44,14 +44,28 @@ int istWallToEpochSec(int y, int mo, int d, int h, int mi, int s) =>
 DateTime istCutoffDaysAgo(int days) =>
     DateTime.now().toUtc().subtract(Duration(days: days));
 
-/// Today's IST calendar date with no time component.
-DateTime istToday() {
-  final now = DateTime.now().toUtc().add(const Duration(seconds: istOffsetSec));
-  return DateTime(now.year, now.month, now.day);
+/// IST calendar date of [now], with no time component.
+DateTime istToday({DateTime? now}) {
+  final ist = (now ?? DateTime.now()).toUtc().add(
+    const Duration(seconds: istOffsetSec),
+  );
+  return DateTime(ist.year, ist.month, ist.day);
 }
 
+/// [instant] as an IST wall-clock DateTime, ignoring the phone timezone.
+DateTime istWallClock(DateTime instant) =>
+    instant.toUtc().add(const Duration(seconds: istOffsetSec));
+
 /// The IST date [days] before today, ignoring the phone timezone.
-DateTime istDaysAgo(int days) => istToday().subtract(Duration(days: days));
+DateTime istDaysAgo(int days, {DateTime? now}) {
+  final today = istToday(now: now);
+  final date = DateTime.utc(
+    today.year,
+    today.month,
+    today.day,
+  ).subtract(Duration(days: days));
+  return DateTime(date.year, date.month, date.day);
+}
 
 /// IST wall clock for catalog roundStart (device reports IST, not UTC Z).
 String formatRoundStartIst(DateTime utc) {

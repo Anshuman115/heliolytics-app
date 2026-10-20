@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' hide TextDirection;
 import 'package:heliolytics/design_system/components/helio_surface_card.dart';
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/design_system/tokens/helio_spacing.dart';
 import 'package:heliolytics/design_system/tokens/helio_typography.dart';
 import 'package:heliolytics/models/health_sample.dart';
 import 'package:heliolytics/models/sleep_stage.dart';
+import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/utils/stress_zones.dart';
 import 'package:heliolytics/widgets/stress/stress_day_chart.dart';
 import 'package:heliolytics/widgets/stress/stress_gauge.dart';
@@ -49,9 +49,7 @@ class StressDayBody extends StatelessWidget {
         Center(
           child: StressGauge(
             value: latest?.value,
-            atLabel: latest == null
-                ? null
-                : DateFormat.jm().format(latest.sampledAt),
+            atLabel: latest == null ? null : formatTimeOfDay(latest.sampledAt),
           ),
         ),
         const SizedBox(height: HelioSpacing.xl),

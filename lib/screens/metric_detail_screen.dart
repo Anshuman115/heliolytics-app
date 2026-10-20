@@ -208,8 +208,7 @@ class MetricDetailScreen extends ConsumerWidget {
   }.contains(id);
 
   void _openDay(BuildContext context, int delta) {
-    final date = DateTime.parse(dayKey).add(Duration(days: delta));
-    context.replace('/metric/${dayKeyFor(date)}/$metricId');
+    context.replace('/metric/${shiftDayKey(dayKey, delta)}/$metricId');
   }
 
   Future<void> _pickDay(BuildContext context) async {

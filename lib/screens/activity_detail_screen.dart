@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import 'package:heliolytics/constants/constants.dart';
 import 'package:heliolytics/design_system/components/helio_bottom_nav.dart';
@@ -17,6 +16,7 @@ import 'package:heliolytics/models/activity_metric.dart';
 import 'package:heliolytics/models/hr_sample.dart';
 import 'package:heliolytics/providers/detail_metrics_provider.dart';
 import 'package:heliolytics/providers/health_data_refresh_coordinator.dart';
+import 'package:heliolytics/utils/formatters.dart';
 import 'package:heliolytics/utils/hr_chart_samples.dart';
 import 'package:heliolytics/utils/hr_zones.dart';
 import 'package:heliolytics/utils/sport_icons.dart';
@@ -270,11 +270,9 @@ List<HeartRateSample> _inWindow(
     .where((h) => !h.sampledAt.isBefore(start) && h.sampledAt.isBefore(end))
     .toList();
 
-String _timeRange(ActivityMetric activity) {
-  final fmt = DateFormat.jm();
-  return '${fmt.format(activity.startedAt.toLocal())} to '
-      '${fmt.format(activity.endedAt.toLocal())}';
-}
+String _timeRange(ActivityMetric activity) =>
+    '${formatTimeOfDay(activity.startedAt)} to '
+    '${formatTimeOfDay(activity.endedAt)}';
 
 class _ActivityStat {
   final IconData icon;
