@@ -303,7 +303,7 @@ void main() {
     expect(container.read(bandSessionProvider).activeOp, BandSessionOp.none);
   });
 
-  test('unreadable reply shows an error without retry', () async {
+  test('unreadable reply shows an error and setup still connects', () async {
     final port = FakeHealthPort([_frame('04 01 08')]);
     final session = TestBandSession(() => HealthBandLink(port));
     final (container, _, preferences) = await harness(session);
@@ -312,18 +312,13 @@ void main() {
     final emitted = await _connectForSetup(container);
 
     expect(port.sent, [_read]);
-    expect(emitted.last.state, SessionState.error);
-    expect(emitted.last.error, SessionError.bleDisconnected);
-    expect(
-      emitted.where((value) => value.state == SessionState.connected),
-      isEmpty,
-    );
+    expect(emitted.last.state, SessionState.connected);
     final state = container.read(strapHealthConfigProvider);
     expect(state.phase, StrapHealthConfigPhase.error);
     expect(state.error, 'Invalid HEALTH response header');
     expect(state.config, isNull);
     expect(session.connects, 1);
-    expect(port.retired, 1);
+    expect(port.retired, 0);
     expect(container.read(bandSessionProvider).activeOp, BandSessionOp.none);
   });
 
@@ -597,7 +592,7 @@ void main() {
 
   for (final failure in ['read', 'ACK', 'readback']) {
     test(
-      'user malformed $failure invalidates actual when retirement throws',
+      'user malformed $failure clears actual; only a bad ACK drops the link',
       () async {
         final port = ThrowingRetirementHealthPort([
           response(allDay: false),
@@ -622,11 +617,11 @@ void main() {
         );
         expect(state.desired.allDay, isTrue);
         expect((await preferences.load()).allDay, isTrue);
-        expect(port.retired, 1);
-        expect(port.canceled, greaterThan(0));
+        final dropsLink = failure == 'ACK';
+        expect(port.retired, dropsLink ? 1 : 0);
         expect(port.hasWaiter, isFalse);
-        expect(session.isReady, isFalse);
-        expect(container.read(bandSessionProvider).isConnected, isFalse);
+        expect(session.isReady, !dropsLink);
+        expect(container.read(bandSessionProvider).isConnected, !dropsLink);
         expect(
           container.read(bandSessionProvider).activeOp,
           BandSessionOp.none,
@@ -661,42 +656,36 @@ void main() {
     },
   );
 
-  test(
-    'malformed-read setup retires link and emits disconnected error, never successful connection',
-    () async {
-      final port = FakeHealthPort([
-        Uint8List.fromList([4, 1, 8, 0, 1, 0]),
-      ]);
-      final session = TestBandSession(() => HealthBandLink(port));
-      final (container, _, _) = await harness(session);
-      var snapshot = SessionSnapshot.initial;
-      final emitted = <SessionSnapshot>[];
-      final setup = Provider<Future<void>>(
-        (ref) => connectForInitialSetup(
-          ref: ref,
-          readState: () => snapshot,
-          sessionLog: SyncSessionLog(),
-          emit: (value) {
-            snapshot = value;
-            emitted.add(value);
-          },
-        ),
-      );
-      await container.read(setup);
-      expect(snapshot.state, SessionState.error);
-      expect(snapshot.error, SessionError.bleDisconnected);
-      expect(snapshot.lastErrorMessage, 'Invalid HEALTH response header');
-      expect(emitted.where((s) => s.state == SessionState.connected), isEmpty);
-      expect(port.retired, 1);
-      expect(session.isReady, isFalse);
-      expect(container.read(strapHealthConfigProvider).config, isNull);
-      expect(container.read(bandSessionProvider).activeOp, BandSessionOp.none);
-    },
-  );
+  test('malformed-read setup keeps the link and finishes connecting', () async {
+    final port = FakeHealthPort([
+      Uint8List.fromList([4, 1, 8, 0, 1, 0]),
+    ]);
+    final session = TestBandSession(() => HealthBandLink(port));
+    final (container, _, _) = await harness(session);
+    var snapshot = SessionSnapshot.initial;
+    final setup = Provider<Future<void>>(
+      (ref) => connectForInitialSetup(
+        ref: ref,
+        readState: () => snapshot,
+        sessionLog: SyncSessionLog(),
+        emit: (value) => snapshot = value,
+      ),
+    );
+    await container.read(setup);
+    expect(snapshot.state, SessionState.connected);
+    expect(port.retired, 0);
+    expect(session.isReady, isTrue);
+    expect(container.read(strapHealthConfigProvider).config, isNull);
+    expect(
+      container.read(strapHealthConfigProvider).error,
+      'Invalid HEALTH response header',
+    );
+    expect(container.read(bandSessionProvider).activeOp, BandSessionOp.none);
+  });
 
   for (final failure in ['read', 'ACK', 'readback']) {
     test(
-      'setup malformed $failure reaches terminal error when retirement throws',
+      'setup malformed $failure: only a bad ACK aborts setup',
       () async {
         final port = ThrowingRetirementHealthPort([
           response(allDay: false),
@@ -725,23 +714,27 @@ void main() {
           ),
         );
         await container.read(setup);
-        expect(emitted.map((s) => s.state), [
-          SessionState.connecting,
-          SessionState.error,
-        ]);
-        expect(snapshot.state, SessionState.error);
-        expect(snapshot.error, SessionError.bleDisconnected);
+        final dropsLink = failure == 'ACK';
         expect(
-          snapshot.lastErrorMessage,
-          failure == 'ACK'
-              ? 'Malformed HEALTH ACK'
-              : 'Invalid HEALTH response header',
+          emitted.map((s) => s.state),
+          dropsLink
+              ? [SessionState.connecting, SessionState.error]
+              : contains(SessionState.connected),
         );
-        expect(port.retired, 1);
-        expect(port.canceled, greaterThan(0));
+        if (dropsLink) {
+          expect(snapshot.error, SessionError.bleDisconnected);
+          expect(snapshot.lastErrorMessage, 'Malformed HEALTH ACK');
+        } else {
+          expect(snapshot.state, SessionState.connected);
+          expect(
+            container.read(strapHealthConfigProvider).error,
+            'Invalid HEALTH response header',
+          );
+        }
+        expect(port.retired, dropsLink ? 1 : 0);
         expect(port.hasWaiter, isFalse);
-        expect(session.isReady, isFalse);
-        expect(container.read(bandSessionProvider).isConnected, isFalse);
+        expect(session.isReady, !dropsLink);
+        expect(container.read(bandSessionProvider).isConnected, !dropsLink);
         expect(container.read(strapHealthConfigProvider).config, isNull);
         expect(
           container.read(bandSessionProvider).activeOp,

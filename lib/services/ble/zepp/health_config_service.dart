@@ -75,13 +75,6 @@ class HealthConfigService {
     }
 
     final count = bytes[5];
-    if (count > 3) {
-      throw const HealthConfigError(
-        HealthConfigErrorKind.protocol,
-        'Invalid HEALTH response count',
-      );
-    }
-
     var offset = 6;
     bool? allDay;
     bool? sleepBreathing;
@@ -97,18 +90,22 @@ class HealthConfigService {
       }
       final key = bytes[offset++];
       final type = bytes[offset++];
-      if (!seen.add(key) ||
-          (key != strapHealthKeyAllDay &&
-              key != strapHealthKeySleepBreathing &&
-              key != strapHealthKeyLowAlert)) {
-        throw const HealthConfigError(
+      if (!seen.add(key)) {
+        throw HealthConfigError(
           HealthConfigErrorKind.protocol,
-          'Unknown or duplicate HEALTH key',
+          'Duplicate HEALTH key ${_hexByte(key)}',
+        );
+      }
+      final expected = _expectedTypes[key];
+      if (expected != null && expected != type) {
+        throw HealthConfigError(
+          HealthConfigErrorKind.protocol,
+          'Unexpected HEALTH type ${_hexByte(type)} for key ${_hexByte(key)}',
         );
       }
 
-      if (key == strapHealthKeyAllDay || key == strapHealthKeySleepBreathing) {
-        if (type != strapHealthTypeBool || offset >= bytes.length) {
+      if (type == strapHealthTypeBool) {
+        if (offset >= bytes.length) {
           throw const HealthConfigError(
             HealthConfigErrorKind.protocol,
             'Invalid HEALTH BOOL entry',
@@ -123,28 +120,36 @@ class HealthConfigService {
         }
         if (key == strapHealthKeyAllDay) {
           allDay = value == 1;
-        } else {
+        } else if (key == strapHealthKeySleepBreathing) {
           sleepBreathing = value == 1;
         }
         continue;
       }
 
-      if (type != strapHealthTypeByte || offset + 2 > bytes.length) {
-        throw const HealthConfigError(
-          HealthConfigErrorKind.protocol,
-          'Invalid HEALTH BYTE entry',
-        );
+      if (type == strapHealthTypeByte) {
+        if (offset + 2 > bytes.length) {
+          throw const HealthConfigError(
+            HealthConfigErrorKind.protocol,
+            'Invalid HEALTH BYTE entry',
+          );
+        }
+        final reported = bytes[offset++];
+        final optionCount = bytes[offset++];
+        if (offset + optionCount > bytes.length) {
+          throw const HealthConfigError(
+            HealthConfigErrorKind.protocol,
+            'Truncated HEALTH BYTE options',
+          );
+        }
+        offset += optionCount;
+        if (key == strapHealthKeyLowAlert) lowAlert = reported;
+        continue;
       }
-      final reported = bytes[offset++];
-      final optionCount = bytes[offset++];
-      if (offset + optionCount > bytes.length) {
-        throw const HealthConfigError(
-          HealthConfigErrorKind.protocol,
-          'Truncated HEALTH BYTE options',
-        );
-      }
-      offset += optionCount;
-      lowAlert = reported;
+
+      throw HealthConfigError(
+        HealthConfigErrorKind.protocol,
+        'Unsupported HEALTH type ${_hexByte(type)} for key ${_hexByte(key)}',
+      );
     }
 
     if (offset != bytes.length) {
@@ -161,6 +166,18 @@ class HealthConfigService {
       spo2LowAlert: lowAlert,
     );
   }
+
+  static const _expectedTypes = {
+    strapHealthKeySleepBreathing: strapHealthTypeBool,
+    strapHealthKeyAllDay: strapHealthTypeBool,
+    strapHealthKeyLowAlert: strapHealthTypeByte,
+  };
+
+  static String _hexByte(int value) =>
+      '0x${value.toRadixString(16).padLeft(2, '0')}';
+
+  static String _hex(Uint8List bytes) =>
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
 
   static int _decodeAck(Uint8List bytes) {
     if (bytes.length != 2 || bytes[0] != strapHealthConfigAck) {
@@ -232,15 +249,15 @@ class HealthConfigService {
         strapHealthKeyLowAlert,
       ]),
     );
+    // The transaction is complete, so a response we cannot decode leaves the
+    // link idle. The settings stay unknown and the sync continues.
     try {
       return decodeResponse(response);
     } on HealthConfigError catch (error) {
-      await _retire(port);
-      throw HealthConfigError(
-        error.kind,
-        error.message,
-        requiresReconnect: true,
+      log(
+        'HEALTH response rejected: ${error.message}; payload ${_hex(response)}',
       );
+      rethrow;
     }
   }
 
