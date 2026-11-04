@@ -218,69 +218,94 @@ void main() {
     'wrong group': [4, 1, 9, 3, 1, 0],
     'unknown version': [4, 1, 8, 0, 1, 0],
     'wrong constraints flag': [4, 1, 8, 3, 0, 0],
-    'excess count': [4, 1, 8, 3, 1, 4],
+    'count beyond payload': [4, 1, 8, 3, 1, 4],
     'truncated count entries': [4, 1, 8, 3, 1, 1],
     'truncated key header': [4, 1, 8, 3, 1, 1, 0x31],
     'truncated BOOL value': [4, 1, 8, 3, 1, 1, 0x31, 0x0b],
     'invalid BOOL': [4, 1, 8, 3, 1, 1, 0x31, 0x0b, 2],
-    'unknown BOOL type': [4, 1, 8, 3, 1, 1, 0x31, 0xff, 1],
-    'unknown key': [4, 1, 8, 3, 1, 1, 0x33, 0x0b, 1],
+    'all-day sent as BYTE': [4, 1, 8, 3, 1, 1, 0x31, 0x10, 1, 0],
+    'low alert sent as BOOL': [4, 1, 8, 3, 1, 1, 0x32, 0x0b, 1],
+    'unsupported type on an extra key': [4, 1, 8, 3, 1, 1, 0x40, 0xff, 1],
     'duplicate key': [4, 1, 8, 3, 1, 2, 0x31, 0x0b, 1, 0x31, 0x0b, 1],
-    'unknown BYTE type': [4, 1, 8, 3, 1, 1, 0x32, 0xff, 85, 1, 85],
     'truncated BYTE value': [4, 1, 8, 3, 1, 1, 0x32, 0x10],
     'truncated option count': [4, 1, 8, 3, 1, 1, 0x32, 0x10, 85],
     'truncated options': [4, 1, 8, 3, 1, 1, 0x32, 0x10, 85, 2, 85],
     'trailing bytes': [4, 1, 8, 3, 1, 0, 0xff],
   };
   for (final entry in malformed.entries) {
-    test('${entry.key} is typed invalid, retired and never writable', () async {
+    test('${entry.key} is rejected without dropping the link', () async {
       final port = FakeHealthPort([Uint8List.fromList(entry.value)]);
+      final logs = <String>[];
       await expectLater(
-        HealthConfigService(log: (_) {}).read(port),
-        throwsA(healthError(HealthConfigErrorKind.protocol)),
+        HealthConfigService(log: logs.add).read(port),
+        throwsA(healthError(HealthConfigErrorKind.protocol, reconnect: false)),
       );
-      expect(port.retired, 1);
-      expect(port.canceled, greaterThan(0));
+      expect(port.retired, 0);
       expect(port.hasWaiter, isFalse);
       expect(port.sent.single.first, 3);
+      expect(
+        logs.single,
+        endsWith(
+          'payload ${entry.value.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}',
+        ),
+      );
     });
   }
 
-  for (final failure in ['read', 'ACK', 'readback']) {
-    test(
-      'malformed $failure preserves protocol error when retirement throws',
-      () async {
-        final port = ThrowingRetirementHealthPort([
-          if (failure == 'readback') Uint8List.fromList([6, 1]),
-          Uint8List.fromList(failure == 'ACK' ? [6] : [4, 1, 8]),
-        ]);
-        final service = HealthConfigService(log: (_) {});
-        await expectLater(
-          failure == 'read'
-              ? service.read(port)
-              : service.setAllDay(port, true, version: 3),
-          throwsA(
-            healthError(HealthConfigErrorKind.protocol).having(
-              (e) => e.message,
-              'message',
-              failure == 'ACK'
-                  ? 'Malformed HEALTH ACK'
-                  : 'Invalid HEALTH response header',
-            ),
-          ),
-        );
-        expect(port.retired, 1);
-        expect(port.canceled, greaterThan(0));
-        expect(port.hasWaiter, isFalse);
-        expect(port.sent, hasLength(failure == 'readback' ? 2 : 1));
-        expect(
-          (await service.read(FakeHealthPort([response()]))).spo2AllDay,
-          isTrue,
-          reason: 'A fresh channel remains usable after protocol failure',
-        );
-      },
+  test('extra keys of known types are skipped', () async {
+    final port = FakeHealthPort([
+      Uint8List.fromList([
+        4, 1, 8, 3, 1, 4, //
+        0x11, 0x0b, 1, //
+        0x31, 0x0b, 1, //
+        0x40, 0x10, 2, 2, 1, 2, //
+        0x32, 0x10, 85, 1, 85,
+      ]),
+    ]);
+    final actual = await HealthConfigService(log: (_) {}).read(port);
+    expect(actual.spo2AllDay, isTrue);
+    expect(actual.spo2LowAlert, 85);
+    expect(actual.sleepBreathing, isNull);
+    expect(port.retired, 0);
+  });
+
+  test(
+    'malformed ACK keeps its protocol error when retirement throws',
+    () async {
+      final port = ThrowingRetirementHealthPort([
+        Uint8List.fromList([6]),
+      ]);
+      final service = HealthConfigService(log: (_) {});
+      await expectLater(
+        service.setAllDay(port, true, version: 3),
+        throwsA(
+          healthError(
+            HealthConfigErrorKind.protocol,
+          ).having((e) => e.message, 'message', 'Malformed HEALTH ACK'),
+        ),
+      );
+      expect(port.retired, 1);
+      expect(port.hasWaiter, isFalse);
+      expect(
+        (await service.read(FakeHealthPort([response()]))).spo2AllDay,
+        isTrue,
+        reason: 'A fresh channel remains usable after protocol failure',
+      );
+    },
+  );
+
+  test('malformed readback after a SET does not drop the link', () async {
+    final port = FakeHealthPort([
+      Uint8List.fromList([6, 1]),
+      Uint8List.fromList([4, 1, 8]),
+    ]);
+    await expectLater(
+      HealthConfigService(log: (_) {}).setAllDay(port, true, version: 3),
+      throwsA(healthError(HealthConfigErrorKind.protocol, reconnect: false)),
     );
-  }
+    expect(port.retired, 0);
+    expect(port.sent, hasLength(2));
+  });
 
   for (final missing in [0x31, 0x32]) {
     test(
